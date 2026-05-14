@@ -240,6 +240,10 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .tr-clickable:hover td{background:var(--bg)!important;}
 .pubs-badge{background:#EEF2FF;color:#2251CC;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:4px;cursor:pointer;}
 .pubs-badge:hover{background:#dde7ff;}
+.cl-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.35);z-index:300;display:none;align-items:center;justify-content:center;padding:20px;}
+.cl-overlay-card{background:var(--bg);border-radius:16px;width:600px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;}
+.cl-overlay-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.cl-overlay-body{overflow-y:auto;flex:1;padding:0 0 16px;}
 </style>
 </head>
 <body>
@@ -277,7 +281,6 @@ textarea.field-input{resize:vertical;min-height:80px;}
     <button class="sb-item" onclick="showSection('egresos',this)"><i class="ti ti-user-minus"></i>Egresos <span class="bc" id="bc-egresos">0</span></button>
     <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-clipboard-list"></i>Reviews</button>
     <button class="sb-item" onclick="showSection('proyectos',this)"><i class="ti ti-folder"></i>Proyectos</button>
-    <button class="sb-item" onclick="showSection('checklist',this)"><i class="ti ti-checklist"></i>Checklist</button>
     <div class="sb-section">Beneficios</div>
     <button class="sb-item" onclick="showSection('beneficios',this)"><i class="ti ti-gift"></i>Beneficios</button>
     <button class="sb-item" onclick="showSection('ambassadors',this)"><i class="ti ti-plane"></i>Ambassador Week</button>
@@ -386,8 +389,8 @@ textarea.field-input{resize:vertical;min-height:80px;}
           </select>
         </div>
         <div class="table-wrap" id="wrap-engineers" style="border-radius:0;border-top:none;margin-bottom:0;">
-          <div class="table-head">
-            <span class="table-head-title">Engineers & Tech</span>
+          <div class="table-head" style="background:linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;">
+            <span class="table-head-title" style="color:#0026B0">Engineers & Tech</span>
             <span class="badge badge-blue" id="badge-personas-eng">—</span>
           </div>
           <table class="data-table">
@@ -395,13 +398,13 @@ textarea.field-input{resize:vertical;min-height:80px;}
             <tbody id="tbody-personas-eng"></tbody>
           </table>
         </div>
-        <div class="table-wrap" id="wrap-coreteam" style="border-radius:0 0 13px 13px;border-top:none;">
-          <div class="table-head">
-            <span class="table-head-title">Core Team</span>
+        <div class="table-wrap" id="wrap-coreteam" style="border-radius:0 0 13px 13px;border-top:none;margin-top:24px;">
+          <div class="table-head" style="background:linear-gradient(90deg,#F3EEFF 0%,var(--bg2) 100%);border-left:3px solid #7432FF;">
+            <span class="table-head-title" style="color:#4A1FAA">Core Team</span>
             <span class="badge badge-purple" id="badge-personas-core">—</span>
           </div>
           <table class="data-table">
-            <thead><tr><th>Nombre</th><th>Mail</th><th>Rol en empresa</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Ingreso</th><th>Antigüedad</th><th>Manager</th><th>Cumpleaños</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Mail</th><th>Rol en empresa</th><th>Área</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Ingreso</th><th>Antigüedad</th><th>Manager</th><th>Cumpleaños</th></tr></thead>
             <tbody id="tbody-personas-core"></tbody>
           </table>
         </div>
@@ -882,6 +885,23 @@ textarea.field-input{resize:vertical;min-height:80px;}
   </div>
 </div>
 
+<!-- CHECKLIST OVERLAY -->
+<div class="cl-overlay" id="cl-overlay">
+  <div class="cl-overlay-card">
+    <div class="cl-overlay-head">
+      <button onclick="closeChecklistOverlay()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;display:flex;align-items:center;gap:5px;font-family:'Plus Jakarta Sans',sans-serif;padding:0;flex-shrink:0"><i class="ti ti-arrow-left"></i> Volver</button>
+      <span style="color:var(--text3)">·</span>
+      <span id="cl-nombre" style="font-size:15px;font-weight:700;flex:1"></span>
+      <span id="cl-badge" class="badge"></span>
+    </div>
+    <div class="cl-overlay-head" style="padding:10px 22px;background:var(--bg2);">
+      <span id="cl-subtitle" style="font-size:12px;color:var(--text2);flex:1"></span>
+      <span id="cl-progress" class="badge badge-blue"></span>
+    </div>
+    <div class="cl-overlay-body" id="cl-items"></div>
+  </div>
+</div>
+
 <!-- PANEL LATERAL PERSONA BENEFICIOS -->
 <div class="side-panel-overlay" id="sp-overlay" onclick="closeSidePanel()"></div>
 <div class="side-panel" id="sp-panel">
@@ -1331,6 +1351,12 @@ async function loadKanbanIngresos(){
     if(el) el.textContent='0';
   });
 
+  // Ordenar por fecha de ingreso: más cercana primero
+  recs.sort((a,b)=>{
+    const fa=a.fields.Fecha||'9999', fb=b.fields.Fecha||'9999';
+    return fa.localeCompare(fb);
+  });
+
   const counts={};
   for(const r of recs){
     // Normalizar EstadoKanban — si vacío o inválido, forzar Pre-ingreso
@@ -1394,6 +1420,12 @@ async function loadKanbanEgresos(){
     if(el) el.textContent='0';
   });
 
+  // Ordenar por fecha: más cercana primero
+  recs.sort((a,b)=>{
+    const fa=a.fields.Fecha||'9999', fb=b.fields.Fecha||'9999';
+    return fa.localeCompare(fb);
+  });
+
   const counts={};
   recs.forEach(r=>{
     let col=(r.fields.EstadoKanban||'').trim();
@@ -1443,22 +1475,69 @@ async function loadKanbanEgresos(){
 
 // ─── CHECKLIST DETAIL ─────────────────────────────────────────────────────────
 function openChecklistFromKanban(id,nombre,tipo,rol,fecha,etapa){
-  showSection('checklist',document.querySelector('.sb-item[onclick*="checklist"]'));
-  setTimeout(()=>openChecklist(id,nombre,tipo,rol,fecha,etapa),50);
+  // Abrir overlay de checklist sin cambiar sección
+  const overlay=document.getElementById('cl-overlay');
+  overlay.style.display='flex';
+  document.body.style.overflow='hidden';
+  openChecklistInline(id,nombre,tipo,rol,fecha,etapa);
+}
+
+function closeChecklistOverlay(){
+  document.getElementById('cl-overlay').style.display='none';
+  document.body.style.overflow='';
+  // Refrescar kanban para reflejar progreso
+  loadKanbans();
 }
 function openChecklist(id,nombre,tipo,rol,fecha,etapa){
-  document.getElementById('checklist-list-view').style.display='none';
-  document.getElementById('checklist-detail-view').style.display='block';
-  document.getElementById('detail-title').textContent=nombre;
-  document.getElementById('detail-badge').className=`badge ${tipo==='Ingreso'?'badge-green':'badge-red'}`;
-  document.getElementById('detail-badge').textContent=tipo;
-  document.getElementById('detail-subtitle').textContent=`${tipo} · ${rol}${fecha?' · '+fmt(fecha):''}`;
+  openChecklistFromKanban(id,nombre,tipo,rol,fecha,etapa);
+}
+
+function openChecklistInline(id,nombre,tipo,rol,fecha,etapa){
+  document.getElementById('cl-nombre').textContent=nombre;
+  document.getElementById('cl-badge').className=`badge ${tipo==='Ingreso'?'badge-green':'badge-red'}`;
+  document.getElementById('cl-badge').textContent=tipo;
+  document.getElementById('cl-subtitle').textContent=`${tipo} · ${rol}${fecha?' · '+fmt(fecha):''}`;
   const items=getItems(tipo,rol);
   if(!clState[id]) clState[id]=Array(items.length).fill(false);
   clState[id]=items.map((_,i)=>clState[id][i]===true);
-  renderChecklistItems(id,tipo,rol,fecha||'');
-  document.getElementById('btn-add').style.display='none';
-  document.getElementById('btn-add-full').style.display='none';
+  renderChecklistItemsInline(id,tipo,rol,fecha||'');
+}
+
+function renderChecklistItemsInline(id,tipo,rol,fecha){
+  const items=getItemsMap(tipo,rol);
+  const etapas=tipo==='Egreso'?ETAPAS_EGRESO:ETAPAS_INGRESO;
+  if(!clState[id]) clState[id]=Array(items.length).fill(false);
+  clState[id]=items.map((_,i)=>clState[id][i]===true);
+  const comp=clState[id].filter(Boolean).length;
+  const pct=Math.round(comp/items.length*100);
+  document.getElementById('cl-progress').textContent=`${comp}/${items.length} completados (${pct}%)`;
+  document.getElementById('cl-progress').className=`badge ${pct===100?'badge-green':pct>0?'badge-amber':'badge-red'}`;
+  let html='';
+  etapas.forEach(etapa=>{
+    if(tipo==='Ingreso'&&etapa==='Onboarding completo') return;
+    const its=items.filter(it=>it.e===etapa);
+    if(!its.length) return;
+    const idxs=its.map(it=>items.indexOf(it));
+    const ec=idxs.filter(i=>clState[id][i]).length;
+    const eb=ec===idxs.length?'badge-green':ec>0?'badge-amber':'badge-gray';
+    html+=`<div class="cl-etapa-header"><span>${etapa}</span><span class="cl-etapa-badge ${eb}">${ec}/${idxs.length}</span></div>`;
+    html+=its.map(it=>{
+      const i=items.indexOf(it);
+      const checked=clState[id][i]===true;
+      const lnk=it.link?` <a href="${it.link}" target="_blank" style="color:var(--blue);font-size:11px;margin-left:6px;text-decoration:none">↗ Link</a>`:'';
+      return`<div class="cl-item ${checked?'cl-item-done':''}" onclick="toggleItemInline('${id}','${tipo}','${rol}','${fecha}',${i})">
+        <div class="cl-check ${checked?'cl-check-done':''}">${checked?'✓':''}</div>
+        <span>${it.label}${lnk}</span>
+      </div>`;
+    }).join('');
+  });
+  document.getElementById('cl-items').innerHTML=html;
+}
+
+async function toggleItemInline(id,tipo,rol,fecha,idx){
+  clState[id][idx]=!clState[id][idx];
+  await saveChecklistState(id,tipo,rol,fecha);
+  renderChecklistItemsInline(id,tipo,rol,fecha);
 }
 function renderChecklistItems(id,tipo,rol,fecha){
   const items=getItemsMap(tipo,rol);
@@ -1639,10 +1718,13 @@ async function loadPersonas(){
       else if(meses===0) antiguedad=`${anos} año${anos!==1?'s':''}`;
       else antiguedad=`${anos} año${anos!==1?'s':''} y ${meses} mes${meses!==1?'es':''}`;
     }
+    const esCore=['Manager','Lead','Core Team'].includes(rol);
+    const area=f['Área']||'';
     return`<tr>
       <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
       <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
+      ${esCore?`<td style="font-size:12px;color:var(--text2)">${area||'—'}</td>`:'<td style="color:var(--text3);font-size:12px">—</td>'}
       <td>${nivelBadgeHtml(r.id, nivel)}</td>
       <td>${f.Proyecto||'—'}</td>
       <td>${fmt(f['Fecha de ingreso'])}</td>
@@ -1656,13 +1738,13 @@ async function loadPersonas(){
   document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;
   document.getElementById('tbody-personas-eng').innerHTML=allEng.length
     ?allEng.map(rowHtml).join('')
-    :'<tr class="empty-row"><td colspan="9">Sin engineers cargados</td></tr>';
+    :'<tr class="empty-row"><td colspan="10">Sin engineers cargados</td></tr>';
 
   // Tabla Core Team
   document.getElementById('badge-personas-core').textContent=`${coreTeam.length} personas`;
   document.getElementById('tbody-personas-core').innerHTML=coreTeam.length
     ?coreTeam.map(rowHtml).join('')
-    :'<tr class="empty-row"><td colspan="9">Sin Core Team cargado</td></tr>';
+    :'<tr class="empty-row"><td colspan="10">Sin Core Team cargado</td></tr>';
 
   poblarFiltrosPersonas();
   return recs;
@@ -2029,7 +2111,7 @@ function filtrarPersonas(){
       if(!emptyRow){
         emptyRow=document.createElement('tr');
         emptyRow.className='empty-row';
-        emptyRow.innerHTML='<td colspan="9">Sin resultados</td>';
+        emptyRow.innerHTML='<td colspan="10">Sin resultados</td>';
         tb.appendChild(emptyRow);
       }
       emptyRow.style.display='';

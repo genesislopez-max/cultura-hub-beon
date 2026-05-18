@@ -394,7 +394,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
             <span class="badge badge-blue" id="badge-personas-eng">—</span>
           </div>
           <table class="data-table">
-            <thead><tr><th>Nombre</th><th>Mail</th><th>Rol en empresa</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Ingreso</th><th>Antigüedad</th><th>Manager</th><th>Cumpleaños</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Mail</th><th>Rol en empresa</th><th style="color:transparent;pointer-events:none">Área</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Ingreso</th><th>Antigüedad</th><th>Manager</th><th>Cumpleaños</th></tr></thead>
             <tbody id="tbody-personas-eng"></tbody>
           </table>
         </div>
@@ -560,7 +560,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
             </div>
           </div>
           <table class="data-table">
-            <thead><tr><th>Proyecto</th><th>Inicio</th><th>Devs</th><th>Publicaciones</th><th>Último Meet</th><th>Días sin publicar</th><th>Promedio entre pubs.</th><th></th></tr></thead>
+            <thead><tr><th>Proyecto</th><th>Inicio</th><th>Devs</th><th>Publicaciones</th><th>Último Meet</th><th>Promedio entre pubs.</th><th></th></tr></thead>
             <tbody id="tbody-proyectos"></tbody>
           </table>
         </div>
@@ -2162,7 +2162,7 @@ function filtrarProyectos(){
   });
   let emptyRow=tb.querySelector('.empty-row');
   if(count===0){
-    if(!emptyRow){emptyRow=document.createElement('tr');emptyRow.className='empty-row';emptyRow.innerHTML='<td colspan="8">Sin resultados</td>';tb.appendChild(emptyRow);}
+    if(!emptyRow){emptyRow=document.createElement('tr');emptyRow.className='empty-row';emptyRow.innerHTML='<td colspan="7">Sin resultados</td>';tb.appendChild(emptyRow);}
     emptyRow.style.display='';
   } else if(emptyRow){ emptyRow.style.display='none'; }
 }
@@ -2286,22 +2286,17 @@ async function loadProyectos(){
       promDias=Math.round(diffs.reduce((a,b)=>a+b,0)/diffs.length)+' días';
     }
 
-    let diasSinPublicar='—';
-    if(ultimaPub){
-      const d=Math.round((new Date()-new Date(ultimaPub.fecha+'T12:00:00'))/86400000);
-      diasSinPublicar=d+' días';
-    }
-
+    const fechaInicioVal=f['Fecha de Inicio']||f['Fecha de inicio']||'';
     return`<tr class="tr-clickable" onclick="openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}')">
       <td><strong>${nombre}</strong></td>
+      <td style="font-size:12px;color:var(--text2)">${fechaInicioVal?fmt(fechaInicioVal):'—'}</td>
       <td>${devBadge}</td>
       <td>${pubBadge}</td>
       <td style="font-size:12px;color:var(--text2)">${ultimaFecha}</td>
-      <td style="font-size:12px;color:var(--text2)">${diasSinPublicar}</td>
       <td style="font-size:12px;color:var(--text2)">${promDias}</td>
       <td><button onclick="event.stopPropagation();openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}',true)" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button></td>
     </tr>`;
-  }).join(''):'<tr class="empty-row"><td colspan="8">No hay proyectos activos</td></tr>';
+  }).join(''):'<tr class="empty-row"><td colspan="7">No hay proyectos activos</td></tr>';
 }
 
 // Abre el modal de Meet our Teams para un proyecto
@@ -2328,10 +2323,12 @@ function openMeetModal(proyectoId, nombre, focusForm=false){
     diasDesdeUltima=Math.round((new Date()-new Date(pubs[pubs.length-1].fecha+'T12:00:00'))/86400000);
   }
 
+  const diasSinPub=pubs.length?Math.round((new Date()-new Date(pubs[pubs.length-1].fecha+'T12:00:00'))/86400000)+'d':'—';
   document.getElementById('meet-stats').innerHTML=`
     <div class="meet-stat"><div class="meet-stat-val">${pubs.length}</div><div class="meet-stat-label">Publicaciones</div></div>
     <div class="meet-stat"><div class="meet-stat-val" style="color:var(--purple)">${promDias}</div><div class="meet-stat-label">Días promedio entre pubs.</div></div>
-    <div class="meet-stat"><div class="meet-stat-val" style="color:#9a6700">${diasDesdeUltima==='—'?'—':diasDesdeUltima+'d'}</div><div class="meet-stat-label">Desde última publicación</div></div>`;
+    <div class="meet-stat"><div class="meet-stat-val" style="color:#9a6700">${diasDesdeUltima==='—'?'—':diasDesdeUltima+'d'}</div><div class="meet-stat-label">Desde última publicación</div></div>
+    <div class="meet-stat"><div class="meet-stat-val" style="color:#C62828">${diasSinPub}</div><div class="meet-stat-label">Días sin publicar</div></div>`;
 
   // Lista de publicaciones
   const listEl=document.getElementById('meet-pub-list');

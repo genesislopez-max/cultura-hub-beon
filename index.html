@@ -388,7 +388,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
             <option value="">Todos los managers</option>
           </select>
         </div>
-        <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-bottom:16px;">
+        <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-bottom:16px;margin-top:16px;">
           <div class="table-head" style="background:linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;border-radius:13px 13px 0 0;">
             <span class="table-head-title" style="color:#0026B0">Engineers & Tech</span>
             <span class="badge badge-blue" id="badge-personas-eng">—</span>
@@ -1536,7 +1536,15 @@ function renderChecklistItemsInline(id,tipo,rol,fecha){
 
 async function toggleItemInline(id,tipo,rol,fecha,idx){
   clState[id][idx]=!clState[id][idx];
-  await saveChecklistState(id,tipo,rol,fecha);
+  // Guardar en Airtable
+  await atPatch(`Checklist/${id}`,{ItemsCompletados:JSON.stringify(clState[id])}).catch(()=>{});
+  // Avance automático de etapa si corresponde
+  const etapaCalc=calcularEtapa(tipo,rol,clState[id],fecha);
+  const recMeta_entry=recMeta[id];
+  if(recMeta_entry&&etapaCalc!==recMeta_entry.etapa){
+    await atPatch(`Checklist/${id}`,{EstadoKanban:etapaCalc}).catch(()=>{});
+    recMeta_entry.etapa=etapaCalc;
+  }
   renderChecklistItemsInline(id,tipo,rol,fecha);
 }
 function renderChecklistItems(id,tipo,rol,fecha){

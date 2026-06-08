@@ -1082,9 +1082,17 @@ function avH(n){return`<div class="avatar ${av(n)}">${ini(n)}</div>`;}
 
 // ─── AIRTABLE ────────────────────────────────────────────────────────────────
 async function atGet(table,qs=''){
-  const r=await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?maxRecords=500${qs}`,{headers:HDR});
-  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
-  return r.json();
+  // Paginación automática — Airtable devuelve max 100 por request
+  let allRecords=[], offset=null;
+  do {
+    const offsetParam=offset?`&offset=${offset}`:'';
+    const r=await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?pageSize=100${qs}${offsetParam}`,{headers:HDR});
+    if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
+    const data=await r.json();
+    allRecords=[...allRecords,...(data.records||[])];
+    offset=data.offset||null;
+  } while(offset);
+  return {records:allRecords};
 }
 async function atPost(table,fields){
   const r=await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}`,{method:'POST',headers:HDR,body:JSON.stringify({records:[{fields}]})});

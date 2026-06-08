@@ -368,10 +368,13 @@ textarea.field-input{resize:vertical;min-height:80px;}
           <select class="filter-select" id="personas-rol" onchange="filtrarPersonas()">
             <option value="">Todos los roles</option>
             <option value="Engineer">Engineer</option>
-            <option value="TEM">TEM</option>
-            <option value="Manager">Manager</option>
-            <option value="Lead">Lead</option>
             <option value="Core Team">Core Team</option>
+            <option value="Supervisor">Supervisor</option>
+            <option value="TEM">TEM</option>
+            <option value="Lead">Lead</option>
+            <option value="Manager">Manager</option>
+            <option value="COO">COO</option>
+            <option value="Founder">Founder</option>
           </select>
           <select class="filter-select" id="personas-loyalty" onchange="filtrarPersonas()">
             <option value="">Todos los niveles</option>
@@ -1079,7 +1082,7 @@ function avH(n){return`<div class="avatar ${av(n)}">${ini(n)}</div>`;}
 
 // ─── AIRTABLE ────────────────────────────────────────────────────────────────
 async function atGet(table,qs=''){
-  const r=await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?maxRecords=200${qs}`,{headers:HDR});
+  const r=await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?maxRecords=500${qs}`,{headers:HDR});
   if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
   return r.json();
 }
@@ -1669,11 +1672,11 @@ async function loadPersonas(){
   cachePersonasPorRol={TEM:[],Manager:[],Lead:[]};
 
   // Roles que pertenecen a Core Team
-  const CORE_ROLES=new Set(['Core Team','Manager','Lead']);
+  const CORE_ROLES=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
   // Roles que pertenecen a Engineers & Tech
-  const ENG_ROLES=new Set(['Engineer','TEM']);
+  const ENG_ROLES=new Set(['Engineer']);
 
-  const engineers=[], coreTeam=[], otros=[];
+  const engineers=[], coreTeam=[];
 
   recs.forEach(r=>{
     const rol=(r.fields['Rol en empresa']||'').trim(),nom=r.fields.Nombre||'';
@@ -1682,11 +1685,10 @@ async function loadPersonas(){
     if(rol==='Manager') cachePersonasPorRol.Manager.push(nom);
     if(rol==='Lead') cachePersonasPorRol.Lead.push(nom);
     if(CORE_ROLES.has(rol)) coreTeam.push(r);
-    else if(ENG_ROLES.has(rol)) engineers.push(r);
-    else otros.push(r);
+    else engineers.push(r); // Engineer y cualquier rol no clasificado va a Engineers
   });
 
-  const allEng=[...engineers,...otros];
+  const allEng=[...engineers];
 
   document.getElementById('bc-personas').textContent=recs.length;
   document.getElementById('badge-personas-h') && (document.getElementById('badge-personas-h').textContent=`${recs.length} personas`);
@@ -2781,7 +2783,7 @@ function renderOSHistorial(){
 }
 
 function getRolGroup(rol){
-  const core=['Manager','Lead','Core Team'];
+  const core=['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder'];
   return core.includes(rol)?'Core Team':'Engineers';
 }
 

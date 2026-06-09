@@ -981,7 +981,7 @@ let HDR={'Authorization':`Bearer ${TOKEN}`,'Content-Type':'application/json'};
 function actualizarHDR(){ HDR={'Authorization':`Bearer ${TOKEN}`,'Content-Type':'application/json'}; }
 
 let cachePersonasPorRol={};
-let cacheProyectos=[];
+let cacheProyectos=[], cacheProyectosRaw=[];
 let cachePersonasRaw=[];
 let cacheBeneficiosRaw=[];
 let beneficiosFiltro='Todos';
@@ -2261,6 +2261,7 @@ async function loadProyectos(){
 
   // Cache para selects — mismos proyectos visibles
   cacheProyectos=recs.map(r=>r.fields.Proyecto||'').filter(Boolean);
+  cacheProyectosRaw=todosRecs; // registros completos para resolver linked records
 
   document.getElementById('badge-proyectos-h').textContent=`${recs.length} proyectos activos`;
 

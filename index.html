@@ -806,7 +806,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
               </div>
             </div>
             <table class="data-table">
-              <thead><tr><th>Proyecto</th><th>Off sites</th><th>Personas</th><th>Destinos</th><th>Días totales</th></tr></thead>
+              <thead><tr><th>Proyecto</th><th>Veces</th><th>Personas</th><th>Destinos</th><th>Días totales</th></tr></thead>
               <tbody id="os-tbody-proyecto"></tbody>
             </table>
           </div>
@@ -2732,7 +2732,7 @@ function renderOSPersona(){
 
   const filas=Object.entries(mapa)
     .filter(([n])=>!q||n.toLowerCase().includes(q))
-    .sort((a,b)=>b[1].count-a[1].count);
+    .sort((a,b)=>b[1].ultFecha.localeCompare(a[1].ultFecha));
 
   document.getElementById('os-badge-persona').textContent=`${filas.length} personas`;
   const tb=document.getElementById('os-tbody-persona');

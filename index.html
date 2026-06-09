@@ -1980,12 +1980,16 @@ async function sincronizarGlassdoor(){
   const personas = personasData.records||[];
   const eventosExistentes = eventosData.records||[];
 
-  let creados=0, omitidos=0, sinFecha=0;
+  let creados=0, omitidos=0, sinFecha=0, noAplica=0;
 
   for(const p of personas){
     const f=p.fields;
     const nombre=(f.Nombre||'').trim();
     if(!nombre){omitidos++;continue;}
+
+    // Solo Engineers
+    const rol=(f['Rol en empresa']||'').trim();
+    if(rol!=='Engineer'){noAplica++;continue;}
 
     const fechaIngreso=f['Fecha de ingreso']||'';
     const fechaCumple=f['Fecha de cumpleaños']||'';
@@ -2012,7 +2016,7 @@ async function sincronizarGlassdoor(){
   }
 
   btn.disabled=false;btn.innerHTML='<i class="ti ti-refresh"></i> Sincronizar Glassdoor';
-  const msg=`✅ Glassdoor sincronizado: ${creados} reminders creados, ${omitidos} ya existían o ya vencieron${sinFecha?' · '+sinFecha+' sin fecha de ingreso':''}`;
+  const msg=`✅ Glassdoor sincronizado: ${creados} reminders creados, ${omitidos} ya existían o ya vencieron${sinFecha?' · '+sinFecha+' sin fecha de ingreso':''}${noAplica?' · '+noAplica+' omitidos (no son Engineers)':''}`;
   toast(msg);
   await loadEventos();
 }

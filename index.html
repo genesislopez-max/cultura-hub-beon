@@ -2656,7 +2656,23 @@ let cacheOSRaw=[];
 
 async function loadOffsites(){
   const d=await atGet('Off Sites','&sort[0][field]=Fecha inicio&sort[0][direction]=desc').catch(()=>({records:[]}));
-  cacheOSRaw=d.records||[];
+  // Resolver linked record IDs a nombres reales
+  cacheOSRaw=(d.records||[]).map(r=>{
+    const f={...r.fields};
+    // Persona: si es array con ID, buscar en cachePersonasRaw
+    if(Array.isArray(f.Persona)){
+      const id=f.Persona[0];
+      const match=cachePersonasRaw.find(p=>p.id===id);
+      f.Persona=match?match.fields.Nombre:id;
+    }
+    // Proyecto: si es array con ID, buscar en cacheProyectosRaw
+    if(Array.isArray(f.Proyecto)){
+      const id=f.Proyecto[0];
+      const match=(cacheProyectosRaw||[]).find(p=>p.id===id);
+      f.Proyecto=match?match.fields.Proyecto:id;
+    }
+    return {...r, fields:f};
+  });
   renderOSMetricas();
   renderOSPersona();
   renderOSProyecto();
@@ -2813,7 +2829,15 @@ const AW_RULES={
 
 async function loadAmbassadors(){
   const d=await atGet('Ambassador Week','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
-  cacheAWRaw=d.records||[];
+  cacheAWRaw=(d.records||[]).map(r=>{
+    const f={...r.fields};
+    if(Array.isArray(f.Persona)){
+      const id=f.Persona[0];
+      const match=cachePersonasRaw.find(p=>p.id===id);
+      f.Persona=match?match.fields.Nombre:id;
+    }
+    return {...r, fields:f};
+  });
   renderAWMetricas();
   renderAWPersonas();
   renderAWHistorial();
@@ -3092,7 +3116,21 @@ function closeSidePanel(){
 // ─── GET TOGETHER ─────────────────────────────────────────────────────────────
 async function loadGetTogether(){
   const d=await atGet('Get Together','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
-  cacheGetTogetherRaw=d.records||[];
+  // Resolver linked record IDs
+  cacheGetTogetherRaw=(d.records||[]).map(r=>{
+    const f={...r.fields};
+    if(Array.isArray(f.Persona)){
+      const id=f.Persona[0];
+      const match=cachePersonasRaw.find(p=>p.id===id);
+      f.Persona=match?match.fields.Nombre:id;
+    }
+    if(Array.isArray(f.Proyecto)){
+      const id=f.Proyecto[0];
+      const match=(cacheProyectosRaw||[]).find(p=>p.id===id);
+      f.Proyecto=match?match.fields.Proyecto:id;
+    }
+    return {...r, fields:f};
+  });
   renderGTMetricas();
   renderGTPersona();
   renderGTHistorial();
@@ -3185,14 +3223,14 @@ function filterBeneficios(grupo,btn){
 
 async function loadAll(){
   const personas=await loadPersonas();
-  // FIX: sincronizar personas sin checklist antes de cargar kanban
+  // Proyectos debe cargar antes que Off Sites / GT / AW para resolver linked records
+  await loadProyectos();
   await sincronizarPersonasEnKanban(personas);
   await Promise.all([
     loadCumpleanos(personas),
     loadAniversarios(personas),
     loadEventos(),
     loadReviews(),
-    loadProyectos(),
     loadChecklist(),
     loadBeneficios(),
     loadAmbassadors(),

@@ -1076,9 +1076,10 @@ function daysTo(ds){
   return Math.round((d-now)/86400000);
 }
 const AVS=['av-blue','av-purple','av-pink','av-green','av-amber'];
-function av(n){return AVS[(n||'').split('').reduce((a,c)=>a+c.charCodeAt(0),0)%AVS.length];}
-function ini(n){return(n||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
-function avH(n){return`<div class="avatar ${av(n)}">${ini(n)}</div>`;}
+function safeStr(n){return Array.isArray(n)?n[0]||'':typeof n==='string'?n:String(n||'');}
+function av(n){const s=safeStr(n);return AVS[s.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%AVS.length];}
+function ini(n){const s=safeStr(n)||'?';return s.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
+function avH(n){const s=safeStr(n);return`<div class="avatar ${av(s)}">${ini(s)}</div>`;}
 
 // ─── AIRTABLE ────────────────────────────────────────────────────────────────
 async function atGet(table,qs=''){

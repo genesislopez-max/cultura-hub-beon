@@ -2486,8 +2486,8 @@ function renderBenefMetricas(){
     if(a.fields.Monto){
       totalUsado+=Number(a.fields.Monto)||0;
     } else {
-      const benefNombre=Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:a.fields.Beneficio;
-      const benef=cacheBeneficiosRaw.find(b=>b.id===benefNombre||b.fields.Beneficio===benefNombre);
+      const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
+      const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===bNombre);
       if(benef?.fields.Valor) totalUsado+=Number(benef.fields.Valor)||0;
     }
   });
@@ -2649,8 +2649,8 @@ function renderBenefPersonas(){
     });
     // Beneficios asignados activos para esta persona
     const asignados=cacheBenefAsignados.filter(a=>{
-      const pNombre=Array.isArray(a.fields.Persona)?a.fields.Persona[0]:a.fields.Persona;
-      return pNombre===nombre&&(a.fields.Estado||'Activo')==='Activo';
+      const pNombre=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'');
+      return pNombre.trim()===nombre.trim()&&(a.fields.Estado||'Activo')==='Activo';
     });
 
     // Sumar valor: usa Monto del asignado si existe, sino Valor del catálogo
@@ -2659,8 +2659,9 @@ function renderBenefPersonas(){
       if(a.fields.Monto){
         usado+=Number(a.fields.Monto)||0;
       } else {
-        const bNombre=Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:a.fields.Beneficio;
-        const benef=cacheBeneficiosRaw.find(b=>b.id===bNombre||b.fields.Beneficio===bNombre);
+        // Beneficio ya resuelto a nombre en loadBeneficios
+        const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
+        const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===bNombre);
         if(benef?.fields.Valor) usado+=Number(benef.fields.Valor)||0;
       }
     });
@@ -3048,8 +3049,8 @@ async function verBenefPersona(nombre, grupo, nivel){
   // Sumar monto de beneficios asignados con prioridad a campo Monto
   const usadoBenef=benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').reduce((s,a)=>{
     if(a.fields.Monto) return s+Number(a.fields.Monto);
-    const bId=Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:a.fields.Beneficio;
-    const b=cacheBeneficiosRaw.find(x=>x.id===bId||x.fields.Beneficio===bId);
+    const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
+    const b=cacheBeneficiosRaw.find(x=>x.fields.Beneficio===bNombre);
     return s+(b?.fields.Valor?Number(b.fields.Valor):0);
   },0);
   const osRecs=dOS.records||[];

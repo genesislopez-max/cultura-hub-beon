@@ -1974,7 +1974,7 @@ async function sincronizarGlassdoor(){
   // Traer todas las personas y todos los eventos existentes
   const [personasData, eventosData] = await Promise.all([
     atGet('Personas','&sort[0][field]=Nombre&sort[0][direction]=asc').catch(()=>({records:[]})),
-    atGet('Eventos','&maxRecords=500').catch(()=>({records:[]}))
+    atGet('Eventos').catch(()=>({records:[]}))
   ]);
 
   const personas = personasData.records||[];
@@ -2441,8 +2441,8 @@ let cacheBenefAsignados=[], cachePresupuestoLoyalty=[];
 async function loadBeneficios(){
   const [dBenef, dAsig, dPres] = await Promise.all([
     atGet('Beneficios','&sort[0][field]=Beneficio&sort[0][direction]=asc'),
-    atGet('Beneficios Asignados','&maxRecords=500'),
-    atGet('Presupuesto Loyalty','&maxRecords=50')
+    atGet('Beneficios Asignados'),
+    atGet('Presupuesto Loyalty')
   ]);
   cacheBeneficiosRaw=dBenef.records||[];
   cacheBenefAsignados=dAsig.records||[];

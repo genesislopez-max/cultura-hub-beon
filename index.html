@@ -3443,7 +3443,7 @@ function buildIngresoSimpleHTML(){
 <div class="field-group"><label class="field-label">Proyecto</label><select class="field-input" id="f-proyecto"></select><div class="field-hint">Elegí de la lista o seleccioná "＋ Nuevo proyecto" para crear uno</div></div>
 <div class="field-group"><label class="field-label">Fecha de ingreso *</label><input class="field-input" id="f-ingreso" type="date"></div>
 <div class="field-group"><label class="field-label">Comentarios</label><textarea class="field-input" id="f-comentarios" placeholder="Información adicional, contexto, aclaraciones..."></textarea></div>
-<div class="auto-preview"><strong>Se crearán automáticamente:</strong>👤 Persona · 📋 Checklist de ingreso en Pre-ingreso · ⭐ Reminder aniversario · 📝 Reminder Glassdoor (4 meses)</div>`;
+<div class="auto-preview"><strong>Se crearán automáticamente:</strong>👤 Persona · 📋 Checklist de ingreso en Pre-ingreso · ⭐ Reminder aniversario · 📝 Reminder Glassdoor (4 meses, solo Engineers)</div>`;
 }
 
 // FORMULARIO COMPLETO (admin)
@@ -3473,7 +3473,7 @@ function buildIngresoCompletoHTML(){
 </div>
 <div class="field-group"><label class="field-label">Fecha de ingreso</label><input class="field-input" id="f-ingreso" type="date"></div>
 <div class="field-group"><label class="field-label">Fecha de cumpleaños</label><input class="field-input" id="f-cumple" type="date"></div>
-<div class="auto-preview"><strong>Se crearán automáticamente:</strong>👤 Persona · 📋 Checklist · 🎂 Reminder cumpleaños · ⭐ Aniversario · 📝 Glassdoor (4 meses)</div>`;
+<div class="auto-preview"><strong>Se crearán automáticamente:</strong>👤 Persona · 📋 Checklist · 🎂 Reminder cumpleaños · ⭐ Aniversario · 📝 Glassdoor (4 meses, solo Engineers)</div>`;
 }
 
 async function saveIngresoSimple(){
@@ -3513,7 +3513,7 @@ async function saveIngresoSimple(){
     try{await atPost('Eventos',{Evento:`⭐ Aniversario 1 año — ${nombre}`,Tipo:'Aniversario',Fecha:aniv.toISOString().split('T')[0],Estado:'Pendiente'});}
     catch(e){console.error('Error creando aniversario:',e.message);reminderErrors.push('aniversario');}
   }
-  if(!tieneGlassdoor){
+  if(!tieneGlassdoor&&perfilChecklist==='Engineer'){
     const gd=new Date(ing);gd.setMonth(gd.getMonth()+4);
     try{await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Otro',Fecha:gd.toISOString().split('T')[0],Estado:'Pendiente'});}
     catch(e){console.error('Error creando Glassdoor reminder:',e.message);reminderErrors.push('Glassdoor');}
@@ -3586,7 +3586,7 @@ async function saveIngresoCompleto(){
       try{await atPost('Eventos',{Evento:`⭐ Aniversario 1 año — ${nombre}`,Tipo:'Aniversario',Fecha:aniv.toISOString().split('T')[0],Estado:'Pendiente'});}
       catch(e){console.error('Error creando aniversario:',e.message);reminderErrors2.push('aniversario');}
     }
-    if(!tieneGlassdoor){
+    if(!tieneGlassdoor&&(v('f-rol')==='Engineer'||v('f-rol-completo')==='Engineer')){
       const gd=new Date(ing);gd.setMonth(gd.getMonth()+4);
       try{await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Otro',Fecha:gd.toISOString().split('T')[0],Estado:'Pendiente'});}
       catch(e){console.error('Error creando Glassdoor:',e.message);reminderErrors2.push('Glassdoor');}
@@ -3693,8 +3693,10 @@ const FORMS={
         const aniv=new Date(ing);aniv.setFullYear(aniv.getFullYear()+1);
         await atPost('Eventos',{Evento:`⭐ Aniversario 1 año — ${n}`,Tipo:'Aniversario',Fecha:aniv.toISOString().split('T')[0],Estado:'Pendiente'});
         const gd=new Date(ing);gd.setMonth(gd.getMonth()+4);
-        await atPost('Eventos',{Evento:`📋 Glassdoor — ${n}`,Tipo:'Otro',Fecha:gd.toISOString().split('T')[0],Estado:'Pendiente'});
-        toast(`Checklist + 3 reminders creados para ${n} ✓`);
+        if(rol==='Engineer'){
+          await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${n}`,Tipo:'Otro',Fecha:gd.toISOString().split('T')[0],Estado:'Pendiente'});
+        }
+        toast(`Checklist + reminders creados para ${n} ✓`);
       }
       return true;
     }},

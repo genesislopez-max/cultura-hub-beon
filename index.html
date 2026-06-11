@@ -2445,8 +2445,25 @@ async function loadBeneficios(){
     atGet('Presupuesto Loyalty')
   ]);
   cacheBeneficiosRaw=dBenef.records||[];
-  cacheBenefAsignados=dAsig.records||[];
   cachePresupuestoLoyalty=dPres.records||[];
+
+  // Resolver linked records en Beneficios Asignados
+  cacheBenefAsignados=(dAsig.records||[]).map(r=>{
+    const f={...r.fields};
+    // Persona: si es linked record (array de IDs), resolver a nombre
+    if(Array.isArray(f.Persona)){
+      const id=f.Persona[0];
+      const match=cachePersonasRaw.find(p=>p.id===id);
+      f.Persona=match?match.fields.Nombre:id;
+    }
+    // Beneficio: si es linked record (array de IDs), resolver a nombre
+    if(Array.isArray(f.Beneficio)){
+      const id=f.Beneficio[0];
+      const match=cacheBeneficiosRaw.find(b=>b.id===id);
+      f.Beneficio=match?match.fields.Beneficio:id;
+    }
+    return {...r, fields:f};
+  });
   renderBenefCatalogo();
   renderBenefPersonas();
   renderBenefMetricas();

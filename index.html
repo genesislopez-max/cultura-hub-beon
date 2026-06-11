@@ -2466,9 +2466,13 @@ function renderBenefMetricas(){
   // Presupuesto total usado = suma de valores de beneficios asignados activos
   let totalUsado=0;
   cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo').forEach(a=>{
-    const benefNombre=Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:a.fields.Beneficio;
-    const benef=cacheBeneficiosRaw.find(b=>b.id===benefNombre||b.fields.Beneficio===benefNombre);
-    if(benef?.fields.Valor) totalUsado+=Number(benef.fields.Valor)||0;
+    if(a.fields.Monto){
+      totalUsado+=Number(a.fields.Monto)||0;
+    } else {
+      const benefNombre=Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:a.fields.Beneficio;
+      const benef=cacheBeneficiosRaw.find(b=>b.id===benefNombre||b.fields.Beneficio===benefNombre);
+      if(benef?.fields.Valor) totalUsado+=Number(benef.fields.Valor)||0;
+    }
   });
   document.getElementById('mb-presupuesto').textContent=totalUsado>0?`$${totalUsado.toLocaleString('es-AR')}`:'—';
 
@@ -2565,6 +2569,21 @@ function renderBenefCatalogo(){
   container.innerHTML=html;
 }
 
+function actualizarMontoBenef(){
+  const sel=document.getElementById('f-ba-beneficio');
+  if(!sel) return;
+  const nombre=sel.value;
+  const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===nombre);
+  const montoInput=document.getElementById('f-ba-monto');
+  if(montoInput&&benef?.fields.Valor){
+    montoInput.value=Number(benef.fields.Valor);
+    montoInput.placeholder='Valor del catálogo (podés modificarlo)';
+  } else if(montoInput){
+    montoInput.value='';
+    montoInput.placeholder='Ingresá el monto para esta persona';
+  }
+}
+
 function filtrarBenefPersonas(){ renderBenefPersonas(); }
 
 function renderBenefPersonas(){
@@ -2617,12 +2636,16 @@ function renderBenefPersonas(){
       return pNombre===nombre&&(a.fields.Estado||'Activo')==='Activo';
     });
 
-    // Sumar valor de cada beneficio asignado
+    // Sumar valor: usa Monto del asignado si existe, sino Valor del catálogo
     let usado=0;
     asignados.forEach(a=>{
-      const bNombre=Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:a.fields.Beneficio;
-      const benef=cacheBeneficiosRaw.find(b=>b.id===bNombre||b.fields.Beneficio===bNombre);
-      if(benef?.fields.Valor) usado+=Number(benef.fields.Valor)||0;
+      if(a.fields.Monto){
+        usado+=Number(a.fields.Monto)||0;
+      } else {
+        const bNombre=Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:a.fields.Beneficio;
+        const benef=cacheBeneficiosRaw.find(b=>b.id===bNombre||b.fields.Beneficio===bNombre);
+        if(benef?.fields.Valor) usado+=Number(benef.fields.Valor)||0;
+      }
     });
 
     const pct=tope>0?Math.min(100,Math.round((usado/tope)*100)):0;
@@ -3005,6 +3028,13 @@ async function verBenefPersona(nombre, grupo, nivel){
   const benefAsig=dBenefAsig.records||[];
   const caps=dCap.records||[];
   const awRecs=dAW.records||[];
+  // Sumar monto de beneficios asignados con prioridad a campo Monto
+  const usadoBenef=benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').reduce((s,a)=>{
+    if(a.fields.Monto) return s+Number(a.fields.Monto);
+    const bId=Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:a.fields.Beneficio;
+    const b=cacheBeneficiosRaw.find(x=>x.id===bId||x.fields.Beneficio===bId);
+    return s+(b?.fields.Valor?Number(b.fields.Valor):0);
+  },0);
   const osRecs=dOS.records||[];
   const gtRecs=dGT.records||[];
 
@@ -3735,6 +3765,38 @@ const FORMS={
       if(v('f-aw-vuelo')) fields['Costo vuelo']=Number(v('f-aw-vuelo'));
       if(v('f-aw-aloja')) fields['Costo alojamiento']=Number(v('f-aw-aloja'));
       await atPost('Ambassador Week',fields);return true;
+    }},
+
+  'beneficios-asignados':{title:'Asignar beneficio',html:()=>{
+    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    const beneficios=cacheBeneficiosRaw.filter(b=>(b.fields.Estado||'Activo')==='Activo').map(b=>b.fields.Beneficio||'').filter(Boolean).sort();
+    return`
+<div class="field-group"><label class="field-label">Persona *</label>
+  <select class="field-input" id="f-ba-persona">
+    <option value="">Seleccioná una persona…</option>
+    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Beneficio *</label>
+  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef()">
+    <option value="">Seleccioná un beneficio…</option>
+    ${beneficios.map(b=>`<option value="${b}">${b}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Monto ($)</label>
+  <input class="field-input" id="f-ba-monto" type="number" min="0" placeholder="Se autocompleta si el beneficio tiene valor fijo">
+</div>
+<div class="field-group"><label class="field-label">Fecha activación</label><input class="field-input" id="f-ba-fecha" type="date"></div>
+<div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">Si el beneficio tiene valor fijo en el catálogo, se autocompleta. Podés modificarlo.</div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-ba-persona')){toast('La persona es obligatoria',true);return false;}
+      if(!v('f-ba-beneficio')){toast('El beneficio es obligatorio',true);return false;}
+      const fields={Persona:v('f-ba-persona'),Beneficio:v('f-ba-beneficio'),Estado:'Activo'};
+      if(v('f-ba-fecha')) fields['Fecha activación']=v('f-ba-fecha');
+      if(v('f-ba-monto')) fields.Monto=Number(v('f-ba-monto'));
+      await atPost('Beneficios Asignados',fields);return true;
     }},
 
   beneficios:{title:'Nuevo beneficio al catálogo',html:()=>`

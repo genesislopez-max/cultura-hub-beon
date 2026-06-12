@@ -700,8 +700,8 @@ textarea.field-input{resize:vertical;min-height:80px;}
 
         <div class="metrics">
           <div class="metric"><div class="metric-label">Total asistencias</div><div class="metric-val" style="color:var(--blue)" id="aw-total">—</div><div class="metric-sub">historial completo</div></div>
-          <div class="metric"><div class="metric-label">Costo vuelos cubiertos</div><div class="metric-val" style="color:#9a6700" id="aw-vuelos">—</div><div class="metric-sub">50% del total</div></div>
-          <div class="metric"><div class="metric-label">Costo alojamiento cubierto</div><div class="metric-val" style="color:#9a6700" id="aw-aloja">—</div><div class="metric-sub">100% del total</div></div>
+          <div class="metric"><div class="metric-label">Ediciones realizadas</div><div class="metric-val" style="color:#9a6700" id="aw-vuelos">—</div><div class="metric-sub">distintas</div></div>
+          <div class="metric"><div class="metric-label">Personas que asistieron</div><div class="metric-val" style="color:#9a6700" id="aw-aloja">—</div><div class="metric-sub">únicas</div></div>
           <div class="metric"><div class="metric-label">Personas que asistieron</div><div class="metric-val" style="color:#0F6E56" id="aw-personas">—</div><div class="metric-sub" id="aw-personas-sub"></div></div>
         </div>
 
@@ -733,7 +733,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
               </select>
             </div>
             <table class="data-table">
-              <thead><tr><th>Persona</th><th>Nivel</th><th>Veces asistió</th><th>Cobertura próxima vez</th><th>Asistencias disponibles</th><th>Costo total cubierto</th></tr></thead>
+              <thead><tr><th>Persona</th><th>Nivel</th><th>Veces asistió</th><th>Cobertura próxima vez</th><th>Asistencias disponibles</th><th>Ediciones</th></tr></thead>
               <tbody id="aw-tbody-personas"></tbody>
             </table>
           </div>
@@ -753,7 +753,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
               </div>
             </div>
             <table class="data-table">
-              <thead><tr><th>Persona</th><th>Nivel</th><th>Edición / Destino</th><th>Fecha</th><th>Costo vuelo</th><th>Costo alojamiento</th><th>BEON cubrió</th></tr></thead>
+              <thead><tr><th>Persona</th><th>Nivel</th><th>Edición AW</th><th>Acompañantes</th><th>% Cubierto vuelo</th></tr></thead>
               <tbody id="aw-tbody-historial"></tbody>
             </table>
           </div>
@@ -2944,7 +2944,7 @@ const AW_RULES={
 };
 
 async function loadAmbassadors(){
-  const d=await atGet('Ambassador Week','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
+  const d=await atGet('Ambassador Week').catch(()=>({records:[]}));
   cacheAWRaw=(d.records||[]).map(r=>{
     const f={...r.fields};
     if(Array.isArray(f.Persona)){
@@ -2968,19 +2968,17 @@ function switchAWTab(tab,btn){
 
 function renderAWMetricas(){
   const total=cacheAWRaw.length;
-  let totalVuelo=0, totalAloja=0;
   const personas=new Set();
+  const ediciones=new Set();
   cacheAWRaw.forEach(r=>{
-    const vuelo=Number(r.fields['Costo vuelo']||0);
-    const aloja=Number(r.fields['Costo alojamiento']||0);
-    totalVuelo+=vuelo*0.5;
-    totalAloja+=aloja;
     const p=Array.isArray(r.fields.Persona)?r.fields.Persona[0]:r.fields.Persona;
     if(p) personas.add(p);
+    const ed=r.fields['Édición AW']||r.fields['Edición/Destino']||'';
+    if(ed) ediciones.add(ed);
   });
   document.getElementById('aw-total').textContent=total;
-  document.getElementById('aw-vuelos').textContent=totalVuelo>0?`$${Math.round(totalVuelo).toLocaleString('es-AR')}`:'$0';
-  document.getElementById('aw-aloja').textContent=totalAloja>0?`$${Math.round(totalAloja).toLocaleString('es-AR')}`:'$0';
+  document.getElementById('aw-vuelos').textContent=ediciones.size||'—';
+  document.getElementById('aw-aloja').textContent=personas.size;
   document.getElementById('aw-personas').textContent=personas.size;
   document.getElementById('aw-personas-sub').textContent=`de ${cachePersonasRaw.length} en el equipo`;
 }
@@ -2997,10 +2995,10 @@ function renderAWPersonas(){
   cacheAWRaw.forEach(r=>{
     const p=Array.isArray(r.fields.Persona)?r.fields.Persona[0]:r.fields.Persona;
     if(!p) return;
-    if(!asistMap[p]) asistMap[p]={count:0,vuelo:0,aloja:0};
+    if(!asistMap[p]) asistMap[p]={count:0,ediciones:[]};
     asistMap[p].count++;
-    asistMap[p].vuelo+=Number(r.fields['Costo vuelo']||0)*0.5;
-    asistMap[p].aloja+=Number(r.fields['Costo alojamiento']||0);
+    const ed=r.fields['Édición AW']||r.fields['Edición/Destino']||'';
+    if(ed) asistMap[p].ediciones.push(ed);
   });
 
   const personas=cachePersonasRaw.filter(p=>{
@@ -3021,9 +3019,9 @@ function renderAWPersonas(){
     const nombre=p.fields.Nombre||'—';
     const nivel=p.fields['Nivel Loyalty']||'Spark';
     const regla=AW_RULES[nivel]||AW_RULES.Spark;
-    const data=asistMap[nombre]||{count:0,vuelo:0,aloja:0};
+    const data=asistMap[nombre]||{count:0,ediciones:[]};
     const veces=data.count;
-    const costoTotal=Math.round(data.vuelo+data.aloja);
+    const edicionesStr=data.ediciones.slice(-2).join(', ')+(data.ediciones.length>2?` +${data.ediciones.length-2}`:'');
 
     // Calcular cobertura próxima vez
     let cobertura='', disponibles='';
@@ -3049,7 +3047,7 @@ function renderAWPersonas(){
       <td style="font-weight:600;font-size:15px">${veces}</td>
       <td style="font-size:12px;color:var(--text2)">${cobertura}</td>
       <td>${disponibles}</td>
-      <td style="font-size:13px;font-weight:500">${costoTotal>0?`$${costoTotal.toLocaleString('es-AR')}`:'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${edicionesStr||'—'}</td>
     </tr>`;
   }).join('') || '<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
 }
@@ -3073,20 +3071,18 @@ function renderAWHistorial(){
     const nombre=Array.isArray(f.Persona)?f.Persona[0]:(f.Persona||'—');
     const persona=cachePersonasRaw.find(p=>p.fields.Nombre===nombre);
     const nivel=persona?.fields['Nivel Loyalty']||'Spark';
-    const vuelo=Number(f['Costo vuelo']||0);
-    const aloja=Number(f['Costo alojamiento']||0);
-    const cubierto=Math.round(vuelo*0.5+aloja);
+    const edicion=f['Édición AW']||f['Edición/Destino']||'—';
+    const acomp=f['Acompañantes'];
+    const pct=f['Porcentaje cubierto'];
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr style="${bg}">
       <td>${avH(nombre)}${nombre}</td>
       <td><span class="badge ${nivelColors[nivel]||'badge-gray'}">${nivel}</span></td>
-      <td>${f['Edición/Destino']||'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}</td>
-      <td style="font-size:12px;color:var(--text2)">${vuelo>0?`$${vuelo.toLocaleString('es-AR')}`:'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${aloja>0?`$${aloja.toLocaleString('es-AR')}`:'—'}</td>
-      <td style="font-weight:600;font-size:13px;color:#0F6E56">${cubierto>0?`$${cubierto.toLocaleString('es-AR')}`:'—'}</td>
+      <td style="font-size:12px">${edicion}</td>
+      <td style="font-size:12px;color:var(--text2)">${acomp!=null?acomp+' acomp.':'—'}</td>
+      <td style="font-weight:600;color:${pct===50?'var(--blue)':pct===100?'#0F6E56':'var(--text2)'}">${pct!=null?pct+'%':'—'}</td>
     </tr>`;
-  }).join('') || '<tr class="empty-row"><td colspan="7">Sin registros</td></tr>';
+  }).join('') || '<tr class="empty-row"><td colspan="5">Sin registros</td></tr>';
 }
 
 // ─── PANEL LATERAL PERSONA ────────────────────────────────────────────────────
@@ -3195,10 +3191,11 @@ async function verBenefPersona(nombre, grupo, nivel){
     <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${awCobertura}</div>
     ${awRecs.length?awRecs.map(r=>{
       const f=r.fields;
-      const cubierto=Math.round(Number(f['Costo vuelo']||0)*0.5+Number(f['Costo alojamiento']||0));
+      const edicion=f['Édición AW']||f['Edición/Destino']||'—';
+      const pct=f['Porcentaje cubierto'];
       return`<div class="side-panel-row">
-        <span>${f['Edición/Destino']||'—'} <span style="font-size:11px;color:var(--text3)">${fmt(f.Fecha)}</span></span>
-        ${cubierto?`<span style="font-size:12px;font-weight:600;color:#0F6E56">$${cubierto.toLocaleString('es-AR')} cubiertos</span>`:''}
+        <span>${edicion}</span>
+        <span style="font-size:12px;font-weight:600;color:${pct===50?'var(--blue)':pct===100?'#0F6E56':'var(--text2)'}">${pct!=null?pct+'% vuelo cubierto':'—'}</span>
       </div>`;
     }).join(''):`<div class="sp-empty">Sin asistencias registradas</div>`}
   </div>`;
@@ -3842,28 +3839,40 @@ const FORMS={
     }},
 
   ambassadors:{title:'Registrar asistencia AW',html:()=>{
-    const opciones=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    // Obtener ediciones únicas del cache para mostrar como referencia
+    const ediciones=[...new Set(cacheAWRaw.map(r=>r.fields['Édición AW']||'').filter(Boolean))].sort();
     return`
 <div class="field-group"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-aw-persona">
     <option value="">Seleccioná una persona…</option>
-    ${opciones.map(n=>`<option value="${n}">${n}</option>`).join('')}
+    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
   </select>
 </div>
-<div class="field-group"><label class="field-label">Edición / Destino</label><input class="field-input" id="f-aw-destino" placeholder="Ej: AW 2025 — Buenos Aires"></div>
-<div class="field-group"><label class="field-label">Fecha</label><input class="field-input" id="f-aw-fecha" type="date"></div>
-<div class="field-group"><label class="field-label">Costo vuelo ($)</label><input class="field-input" id="f-aw-vuelo" type="number" min="0" placeholder="Costo total del vuelo"></div>
-<div class="field-group"><label class="field-label">Costo alojamiento ($)</label><input class="field-input" id="f-aw-aloja" type="number" min="0" placeholder="Costo total del alojamiento"></div>
-<div class="field-hint" style="padding:0 0 8px;font-size:12px;color:var(--text3)">BEON cubrirá el 50% del vuelo y el 100% del alojamiento automáticamente según el nivel Loyalty.</div>
+<div class="field-group"><label class="field-label">Edición AW *</label>
+  <input class="field-input" id="f-aw-edicion" list="aw-ediciones-list" placeholder="Ej: diciembre 2021">
+  <datalist id="aw-ediciones-list">
+    ${ediciones.map(e=>`<option value="${e}">`).join('')}
+  </datalist>
+</div>
+<div class="field-group"><label class="field-label">Acompañantes</label>
+  <input class="field-input" id="f-aw-acomp" type="number" min="0" placeholder="0 si fue solo/a">
+</div>
+<div class="field-group"><label class="field-label">Porcentaje cubierto por BEON</label>
+  <select class="field-input" id="f-aw-pct">
+    <option value="50">50%</option>
+    <option value="100">100%</option>
+  </select>
+</div>
+<div class="field-hint" style="padding:0 0 8px;font-size:12px;color:var(--text3)">El porcentaje corresponde a la cobertura del vuelo. El alojamiento siempre es 100% cubierto por BEON.</div>
 `;},
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       if(!v('f-aw-persona')){toast('Seleccioná una persona',true);return false;}
-      const fields={Persona:v('f-aw-persona')};
-      if(v('f-aw-destino')) fields['Edición/Destino']=v('f-aw-destino');
-      if(v('f-aw-fecha')) fields.Fecha=v('f-aw-fecha');
-      if(v('f-aw-vuelo')) fields['Costo vuelo']=Number(v('f-aw-vuelo'));
-      if(v('f-aw-aloja')) fields['Costo alojamiento']=Number(v('f-aw-aloja'));
+      if(!v('f-aw-edicion')){toast('La edición AW es obligatoria',true);return false;}
+      const fields={Persona:v('f-aw-persona'),'Édición AW':v('f-aw-edicion')};
+      if(v('f-aw-acomp')) fields['Acompañantes']=Number(v('f-aw-acomp'));
+      if(v('f-aw-pct')) fields['Porcentaje cubierto']=Number(v('f-aw-pct'));
       await atPost('Ambassador Week',fields);return true;
     }},
 

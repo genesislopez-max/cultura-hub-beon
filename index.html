@@ -209,6 +209,11 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .badge-nivel-Lightning{background:#D6DEFF;color:#0026B0;font-weight:600;}
 .badge-nivel-Thunder{background:#E8DEFF;color:#4A1FAA;font-weight:600;}
 .badge-nivel-Storm{background:#101117;color:#fff;font-weight:600;}
+.pag-bar{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-top:1px solid var(--border);background:var(--bg2);}
+.pag-btn{background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.pag-btn:disabled{opacity:0.35;cursor:not-allowed;}
+.pag-btn:not(:disabled):hover{border-color:var(--blue);color:var(--blue);}
+.pag-info{font-size:12px;color:var(--text3);}
 .nivel-select-wrap{position:relative;display:inline-block;}
 .nivel-dropdown{position:absolute;top:calc(100% + 4px);left:0;background:var(--bg2);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.12);z-index:50;min-width:160px;overflow:hidden;}
 .nivel-option{padding:9px 14px;font-size:13px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:8px;transition:background 0.1s;}
@@ -412,6 +417,11 @@ textarea.field-input{resize:vertical;min-height:80px;}
             <thead><tr><th>Nombre</th><th>Mail</th><th>Rol</th><th>Área</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Ingreso</th><th>Antigüedad</th><th>Manager</th><th>Cumpleaños</th></tr></thead>
             <tbody id="tbody-personas-core"></tbody>
           </table>
+          <div class="pag-bar" id="pag-bar-core" style="display:none">
+            <button class="pag-btn" id="pag-prev-core" onclick="cambiarPaginaPersonas('core',-1)">← Anterior</button>
+            <span class="pag-info" id="pag-info-core"></span>
+            <button class="pag-btn" id="pag-next-core" onclick="cambiarPaginaPersonas('core',1)">Siguiente →</button>
+          </div>
         </div>
       </div>
 
@@ -998,6 +1008,41 @@ function actualizarHDR(){ HDR={'Authorization':`Bearer ${TOKEN}`,'Content-Type':
 let cachePersonasPorRol={};
 let cacheProyectos=[], cacheProyectosRaw=[];
 let cachePersonasRaw=[];
+const PAG_SIZE=50;
+let pagState={eng:{page:0,data:[]},core:{page:0,data:[]}};
+
+function renderPagina(grupo){
+  const {page,data}=pagState[grupo];
+  const tb=document.getElementById(`tbody-personas-${grupo}`);
+  const bar=document.getElementById(`pag-bar-${grupo}`);
+  const info=document.getElementById(`pag-info-${grupo}`);
+  const btnPrev=document.getElementById(`pag-prev-${grupo}`);
+  const btnNext=document.getElementById(`pag-next-${grupo}`);
+  if(!tb||!data.length){if(bar) bar.style.display='none';return;}
+  const totalPags=Math.ceil(data.length/PAG_SIZE);
+  const inicio=page*PAG_SIZE, fin=Math.min(inicio+PAG_SIZE,data.length);
+  const slice=data.slice(inicio,fin);
+  if(grupo==='eng'){
+    tb.innerHTML=slice.map(rowHtmlEng).join('')||'<tr class="empty-row"><td colspan="9">Sin resultados</td></tr>';
+  } else {
+    tb.innerHTML=slice.map(rowHtml).join('')||'<tr class="empty-row"><td colspan="10">Sin resultados</td></tr>';
+  }
+  if(totalPags>1){
+    bar.style.display='flex';
+    info.textContent=`${inicio+1}–${fin} de ${data.length} personas`;
+    btnPrev.disabled=page===0;
+    btnNext.disabled=page>=totalPags-1;
+  } else {
+    bar.style.display='none';
+  }
+}
+
+function cambiarPaginaPersonas(grupo,dir){
+  const totalPags=Math.ceil(pagState[grupo].data.length/PAG_SIZE);
+  pagState[grupo].page=Math.max(0,Math.min(pagState[grupo].page+dir,totalPags-1));
+  renderPagina(grupo);
+  document.getElementById(`wrap-${grupo==='eng'?'engineers':'coreteam'}`)?.scrollIntoView({behavior:'smooth',block:'start'});
+}
 let cacheBeneficiosRaw=[];
 let beneficiosFiltro='Todos';
 
@@ -1785,15 +1830,13 @@ async function loadPersonas(){
 
   // Tabla Engineers & Tech
   document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;
-  document.getElementById('tbody-personas-eng').innerHTML=allEng.length
-    ?allEng.map(rowHtmlEng).join('')
-    :'<tr class="empty-row"><td colspan="9">Sin engineers cargados</td></tr>';
+  pagState.eng={page:0,data:allEng};
+  renderPagina('eng');
 
   // Tabla Core Team
   document.getElementById('badge-personas-core').textContent=`${coreTeam.length} personas`;
-  document.getElementById('tbody-personas-core').innerHTML=coreTeam.length
-    ?coreTeam.map(rowHtml).join('')
-    :'<tr class="empty-row"><td colspan="10">Sin Core Team cargado</td></tr>';
+  pagState.core={page:0,data:coreTeam};
+  renderPagina('core');
 
   poblarFiltrosPersonas();
   return recs;
@@ -2228,6 +2271,11 @@ function filtrarPersonas(){
   const cB=document.getElementById('badge-personas-core');
   if(eB) eB.textContent=`${engCount} personas`;
   if(cB) cB.textContent=`${coreCount} personas`;
+  // Actualizar paginación con resultados filtrados
+  const engFiltered=[...document.getElementById('tbody-personas-eng').querySelectorAll('tr:not([style*="display: none"])')];
+  // Resetear página al filtrar
+  pagState.eng.page=0;
+  pagState.core.page=0;
 }
 
 function filtrarReviews(){
@@ -2945,7 +2993,11 @@ const AW_RULES={
 
 // Helper para leer campo Edición AW con o sin acento
 function getEdicionAW(fields){
-  return fields['Edición AW']||fields['Édición AW']||fields['Edicion AW']||fields['Edición/Destino']||'';
+  // Intentar todas las variantes posibles del nombre del campo
+  const val=fields['Edición AW']||fields['Édición AW']||fields['Edicion AW']||fields['edición AW']||fields['Edición/Destino']||'';
+  // Si es array (single select puede venir así), tomar el primer elemento
+  if(Array.isArray(val)) return val[0]||'';
+  return val;
 }
 
 // Calcular % de vuelo cubierto según historial
@@ -3905,7 +3957,7 @@ const FORMS={
       const persona=cachePersonasRaw.find(p=>p.fields.Nombre===v('f-aw-persona'));
       const nivel=persona?.fields['Nivel Loyalty']||'Spark';
       const pctCalculado=calcPctVuelo(v('f-aw-persona'),nivel,cacheAWRaw);
-      const fields={Persona:v('f-aw-persona'),'Édición AW':v('f-aw-edicion'),'Porcentaje cubierto':pctCalculado};
+      const fields={Persona:v('f-aw-persona'),'Edición AW':v('f-aw-edicion'),'Porcentaje cubierto':pctCalculado};
       if(v('f-aw-acomp')) fields['Acompañantes']=Number(v('f-aw-acomp'));
       await atPost('Ambassador Week',fields);return true;
     }},

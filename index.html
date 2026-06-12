@@ -258,8 +258,10 @@ textarea.field-input{resize:vertical;min-height:80px;}
     <input class="config-input" id="cfg-token" type="password" placeholder="patXXXXXX...">
     <label class="config-label">Base ID</label>
     <input class="config-input" id="cfg-base" placeholder="appXXXXXX...">
+    <label class="config-label">Slack Webhook URL <span style="font-weight:400;color:var(--text3)">(opcional)</span></label>
+    <input class="config-input" id="cfg-slack" type="password" placeholder="https://hooks.slack.com/services/...">
     <button class="config-btn" onclick="guardarConfig()">Conectar al Hub →</button>
-    <div class="config-hint">Podés encontrar estos datos en tu cuenta de Airtable.<br>Una vez configurado, no tenés que volver a ingresarlos.</div>
+    <div class="config-hint">Podés encontrar el Token y Base ID en tu cuenta de Airtable.<br>El Slack Webhook es opcional — activa las notificaciones automáticas.<br>Una vez configurado, no tenés que volver a ingresarlos.</div>
   </div>
 </div>
 
@@ -466,6 +468,9 @@ textarea.field-input{resize:vertical;min-height:80px;}
             <span class="badge badge-blue" id="badge-eventos-h">—</span>
             <button onclick="sincronizarGlassdoor()" id="btn-sync-reminders" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
               <i class="ti ti-refresh"></i> Sincronizar Glassdoor
+            </button>
+            <button onclick="limpiarGlassdoorCoreTeam()" id="btn-clean-reminders" style="background:none;border:1px solid #FECACA;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:#C62828;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
+              <i class="ti ti-trash"></i> Limpiar Core Team
             </button>
           </div>
           <div class="search-bar">
@@ -974,6 +979,16 @@ textarea.field-input{resize:vertical;min-height:80px;}
 <div class="toast" id="toast"></div>
 
 <script>
+// Slack Webhook — se guarda en localStorage, nunca en el código
+let SLACK_WEBHOOK=localStorage.getItem('slack_webhook')||'';
+
+async function sendSlack(text){
+  if(!SLACK_WEBHOOK) return; // si no está configurado, no hace nada
+  try{
+    await fetch(SLACK_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+  }catch(e){console.error('Slack error:',e.message);}
+}
+
 // Token y Base ID — se guardan en localStorage, nunca en el código
 let TOKEN=localStorage.getItem('at_token')||'';
 let BASE=localStorage.getItem('at_base')||'';
@@ -1826,6 +1841,10 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   const persona=cachePersonasRaw.find(p=>p.id===recordId);
   const nombre=persona?.fields?.Nombre||'esta persona';
 
+  // Notificar Slack
+  const nivelEmojisSlack={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
+  await sendSlack(`${nivelEmojisSlack[nuevoNivel]||'⭐'} *Cambio de nivel Loyalty*\n*${nombre}* pasó de *${nivelAnterior}* a *${nuevoNivel}* 💪`);
+
   // Mostrar banner recordatorio en la sección de personas
   mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior);
 }
@@ -1966,6 +1985,56 @@ function filtrarAniversarios(){
     if(!emptyRow){emptyRow=document.createElement('tr');emptyRow.className='empty-row';emptyRow.innerHTML='<td colspan="4">Sin resultados</td>';tb.appendChild(emptyRow);}
     emptyRow.style.display='';
   } else if(emptyRow){ emptyRow.style.display='none'; }
+}
+
+async function limpiarGlassdoorCoreTeam(){
+  const btn=document.getElementById('btn-clean-reminders');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Limpiando...';
+
+  // Traer todos los eventos Glassdoor y todas las personas
+  const [dEventos, dPersonas] = await Promise.all([
+    atGet('Eventos','&filterByFormula=FIND("glassdoor",LOWER({Evento}))').catch(()=>({records:[]})),
+    atGet('Personas').catch(()=>({records:[]}))
+  ]);
+
+  // Construir set de nombres de Engineers
+  const engineers=new Set(
+    (dPersonas.records||[])
+      .filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer')
+      .map(p=>(p.fields.Nombre||'').trim())
+  );
+
+  // Encontrar reminders de Glassdoor que NO son de Engineers
+  const aEliminar=(dEventos.records||[]).filter(r=>{
+    const evento=r.fields.Evento||'';
+    const nombre=evento.replace(/.*—\s*/,'').trim();
+    return nombre&&!engineers.has(nombre);
+  });
+
+  if(!aEliminar.length){
+    toast('✅ No hay reminders de Glassdoor para Core Team — todo limpio.');
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-trash"></i> Limpiar Core Team';
+    return;
+  }
+
+  // Confirmar antes de borrar
+  const confirmado=confirm(`Se van a eliminar ${aEliminar.length} reminder${aEliminar.length!==1?'s':''} de Glassdoor de personas que no son Engineers. ¿Continuar?`);
+  if(!confirmado){
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-trash"></i> Limpiar Core Team';
+    return;
+  }
+
+  let eliminados=0;
+  for(const r of aEliminar){
+    try{
+      await fetch(`https://api.airtable.com/v0/${BASE}/Eventos/${r.id}`,{method:'DELETE',headers:HDR});
+      eliminados++;
+    }catch(e){console.error('Error eliminando reminder:',r.id,e.message);}
+  }
+
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-trash"></i> Limpiar Core Team';
+  toast(`✅ ${eliminados} reminder${eliminados!==1?'s':''} de Core Team eliminados.`);
+  await loadEventos();
 }
 
 async function sincronizarGlassdoor(){
@@ -3531,6 +3600,10 @@ async function saveIngresoSimple(){
   } else {
     toast(`${nombre} ${existePersona?'ya existía — checklist creado':'agregado'} con reminders ✓`);
   }
+  if(!existePersona){
+    const rolEmoji=perfilChecklist==='Engineer'?'🧑‍💻':'👥';
+    await sendSlack(`${rolEmoji} *Nuevo ingreso en BEON*\n*${nombre}* se suma como *${perfilChecklist}*${fecha?' · '+fmt(fecha):''} 🎉`);
+  }
   return true;
 }
 
@@ -3607,6 +3680,12 @@ async function saveIngresoCompleto(){
   }
 
   if(!reminderErrors2.length) toast(`${nombre} ${existePersona?'actualizado':'agregado'} con checklist y reminders ✓`);
+  if(!existePersona){
+    const rolSlack=v('f-rol')||'';
+    const rolEmoji=rolSlack==='Engineer'?'🧑‍💻':'👥';
+    const proyStr=v('f-proyecto')?` · Proyecto: *${v('f-proyecto')}*`:'';
+    await sendSlack(`${rolEmoji} *Nuevo ingreso en BEON*\n*${nombre}* se suma como *${rolSlack}*${proyStr}${fechaFinal?' · '+fmt(fechaFinal):''} 🎉`);
+  }
   return true;
 }
 
@@ -3969,10 +4048,12 @@ async function saveRecord(){
 function guardarConfig(){
   const token=document.getElementById('cfg-token')?.value.trim();
   const base=document.getElementById('cfg-base')?.value.trim();
-  if(!token||!base){alert('Completá ambos campos para continuar.');return;}
+  const slack=document.getElementById('cfg-slack')?.value.trim();
+  if(!token||!base){alert('Completá el Token y Base ID para continuar.');return;}
   localStorage.setItem('at_token',token);
   localStorage.setItem('at_base',base);
-  TOKEN=token; BASE=base; actualizarHDR();
+  if(slack) localStorage.setItem('slack_webhook',slack);
+  TOKEN=token; BASE=base; SLACK_WEBHOOK=slack||localStorage.getItem('slack_webhook')||''; actualizarHDR();
   document.getElementById('config-screen').style.display='none';
   iniciarHub();
 }
@@ -4010,8 +4091,12 @@ async function iniciarHub(){
 }
 
 async function init(){
+  // Cargar webhook de Slack si existe
+  SLACK_WEBHOOK=localStorage.getItem('slack_webhook')||'';
   if(!TOKEN||!BASE){
     // Mostrar pantalla de configuración
+    const savedSlack=localStorage.getItem('slack_webhook')||'';
+    if(savedSlack) document.getElementById('cfg-slack').value=savedSlack;
     document.getElementById('config-screen').style.display='flex';
     return;
   }

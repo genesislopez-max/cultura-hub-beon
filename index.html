@@ -1746,6 +1746,23 @@ function calcAntiguedad(fechaStr){
   return `${anos} año${anos!==1?'s':''} y ${meses} mes${meses!==1?'es':''}`;
 }
 
+const NIVELES=['Spark','Ray','Lightning','Thunder','Storm'];
+const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
+
+function nivelBadgeHtml(recordId, nivelActual){
+  const nivel=nivelActual||'Spark';
+  return`<div class="nivel-select-wrap" id="nw-${recordId}">
+    <button class="nivel-badge nivel-${nivel}" onclick="toggleNivelDropdown('${recordId}')">
+      ${nivel}
+    </button>
+    <div class="nivel-dropdown" id="nd-${recordId}" style="display:none">
+      ${NIVELES.map(n=>`<div class="nivel-option" onclick="cambiarNivel('${recordId}','${n}','${nivel}',event)">
+        <span class="nivel-badge nivel-${n}" style="cursor:default">${n}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
 function rowHtmlEng(r){
   const f=r.fields, rol=f['Rol en empresa']||'';
   const nivel=f['Nivel Loyalty']||'Spark';
@@ -1810,25 +1827,6 @@ async function loadPersonas(){
   document.getElementById('m-personas').textContent=recs.length;
   document.getElementById('m-coreteam').textContent=coreTeam.length;
   document.getElementById('m-engineers').textContent=engineers.length;
-
-  const rolColor={Engineer:'badge-blue',TEM:'badge-purple',Manager:'badge-amber',Lead:'badge-green','Core Team':'badge-purple',Otro:'badge-gray'};
-
-  const NIVELES=['Spark','Ray','Lightning','Thunder','Storm'];
-  const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
-
-  function nivelBadgeHtml(recordId, nivelActual){
-    const nivel=nivelActual||'Spark';
-    return`<div class="nivel-select-wrap" id="nw-${recordId}">
-      <button class="nivel-badge nivel-${nivel}" onclick="toggleNivelDropdown('${recordId}')">
-        ${nivel}
-      </button>
-      <div class="nivel-dropdown" id="nd-${recordId}" style="display:none">
-        ${NIVELES.map(n=>`<div class="nivel-option" onclick="cambiarNivel('${recordId}','${n}','${nivel}',event)">
-          <span class="nivel-badge nivel-${n}" style="cursor:default">${n}</span>
-        </div>`).join('')}
-      </div>
-    </div>`;
-  }
 
   // Tabla Engineers & Tech
   document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;

@@ -1018,7 +1018,8 @@ function renderPagina(grupo){
   const info=document.getElementById(`pag-info-${grupo}`);
   const btnPrev=document.getElementById(`pag-prev-${grupo}`);
   const btnNext=document.getElementById(`pag-next-${grupo}`);
-  if(!tb||!data.length){if(bar) bar.style.display='none';return;}
+  if(!tb) return;
+  if(!data.length){if(bar) bar.style.display='none';return;}
   const totalPags=Math.ceil(data.length/PAG_SIZE);
   const inicio=page*PAG_SIZE, fin=Math.min(inicio+PAG_SIZE,data.length);
   const slice=data.slice(inicio,fin);
@@ -1028,12 +1029,12 @@ function renderPagina(grupo){
     tb.innerHTML=slice.map(rowHtml).join('')||'<tr class="empty-row"><td colspan="10">Sin resultados</td></tr>';
   }
   if(totalPags>1){
-    bar.style.display='flex';
-    info.textContent=`${inicio+1}–${fin} de ${data.length} personas`;
-    btnPrev.disabled=page===0;
-    btnNext.disabled=page>=totalPags-1;
+    if(bar) bar.style.display='flex';
+    if(info) info.textContent=`${inicio+1}–${fin} de ${data.length} personas`;
+    if(btnPrev) btnPrev.disabled=page===0;
+    if(btnNext) btnNext.disabled=page>=totalPags-1;
   } else {
-    bar.style.display='none';
+    if(bar) bar.style.display='none';
   }
 }
 

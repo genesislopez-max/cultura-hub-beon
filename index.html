@@ -1734,6 +1734,52 @@ async function loadChecklist(){
 }
 
 // ─── PERSONAS ────────────────────────────────────────────────────────────────
+const rolColor={Engineer:'badge-blue',TEM:'badge-purple',Manager:'badge-amber',Lead:'badge-green','Core Team':'badge-purple',Otro:'badge-gray',Supervisor:'badge-amber',COO:'badge-amber',Founder:'badge-amber'};
+
+function calcAntiguedad(fechaStr){
+  if(!fechaStr) return '—';
+  const ing=new Date(fechaStr+'T12:00:00'), hoy=new Date();
+  const anos=hoy.getFullYear()-ing.getFullYear()-((hoy.getMonth()<ing.getMonth()||(hoy.getMonth()===ing.getMonth()&&hoy.getDate()<ing.getDate()))?1:0);
+  const meses=(hoy.getMonth()-ing.getMonth()+12)%12;
+  if(anos===0) return meses===0?'< 1 mes':`${meses} mes${meses!==1?'es':''}`;
+  if(meses===0) return `${anos} año${anos!==1?'s':''}`;
+  return `${anos} año${anos!==1?'s':''} y ${meses} mes${meses!==1?'es':''}`;
+}
+
+function rowHtmlEng(r){
+  const f=r.fields, rol=f['Rol en empresa']||'';
+  const nivel=f['Nivel Loyalty']||'Spark';
+  return`<tr>
+    <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
+    <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
+    <td>${nivelBadgeHtml(r.id, nivel)}</td>
+    <td style="font-size:12px">${f.Proyecto||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de ingreso'])}</td>
+    <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
+    <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de cumpleaños'])}</td>
+  </tr>`;
+}
+
+function rowHtml(r){
+  const f=r.fields, rol=f['Rol en empresa']||'';
+  const nivel=f['Nivel Loyalty']||'Spark';
+  const area=f['Área']||f['Area']||'—';
+  return`<tr>
+    <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
+    <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${area}</td>
+    <td>${nivelBadgeHtml(r.id, nivel)}</td>
+    <td style="font-size:12px">${f.Proyecto||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de ingreso'])}</td>
+    <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
+    <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de cumpleaños'])}</td>
+  </tr>`;
+}
+
 async function loadPersonas(){
   const d=await atGet('Personas','&sort[0][field]=Nombre&sort[0][direction]=asc');
   const recs=d.records||[];
@@ -1782,50 +1828,6 @@ async function loadPersonas(){
         </div>`).join('')}
       </div>
     </div>`;
-  }
-
-  function calcAntiguedad(fechaStr){
-    if(!fechaStr) return '—';
-    const ing=new Date(fechaStr+'T12:00:00'), hoy=new Date();
-    const anos=hoy.getFullYear()-ing.getFullYear()-((hoy.getMonth()<ing.getMonth()||(hoy.getMonth()===ing.getMonth()&&hoy.getDate()<ing.getDate()))?1:0);
-    const meses=(hoy.getMonth()-ing.getMonth()+12)%12;
-    if(anos===0) return meses===0?'< 1 mes':`${meses} mes${meses!==1?'es':''}`;
-    if(meses===0) return `${anos} año${anos!==1?'s':''}`;
-    return `${anos} año${anos!==1?'s':''} y ${meses} mes${meses!==1?'es':''}`;
-  }
-
-  function rowHtmlEng(r){
-    const f=r.fields, rol=f['Rol en empresa']||'';
-    const nivel=f['Nivel Loyalty']||'Spark';
-    return`<tr>
-      <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
-      <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
-      <td>${nivelBadgeHtml(r.id, nivel)}</td>
-      <td style="font-size:12px">${f.Proyecto||'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de ingreso'])}</td>
-      <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
-      <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de cumpleaños'])}</td>
-    </tr>`;
-  }
-
-  function rowHtml(r){
-    const f=r.fields, rol=f['Rol en empresa']||'';
-    const nivel=f['Nivel Loyalty']||'Spark';
-    const area=f['Área']||f['Area']||'—';
-    return`<tr>
-      <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
-      <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${area}</td>
-      <td>${nivelBadgeHtml(r.id, nivel)}</td>
-      <td style="font-size:12px">${f.Proyecto||'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de ingreso'])}</td>
-      <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
-      <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de cumpleaños'])}</td>
-    </tr>`;
   }
 
   // Tabla Engineers & Tech

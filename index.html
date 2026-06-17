@@ -948,6 +948,17 @@ textarea.field-input{resize:vertical;min-height:80px;}
   </div>
 </div>
 
+<!-- MODAL CIUDAD GET TOGETHER -->
+<div class="modal-overlay" id="gt-city-overlay" onclick="closeGTCityModal(event)" style="display:none">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;width:95vw">
+    <div class="modal-header">
+      <div id="gt-city-title" style="font-size:16px;font-weight:700"></div>
+      <button class="modal-close" onclick="closeGTCityModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="gt-city-body" style="padding:16px 20px;max-height:60vh;overflow-y:auto"></div>
+  </div>
+</div>
+
 <!-- PANEL LATERAL PERSONA BENEFICIOS -->
 <div class="side-panel-overlay" id="sp-overlay" onclick="closeSidePanel()"></div>
 <div class="side-panel" id="sp-panel">
@@ -3357,10 +3368,20 @@ async function loadGetTogether(){
   const d=await atGet('Get Together','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
   cacheGetTogetherRaw=(d.records||[]).map(r=>{
     const f={...r.fields};
-    // Campo se llama BEONer — normalizar a string
-    if(Array.isArray(f.BEONer)) f.BEONer=f.BEONer[0]||'';
-    if(Array.isArray(f.Proyecto)) f.Proyecto=f.Proyecto[0]||'';
-    if(Array.isArray(f.País)) f.País=f.País[0]||'';
+    // BEONer: linked record → resolver ID a nombre
+    if(Array.isArray(f.BEONer)){
+      const id=f.BEONer[0]||'';
+      const match=cachePersonasRaw.find(p=>p.id===id);
+      f.BEONer=match?match.fields.Nombre:id;
+    }
+    // Proyecto: linked record → resolver ID a nombre
+    if(Array.isArray(f.Proyecto)){
+      const id=f.Proyecto[0]||'';
+      const match=(cacheProyectosRaw||[]).find(p=>p.id===id);
+      f.Proyecto=match?match.fields.Proyecto:id;
+    }
+    // País y Ciudad: normalizar arrays
+    if(Array.isArray(f['País'])) f['País']=f['País'][0]||'';
     if(Array.isArray(f.Ciudad)) f.Ciudad=f.Ciudad[0]||'';
     return {...r, fields:f};
   });
@@ -3369,6 +3390,57 @@ async function loadGetTogether(){
   renderGTCiudad();
   renderGTHistorial();
   poblarGTFiltros();
+}
+
+function openGTCityModal(pais, ciudad){
+  const overlay=document.getElementById('gt-city-overlay');
+  overlay.style.display='flex';
+  document.getElementById('gt-city-title').textContent=`${ciudad} · ${pais}`;
+
+  // Filtrar registros de esta ciudad+país
+  const recs=cacheGetTogetherRaw.filter(r=>
+    (r.fields['País']||'')=== pais && (r.fields.Ciudad||'')=== ciudad
+  ).sort((a,b)=>(b.fields.Fecha||'').localeCompare(a.fields.Fecha||''));
+
+  // Agrupar por fecha (encuentros distintos)
+  const encuentros={};
+  recs.forEach(r=>{
+    const fecha=r.fields.Fecha||'sin fecha';
+    if(!encuentros[fecha]) encuentros[fecha]=[];
+    encuentros[fecha].push(r);
+  });
+
+  const totalPersonas=new Set(recs.map(r=>r.fields.BEONer||'')).size;
+
+  let html=`<div style="font-size:13px;color:var(--text2);margin-bottom:16px">
+    ${Object.keys(encuentros).length} encuentro${Object.keys(encuentros).length!==1?'s':''} · ${totalPersonas} BEONer${totalPersonas!==1?'s':''} distintos
+  </div>`;
+
+  Object.entries(encuentros).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([fecha,gente])=>{
+    html+=`<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:8px">
+        ${fmt(fecha)} · ${gente.length} persona${gente.length!==1?'s':''}
+      </div>
+      ${gente.map(r=>{
+        const nombre=r.fields.BEONer||'—';
+        const proyecto=r.fields.Proyecto||'';
+        return`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+          ${avH(nombre)}
+          <div>
+            <div style="font-size:13px;font-weight:500">${nombre}</div>
+            ${proyecto?`<div style="font-size:11px;color:var(--text3)">${proyecto}</div>`:''}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  });
+
+  document.getElementById('gt-city-body').innerHTML=html;
+}
+
+function closeGTCityModal(e){
+  if(e&&e.target!==document.getElementById('gt-city-overlay')) return;
+  document.getElementById('gt-city-overlay').style.display='none';
 }
 
 function switchGTTab(tab,btn){
@@ -3464,7 +3536,7 @@ function renderGTCiudad(){
   const tb=document.getElementById('gt-tbody-ciudad');
   tb.innerHTML=filas.map((d,idx)=>{
     const bg=idx%2===0?'background:var(--bg2)':'';
-    return`<tr style="${bg}">
+    return`<tr class="tr-clickable" style="${bg}" onclick="openGTCityModal(this.dataset.pais,this.dataset.ciudad)" data-pais="${d.pais}" data-ciudad="${d.ciudad}">
       <td style="font-size:12px"><span class="badge badge-blue">${d.pais}</span></td>
       <td><strong>${d.ciudad}</strong></td>
       <td style="font-weight:600;color:var(--blue)">${d.encuentros.size}</td>

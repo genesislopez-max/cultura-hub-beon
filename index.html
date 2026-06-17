@@ -3765,6 +3765,25 @@ function resetConfig(){
   document.getElementById('config-screen').style.display='flex';
 }
 
+async function loadAll(){
+  const personas=await loadPersonas();
+  await loadProyectos();
+  await sincronizarPersonasEnKanban(personas);
+  await Promise.all([
+    loadCumpleanos(personas),
+    loadAniversarios(personas),
+    loadEventos(),
+    loadReviews(),
+    loadChecklist(),
+    loadBeneficios(),
+    loadAmbassadors(),
+    loadOffsites(),
+    loadGetTogether(),
+    loadKanbanIngresos(),
+    loadKanbanEgresos(),
+  ]);
+}
+
 async function iniciarHub(){
   document.getElementById('page-date').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   try{

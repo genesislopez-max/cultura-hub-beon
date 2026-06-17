@@ -821,7 +821,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
               </div>
             </div>
             <table class="data-table">
-              <thead><tr><th>Proyecto</th><th>Veces</th><th>Personas</th><th>Destinos</th><th>Días totales</th></tr></thead>
+              <thead><tr><th>Proyecto</th><th>Off sites</th><th>Personas</th><th>Destinos</th><th>Días totales</th></tr></thead>
               <tbody id="os-tbody-proyecto"></tbody>
             </table>
           </div>
@@ -2988,7 +2988,7 @@ function openOSProyModal(proy){
   overlay.style.display='flex';
   document.getElementById('os-proy-title').textContent=proy;
   document.getElementById('os-proy-subtitle').textContent=
-    `${d.count} viaje${d.count!==1?'s':''} · ${d.personas.size} persona${d.personas.size!==1?'s':''} · ${d.diasUnicos||0} días totales`;
+    `${d.viajesUnicos.size} off site${d.viajesUnicos.size!==1?'s':''} · ${d.personas.size} persona${d.personas.size!==1?'s':''} · ${d.diasUnicos||0} días totales`;
 
   // Construir contenido agrupado por destino
   const destinos=Object.entries(d.destinos).sort((a,b)=>b[1].length-a[1].length);
@@ -3032,7 +3032,7 @@ function renderOSPersona(){
     if(!mapa[nombre]) mapa[nombre]={count:0,destinos:new Set(),dias:0,ultFecha:''};
     mapa[nombre].count++;
     if(f.Destino) mapa[nombre].destinos.add(f.Destino.trim());
-    mapa[nombre].dias+=Number(f['Días']||0);
+    mapa[nombre].dias+=calcDiasOS(f);
     if(f['Fecha inicio']&&f['Fecha inicio']>mapa[nombre].ultFecha) mapa[nombre].ultFecha=f['Fecha inicio'];
   });
 
@@ -3049,7 +3049,7 @@ function renderOSPersona(){
       <td>${avH(nombre)}${nombre}</td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.count}</td>
       <td style="font-size:12px;color:var(--text2)">${destStr||'—'}</td>
-      <td style="font-size:13px">${d.diasUnicos||'—'} días</td>
+      <td style="font-size:13px">${d.dias||'—'} días</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
@@ -3057,11 +3057,11 @@ function renderOSPersona(){
 
 function renderOSProyecto(){
   const q=(document.getElementById('os-search-proyecto')?.value||'').toLowerCase();
-  // Usar cache precalculado
+  // Usar cache precalculado — ordenar por viajes únicos
   const filas=Object.entries(cacheOSProyMap)
     .filter(([n])=>!q||n.toLowerCase().includes(q))
-    .sort((a,b)=>b[1].count-a[1].count)
-    .map(([proy,d])=>[proy,{...d,destinos:new Set(Object.keys(d.destinos))}]);
+    .sort((a,b)=>b[1].viajesUnicos.size-a[1].viajesUnicos.size)
+    .map(([proy,d])=>[proy,{...d,destinos:new Set(Object.keys(d.destinos)),viajesCount:d.viajesUnicos.size}]);
 
   document.getElementById('os-badge-proyecto').textContent=`${filas.length} proyectos`;
   const tb=document.getElementById('os-tbody-proyecto');
@@ -3070,10 +3070,10 @@ function renderOSProyecto(){
     const destStr=[...d.destinos].slice(0,3).join(', ')+(d.destinos.size>3?` +${d.destinos.size-3}`:'');
     return`<tr class="tr-clickable" style="${bg}" onclick="openOSProyModal(this.dataset.proy)" data-proy="${proy.replace(/"/g,'&quot;')}">
       <td><strong>${proy}</strong></td>
-      <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.count}</td>
+      <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.viajesCount||d.viajesUnicos?.size||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${[...d.personas].slice(0,4).join(', ')}${d.personas.size>4?` +${d.personas.size-4} más`:''}</td>
       <td style="font-size:12px;color:var(--text2)">${destStr||'—'}</td>
-      <td style="font-size:13px">${d.dias||'—'} días</td>
+      <td style="font-size:13px">${d.diasUnicos||'—'} días</td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
 }

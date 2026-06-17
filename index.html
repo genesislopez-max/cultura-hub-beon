@@ -3498,10 +3498,10 @@ function renderGTHistorial(){
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin registros</td></tr>';
 }
 
-    ambassadors:{title:'Registrar asistencia AW',html:()=>{
+const FORMS={
+  ambassadors:{title:'Registrar asistencia AW',html:()=>{
     const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
-    // Obtener ediciones únicas del cache para mostrar como referencia
-    const ediciones=[...new Set(cacheAWRaw.map(r=>r.fields['Édición AW']||'').filter(Boolean))].sort();
+    const ediciones=[...new Set(cacheAWRaw.map(r=>r.fields['Edición AW']||'').filter(Boolean))].sort();
     return`
 <div class="field-group"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-aw-persona" onchange="previewAWPct()">
@@ -3511,9 +3511,7 @@ function renderGTHistorial(){
 </div>
 <div class="field-group"><label class="field-label">Edición AW *</label>
   <input class="field-input" id="f-aw-edicion" list="aw-ediciones-list" placeholder="Ej: diciembre 2021">
-  <datalist id="aw-ediciones-list">
-    ${ediciones.map(e=>`<option value="${e}">`).join('')}
-  </datalist>
+  <datalist id="aw-ediciones-list">${ediciones.map(e=>`<option value="${e}">`).join('')}</datalist>
 </div>
 <div class="field-group"><label class="field-label">Acompañantes</label>
   <input class="field-input" id="f-aw-acomp" type="number" min="0" placeholder="0 si fue solo/a">

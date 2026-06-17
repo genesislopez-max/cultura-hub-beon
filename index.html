@@ -948,6 +948,20 @@ textarea.field-input{resize:vertical;min-height:80px;}
   </div>
 </div>
 
+<!-- MODAL OFF SITE PROYECTO -->
+<div class="modal-overlay" id="os-proy-overlay" onclick="closeOSProyModal()" style="display:none;opacity:1;pointer-events:all">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:600px;width:95vw;padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:flex-end;padding:14px 16px 0;">
+      <button onclick="closeOSProyModal()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;line-height:1;padding:4px;border-radius:6px;"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:0 24px 24px;">
+      <div id="os-proy-title" style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px"></div>
+      <div id="os-proy-subtitle" style="font-size:13px;color:var(--text3);margin-bottom:20px"></div>
+      <div id="os-proy-body" style="max-height:55vh;overflow-y:auto"></div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CIUDAD GET TOGETHER -->
 <div class="modal-overlay" id="gt-city-overlay" onclick="closeGTCityModal()" style="display:none;opacity:1;pointer-events:all">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:520px;width:95vw;padding:0;overflow:hidden">
@@ -2880,6 +2894,7 @@ async function loadOffsites(){
     }
     return {...r, fields:f};
   });
+  buildOSProyMap(); // precalcular mapa de proyectos una sola vez
   renderOSMetricas();
   renderOSPersona();
   renderOSProyecto();
@@ -2919,6 +2934,63 @@ function poblarOSFiltroProyecto(){
 }
 
 function filtrarOSPersona(){ renderOSPersona(); }
+// Cache precalculado del mapa de proyectos — se construye una vez al cargar
+let cacheOSProyMap = {};
+
+function buildOSProyMap(){
+  cacheOSProyMap = {};
+  cacheOSRaw.forEach(r=>{
+    const f=r.fields;
+    const proy=Array.isArray(f.Proyecto)?f.Proyecto[0]:(f.Proyecto||'Sin proyecto');
+    const persona=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||''));
+    if(!cacheOSProyMap[proy]) cacheOSProyMap[proy]={count:0,personas:new Set(),destinos:{},dias:0};
+    cacheOSProyMap[proy].count++;
+    if(persona) cacheOSProyMap[proy].personas.add(persona);
+    // Agrupar registros por destino
+    const dest=(f.Destino||'').trim();
+    if(dest){
+      if(!cacheOSProyMap[proy].destinos[dest]) cacheOSProyMap[proy].destinos[dest]=[];
+      cacheOSProyMap[proy].destinos[dest].push({persona,dias:Number(f['Días']||0),fechaInicio:f['Fecha inicio']||''});
+    }
+    cacheOSProyMap[proy].dias+=Number(f['Días']||0);
+  });
+}
+
+function openOSProyModal(proy){
+  const d=cacheOSProyMap[proy];
+  if(!d) return;
+  const overlay=document.getElementById('os-proy-overlay');
+  overlay.style.display='flex';
+  document.getElementById('os-proy-title').textContent=proy;
+  document.getElementById('os-proy-subtitle').textContent=
+    `${d.count} viaje${d.count!==1?'s':''} · ${d.personas.size} persona${d.personas.size!==1?'s':''} · ${d.dias} días totales`;
+
+  // Construir contenido agrupado por destino
+  const destinos=Object.entries(d.destinos).sort((a,b)=>b[1].length-a[1].length);
+  let html='';
+  destinos.forEach(([dest,viajes])=>{
+    const diasDest=viajes.reduce((s,v)=>s+v.dias,0);
+    const personas=[...new Set(viajes.map(v=>v.persona).filter(Boolean))];
+    html+=`<div style="margin-bottom:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px">
+        <span style="font-size:14px;font-weight:600;color:var(--text)">📍 ${dest}</span>
+        <span style="font-size:12px;color:var(--text3)">${viajes.length} viaje${viajes.length!==1?'s':''} · ${diasDest} días</span>
+      </div>
+      ${personas.map(p=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--border)">
+          ${avH(p)}
+          <span style="font-size:13px">${p}</span>
+        </div>`).join('')}
+    </div>`;
+  });
+
+  document.getElementById('os-proy-body').innerHTML=html||'<div style="color:var(--text3);font-size:13px">Sin destinos registrados</div>';
+}
+
+function closeOSProyModal(){
+  document.getElementById('os-proy-overlay').style.display='none';
+}
+
 function filtrarOSProyecto(){ renderOSProyecto(); }
 function filtrarOSHistorial(){ renderOSHistorial(); }
 
@@ -2957,28 +3029,18 @@ function renderOSPersona(){
 
 function renderOSProyecto(){
   const q=(document.getElementById('os-search-proyecto')?.value||'').toLowerCase();
-  const mapa={};
-  cacheOSRaw.forEach(r=>{
-    const f=r.fields;
-    const proy=Array.isArray(f.Proyecto)?f.Proyecto[0]:(f.Proyecto||'Sin proyecto');
-    const persona=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||''));
-    if(!mapa[proy]) mapa[proy]={count:0,personas:new Set(),destinos:new Set(),dias:0};
-    mapa[proy].count++;
-    if(persona) mapa[proy].personas.add(persona);
-    if(f.Destino) mapa[proy].destinos.add(f.Destino.trim());
-    mapa[proy].dias+=Number(f['Días']||0);
-  });
-
-  const filas=Object.entries(mapa)
+  // Usar cache precalculado
+  const filas=Object.entries(cacheOSProyMap)
     .filter(([n])=>!q||n.toLowerCase().includes(q))
-    .sort((a,b)=>b[1].count-a[1].count);
+    .sort((a,b)=>b[1].count-a[1].count)
+    .map(([proy,d])=>[proy,{...d,destinos:new Set(Object.keys(d.destinos))}]);
 
   document.getElementById('os-badge-proyecto').textContent=`${filas.length} proyectos`;
   const tb=document.getElementById('os-tbody-proyecto');
   tb.innerHTML=filas.map(([proy,d],idx)=>{
     const bg=idx%2===0?'background:var(--bg2)':'';
     const destStr=[...d.destinos].slice(0,3).join(', ')+(d.destinos.size>3?` +${d.destinos.size-3}`:'');
-    return`<tr style="${bg}">
+    return`<tr class="tr-clickable" style="${bg}" onclick="openOSProyModal(this.dataset.proy)" data-proy="${proy.replace(/"/g,'&quot;')}">
       <td><strong>${proy}</strong></td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.count}</td>
       <td style="font-size:12px;color:var(--text2)">${[...d.personas].slice(0,4).join(', ')}${d.personas.size>4?` +${d.personas.size-4} más`:''}</td>

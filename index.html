@@ -856,7 +856,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
       <div class="section-page" id="page-gettogether">
         <div class="metrics">
           <div class="metric"><div class="metric-label">Total registros</div><div class="metric-val" style="color:var(--blue)" id="gt-total">—</div><div class="metric-sub">historial completo</div></div>
-          <div class="metric"><div class="metric-label">BEONers que viajaron</div><div class="metric-val" style="color:#0F6E56" id="gt-personas">—</div><div class="metric-sub">únicos</div></div>
+          <div class="metric"><div class="metric-label">BEONers que se juntaron</div><div class="metric-val" style="color:#0F6E56" id="gt-personas">—</div><div class="metric-sub">únicos</div></div>
           <div class="metric"><div class="metric-label">Encuentros</div><div class="metric-val" style="color:#9a6700" id="gt-encuentros">—</div><div class="metric-sub">ciudad + fecha únicos</div></div>
           <div class="metric"><div class="metric-label">Países</div><div class="metric-val" id="gt-paises">—</div><div class="metric-sub">distintos</div></div>
         </div>
@@ -3414,23 +3414,23 @@ function openGTCityModal(pais, ciudad){
 
   const totalPersonas=new Set(recs.map(r=>r.fields.BEONer||'')).size;
 
-  let html=`<div style="font-size:13px;color:var(--text2);margin-bottom:16px">
+  let html=`<div style="font-size:13px;color:var(--text2);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)">
     ${Object.keys(encuentros).length} encuentro${Object.keys(encuentros).length!==1?'s':''} · ${totalPersonas} BEONer${totalPersonas!==1?'s':''} distintos
   </div>`;
 
   Object.entries(encuentros).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([fecha,gente])=>{
-    html+=`<div style="margin-bottom:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:8px">
+    html+=`<div style="margin-bottom:24px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;padding:8px 0 8px;border-bottom:2px solid var(--border);margin-bottom:12px">
         ${fmt(fecha)} · ${gente.length} persona${gente.length!==1?'s':''}
       </div>
       ${gente.map(r=>{
         const nombre=r.fields.BEONer||'—';
         const proyecto=r.fields.Proyecto||'';
-        return`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+        return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
           ${avH(nombre)}
-          <div>
-            <div style="font-size:13px;font-weight:500">${nombre}</div>
-            ${proyecto?`<div style="font-size:11px;color:var(--text3)">${proyecto}</div>`:''}
+          <div style="display:flex;flex-direction:column;gap:2px">
+            <div style="font-size:13px;font-weight:500;line-height:1.3">${nombre}</div>
+            ${proyecto?`<div style="font-size:12px;color:var(--text3);line-height:1.3">${proyecto}</div>`:''}
           </div>
         </div>`;
       }).join('')}

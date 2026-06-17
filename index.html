@@ -855,44 +855,72 @@ textarea.field-input{resize:vertical;min-height:80px;}
     <!-- GET TOGETHER -->
       <div class="section-page" id="page-gettogether">
         <div class="metrics">
-          <div class="metric"><div class="metric-label">Total get togethers</div><div class="metric-val" style="color:var(--blue)" id="gt-total">—</div><div class="metric-sub">registros históricos</div></div>
-          <div class="metric"><div class="metric-label">Personas que participaron</div><div class="metric-val" style="color:#0F6E56" id="gt-personas">—</div><div class="metric-sub">únicas</div></div>
-          <div class="metric"><div class="metric-label">Ciudades</div><div class="metric-val" style="color:#9a6700" id="gt-ciudades">—</div><div class="metric-sub">distintas</div></div>
-          <div class="metric"><div class="metric-label">Proyectos</div><div class="metric-val" id="gt-proyectos">—</div><div class="metric-sub">distintos</div></div>
+          <div class="metric"><div class="metric-label">Total registros</div><div class="metric-val" style="color:var(--blue)" id="gt-total">—</div><div class="metric-sub">historial completo</div></div>
+          <div class="metric"><div class="metric-label">BEONers que viajaron</div><div class="metric-val" style="color:#0F6E56" id="gt-personas">—</div><div class="metric-sub">únicos</div></div>
+          <div class="metric"><div class="metric-label">Encuentros</div><div class="metric-val" style="color:#9a6700" id="gt-encuentros">—</div><div class="metric-sub">ciudad + fecha únicos</div></div>
+          <div class="metric"><div class="metric-label">Países</div><div class="metric-val" id="gt-paises">—</div><div class="metric-sub">distintos</div></div>
         </div>
         <div class="tab-bar" style="margin-bottom:0">
           <button class="tab-btn active" onclick="switchGTTab('persona',this)">Por persona</button>
+          <button class="tab-btn" onclick="switchGTTab('ciudad',this)">Por ciudad</button>
           <button class="tab-btn" onclick="switchGTTab('historial',this)">Historial completo</button>
         </div>
+
         <!-- POR PERSONA -->
         <div id="gt-tab-persona">
           <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
-            <div class="table-head"><span class="table-head-title">Por persona</span><span class="badge badge-blue" id="gt-badge-persona">—</span></div>
+            <div class="table-head"><span class="table-head-title">Por BEONer</span><span class="badge badge-blue" id="gt-badge-persona">—</span></div>
             <div class="search-bar">
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
-                <input class="search-input" id="gt-search-persona" placeholder="Buscar persona…" oninput="filtrarGTPersona()">
+                <input class="search-input" id="gt-search-persona" placeholder="Buscar BEONer…" oninput="filtrarGTPersona()">
               </div>
+              <select class="filter-select" id="gt-filter-pais-per" onchange="filtrarGTPersona()">
+                <option value="">Todos los países</option>
+              </select>
             </div>
             <table class="data-table">
-              <thead><tr><th>Persona</th><th>Get togethers</th><th>Ciudades</th><th>Proyectos</th><th>Último</th></tr></thead>
+              <thead><tr><th>BEONer</th><th>Encuentros</th><th>Países</th><th>Ciudades</th><th>Último</th></tr></thead>
               <tbody id="gt-tbody-persona"></tbody>
             </table>
           </div>
         </div>
+
+        <!-- POR CIUDAD / PAÍS -->
+        <div id="gt-tab-ciudad" style="display:none">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head"><span class="table-head-title">Por ciudad</span><span class="badge badge-blue" id="gt-badge-ciudad">—</span></div>
+            <div class="search-bar">
+              <div class="search-wrap"><i class="ti ti-search search-icon"></i>
+                <input class="search-input" id="gt-search-ciudad" placeholder="Buscar ciudad o país…" oninput="filtrarGTCiudad()">
+              </div>
+              <select class="filter-select" id="gt-filter-pais-ciu" onchange="filtrarGTCiudad()">
+                <option value="">Todos los países</option>
+              </select>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>País</th><th>Ciudad</th><th>Encuentros</th><th>BEONers</th><th>Último encuentro</th></tr></thead>
+              <tbody id="gt-tbody-ciudad"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- HISTORIAL -->
         <div id="gt-tab-historial" style="display:none">
           <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none">
             <div class="table-head"><span class="table-head-title">Historial completo</span><span class="badge badge-blue" id="gt-badge-hist">—</span></div>
             <div class="search-bar">
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
-                <input class="search-input" id="gt-search-hist" placeholder="Buscar…" oninput="filtrarGTHistorial()">
+                <input class="search-input" id="gt-search-hist" placeholder="Buscar BEONer, ciudad o proyecto…" oninput="filtrarGTHistorial()">
               </div>
+              <select class="filter-select" id="gt-filter-pais" onchange="filtrarGTHistorial()">
+                <option value="">Todos los países</option>
+              </select>
               <select class="filter-select" id="gt-filter-proyecto" onchange="filtrarGTHistorial()">
                 <option value="">Todos los proyectos</option>
               </select>
             </div>
             <table class="data-table">
-              <thead><tr><th>Persona</th><th>Ciudad</th><th>Proyecto</th><th>Fecha</th></tr></thead>
+              <thead><tr><th>BEONer</th><th>País</th><th>Ciudad</th><th>Proyecto</th><th>Fecha</th></tr></thead>
               <tbody id="gt-tbody-hist"></tbody>
             </table>
           </div>
@@ -3196,7 +3224,7 @@ async function verBenefPersona(nombre, grupo, nivel){
     atGet('Capacitaciones',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
     atGet('Ambassador Week',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
     atGet('Off Sites',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha inicio&sort[0][direction]=desc`).catch(()=>({records:[]})),
-    atGet('Get Together',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
+    atGet('Get Together',`&filterByFormula=FIND("${nombre}",{BEONer})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
   ]);
 
   const benefAsig=dBenefAsig.records||[];
@@ -3309,7 +3337,7 @@ async function verBenefPersona(nombre, grupo, nivel){
     ${gtRecs.length?gtRecs.map(r=>{
       const f=r.fields;
       return`<div class="side-panel-row">
-        <span><strong>${f.Ciudad||'—'}</strong> <span style="font-size:11px;color:var(--text3)">${f.Proyecto||''}</span></span>
+        <span><strong>${f.Ciudad||'—'}</strong>${f.País?' <span style="font-size:11px;color:var(--text3)">('+f.País+')</span>':''} <span style="font-size:11px;color:var(--text3)">${f.Proyecto||''}</span></span>
         <span style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}</span>
       </div>`;
     }).join(''):`<div class="sp-empty">Sin get togethers registrados</div>`}
@@ -3327,78 +3355,120 @@ function closeSidePanel(){
 // ─── GET TOGETHER ─────────────────────────────────────────────────────────────
 async function loadGetTogether(){
   const d=await atGet('Get Together','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
-  // Resolver linked record IDs
   cacheGetTogetherRaw=(d.records||[]).map(r=>{
     const f={...r.fields};
-    if(Array.isArray(f.Persona)){
-      const id=f.Persona[0];
-      const match=cachePersonasRaw.find(p=>p.id===id);
-      f.Persona=match?match.fields.Nombre:id;
-    }
-    if(Array.isArray(f.Proyecto)){
-      const id=f.Proyecto[0];
-      const match=(cacheProyectosRaw||[]).find(p=>p.id===id);
-      f.Proyecto=match?match.fields.Proyecto:id;
-    }
+    // Campo se llama BEONer — normalizar a string
+    if(Array.isArray(f.BEONer)) f.BEONer=f.BEONer[0]||'';
+    if(Array.isArray(f.Proyecto)) f.Proyecto=f.Proyecto[0]||'';
+    if(Array.isArray(f.País)) f.País=f.País[0]||'';
+    if(Array.isArray(f.Ciudad)) f.Ciudad=f.Ciudad[0]||'';
     return {...r, fields:f};
   });
   renderGTMetricas();
   renderGTPersona();
+  renderGTCiudad();
   renderGTHistorial();
-  poblarGTFiltroProyecto();
+  poblarGTFiltros();
 }
 
 function switchGTTab(tab,btn){
   document.querySelectorAll('#page-gettogether .tab-btn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   document.getElementById('gt-tab-persona').style.display=tab==='persona'?'':'none';
+  document.getElementById('gt-tab-ciudad').style.display=tab==='ciudad'?'':'none';
   document.getElementById('gt-tab-historial').style.display=tab==='historial'?'':'none';
 }
 
 function renderGTMetricas(){
-  const personas=new Set(), ciudades=new Set(), proyectos=new Set();
+  const personas=new Set(), paises=new Set(), encuentros=new Set();
   cacheGetTogetherRaw.forEach(r=>{
-    if(r.fields.Persona) personas.add(r.fields.Persona);
-    if(r.fields.Ciudad) ciudades.add(r.fields.Ciudad);
-    if(r.fields.Proyecto) proyectos.add(r.fields.Proyecto);
+    const f=r.fields;
+    if(f.BEONer) personas.add(f.BEONer);
+    if(f.País) paises.add(f.País);
+    const key=`${f.Ciudad||''}|${f.Fecha||''}`;
+    if(key!=='|') encuentros.add(key);
   });
   document.getElementById('gt-total').textContent=cacheGetTogetherRaw.length;
   document.getElementById('gt-personas').textContent=personas.size;
-  document.getElementById('gt-ciudades').textContent=ciudades.size;
-  document.getElementById('gt-proyectos').textContent=proyectos.size;
+  document.getElementById('gt-encuentros').textContent=encuentros.size;
+  document.getElementById('gt-paises').textContent=paises.size;
 }
 
-function poblarGTFiltroProyecto(){
-  const proy=[...new Set(cacheGetTogetherRaw.map(r=>r.fields.Proyecto||'').filter(Boolean))].sort();
-  const sel=document.getElementById('gt-filter-proyecto');
-  if(sel) sel.innerHTML='<option value="">Todos los proyectos</option>'+proy.map(p=>`<option value="${p}">${p}</option>`).join('');
+function poblarGTFiltros(){
+  const paises=[...new Set(cacheGetTogetherRaw.map(r=>r.fields.País||'').filter(Boolean))].sort();
+  const proyectos=[...new Set(cacheGetTogetherRaw.map(r=>r.fields.Proyecto||'').filter(Boolean))].sort();
+  const paisOpts='<option value="">Todos los países</option>'+paises.map(p=>`<option value="${p}">${p}</option>`).join('');
+  ['gt-filter-pais-per','gt-filter-pais-ciu','gt-filter-pais'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=paisOpts;
+  });
+  const selProy=document.getElementById('gt-filter-proyecto');
+  if(selProy) selProy.innerHTML='<option value="">Todos los proyectos</option>'+proyectos.map(p=>`<option value="${p}">${p}</option>`).join('');
 }
 
 function filtrarGTPersona(){ renderGTPersona(); }
+function filtrarGTCiudad(){ renderGTCiudad(); }
 function filtrarGTHistorial(){ renderGTHistorial(); }
 
 function renderGTPersona(){
   const q=(document.getElementById('gt-search-persona')?.value||'').toLowerCase();
+  const paisFil=document.getElementById('gt-filter-pais-per')?.value||'';
   const mapa={};
   cacheGetTogetherRaw.forEach(r=>{
     const f=r.fields;
-    const n=f.Persona||'—';
-    if(!mapa[n]) mapa[n]={count:0,ciudades:new Set(),proyectos:new Set(),ultFecha:''};
-    mapa[n].count++;
-    if(f.Ciudad) mapa[n].ciudades.add(f.Ciudad);
-    if(f.Proyecto) mapa[n].proyectos.add(f.Proyecto);
-    if(f.Fecha&&f.Fecha>mapa[n].ultFecha) mapa[n].ultFecha=f.Fecha;
+    const nombre=f.BEONer||'';
+    if(!nombre) return;
+    if(paisFil&&(f.País||'')!==paisFil) return;
+    if(!mapa[nombre]) mapa[nombre]={count:0,paises:new Set(),ciudades:new Set(),ultFecha:''};
+    mapa[nombre].count++;
+    if(f.País) mapa[nombre].paises.add(f.País);
+    if(f.Ciudad) mapa[nombre].ciudades.add(f.Ciudad);
+    if(f.Fecha&&f.Fecha>mapa[nombre].ultFecha) mapa[nombre].ultFecha=f.Fecha;
   });
-  const filas=Object.entries(mapa).filter(([n])=>!q||n.toLowerCase().includes(q)).sort((a,b)=>b[1].count-a[1].count);
-  document.getElementById('gt-badge-persona').textContent=`${filas.length} personas`;
+  const filas=Object.entries(mapa)
+    .filter(([n])=>!q||n.toLowerCase().includes(q))
+    .sort((a,b)=>b[1].ultFecha.localeCompare(a[1].ultFecha));
+  document.getElementById('gt-badge-persona').textContent=`${filas.length} BEONers`;
   const tb=document.getElementById('gt-tbody-persona');
   tb.innerHTML=filas.map(([nombre,d],idx)=>{
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr style="${bg}">
       <td>${avH(nombre)}${nombre}</td>
       <td style="font-weight:600;color:var(--blue)">${d.count}</td>
+      <td style="font-size:12px;color:var(--text2)">${[...d.paises].join(', ')||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${[...d.ciudades].join(', ')||'—'}</td>
-      <td style="font-size:12px;color:var(--text2)">${[...d.proyectos].join(', ')||'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
+    </tr>`;
+  }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
+}
+
+function renderGTCiudad(){
+  const q=(document.getElementById('gt-search-ciudad')?.value||'').toLowerCase();
+  const paisFil=document.getElementById('gt-filter-pais-ciu')?.value||'';
+  const mapa={};
+  cacheGetTogetherRaw.forEach(r=>{
+    const f=r.fields;
+    const pais=f.País||'Sin país', ciudad=f.Ciudad||'Sin ciudad';
+    const key=`${pais}||${ciudad}`;
+    if(paisFil&&pais!==paisFil) return;
+    if(!mapa[key]) mapa[key]={pais,ciudad,encuentros:new Set(),personas:new Set(),ultFecha:''};
+    const enc=f.Fecha||'';
+    if(enc) mapa[key].encuentros.add(enc);
+    if(f.BEONer) mapa[key].personas.add(f.BEONer);
+    if(f.Fecha&&f.Fecha>mapa[key].ultFecha) mapa[key].ultFecha=f.Fecha;
+  });
+  const filas=Object.values(mapa)
+    .filter(d=>!q||(d.pais+d.ciudad).toLowerCase().includes(q))
+    .sort((a,b)=>b.ultFecha.localeCompare(a.ultFecha));
+  document.getElementById('gt-badge-ciudad').textContent=`${filas.length} ciudades`;
+  const tb=document.getElementById('gt-tbody-ciudad');
+  tb.innerHTML=filas.map((d,idx)=>{
+    const bg=idx%2===0?'background:var(--bg2)':'';
+    return`<tr style="${bg}">
+      <td style="font-size:12px"><span class="badge badge-blue">${d.pais}</span></td>
+      <td><strong>${d.ciudad}</strong></td>
+      <td style="font-weight:600;color:var(--blue)">${d.encuentros.size}</td>
+      <td style="font-size:12px;color:var(--text2)">${d.personas.size} BEONers</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
@@ -3406,11 +3476,12 @@ function renderGTPersona(){
 
 function renderGTHistorial(){
   const q=(document.getElementById('gt-search-hist')?.value||'').toLowerCase();
+  const paisFil=document.getElementById('gt-filter-pais')?.value||'';
   const proyFil=document.getElementById('gt-filter-proyecto')?.value||'';
   const recs=cacheGetTogetherRaw.filter(r=>{
     const f=r.fields;
-    const txt=`${f.Persona||''} ${f.Ciudad||''} ${f.Proyecto||''}`.toLowerCase();
-    return(!q||txt.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil);
+    const txt=`${f.BEONer||''} ${f.Ciudad||''} ${f.País||''} ${f.Proyecto||''}`.toLowerCase();
+    return(!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil);
   });
   document.getElementById('gt-badge-hist').textContent=`${recs.length} registros`;
   const tb=document.getElementById('gt-tbody-hist');
@@ -3418,518 +3489,16 @@ function renderGTHistorial(){
     const f=r.fields;
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr style="${bg}">
-      <td>${avH(f.Persona||'')}${f.Persona||'—'}</td>
+      <td>${avH(f.BEONer||'')}${f.BEONer||'—'}</td>
+      <td style="font-size:12px"><span class="badge badge-blue">${f.País||'—'}</span></td>
       <td style="font-size:12px">${f.Ciudad||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${f.Proyecto||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}</td>
     </tr>`;
-  }).join('')||'<tr class="empty-row"><td colspan="4">Sin registros</td></tr>';
+  }).join('')||'<tr class="empty-row"><td colspan="5">Sin registros</td></tr>';
 }
 
-function filterBeneficios(grupo,btn){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  if(btn) btn.classList.add('active');
-  renderBenefCatalogo();
-}
-
-async function loadAll(){
-  const personas=await loadPersonas();
-  // Proyectos debe cargar antes que Off Sites / GT / AW para resolver linked records
-  await loadProyectos();
-  await sincronizarPersonasEnKanban(personas);
-  await Promise.all([
-    loadCumpleanos(personas),
-    loadAniversarios(personas),
-    loadEventos(),
-    loadReviews(),
-    loadChecklist(),
-    loadBeneficios(),
-    loadAmbassadors(),
-    loadOffsites(),
-    loadGetTogether(),
-    loadKanbanIngresos(),
-    loadKanbanEgresos(),
-  ]);
-}
-
-// ─── MANAGER SELECT — FIX ────────────────────────────────────────────────────
-// Listas estáticas de fallback (se usan si Airtable no tiene los roles cargados)
-const FALLBACK_TEMS=[
-  'Alejandra Mestayer',
-  'Ana Alfaro',
-  'Camila Belén Calvo',
-  'Florencia Giorgi',
-  'Julian Fuks',
-  'Sofía Maestri',
-  'Valerie Moncada',
-  'Victoria Brancos',
-];
-const FALLBACK_MANAGERS=[
-  'Ana Chirinos',
-  'Damian Wasserman',
-  'Florencia Giorgi',
-  'Julian Fuks',
-  'Julieta Troitiño',
-  'Laura Costero',
-  'Michel Cohen',
-  'Sofía Lamela',
-  'Tali Katkownik',
-  'Valentina Poblet',
-  'Victoria Franco',
-];
-
-function getManagersParaPerfil(perfil){
-  // Usar cache de Airtable si tiene datos, sino usar fallback estático
-  const tCache=cachePersonasPorRol['TEM']||[];
-  const mCache=[...(cachePersonasPorRol['Manager']||[]),...(cachePersonasPorRol['Lead']||[])];
-  const tems=tCache.length>0?tCache:FALLBACK_TEMS;
-  const managers=mCache.length>0?mCache:FALLBACK_MANAGERS;
-  let lista=[];
-  if(perfil==='Engineer') lista=[...tems];
-  else if(perfil==='Core Team') lista=[...new Set(managers)];
-  else lista=[...new Set([...tems,...managers])];
-  return lista.sort((a,b)=>a.localeCompare(b,'es'));
-}
-
-// FIX: ahora también escucha cambio en f-rol-empresa para sincronizar perfil checklist y manager
-function onRolEmpresaChange(){
-  const rolEmpresa=document.getElementById('f-rol-empresa')?.value||'';
-  const fPerfil=document.getElementById('f-perfil');
-  if(fPerfil){
-    if(rolEmpresa==='Engineer') fPerfil.value='Engineer';
-    else if(rolEmpresa==='Core Team'||rolEmpresa==='Manager'||rolEmpresa==='Lead') fPerfil.value='Core Team';
-    else fPerfil.value='Otro';
-  }
-  updateManagerSelect();
-}
-
-function updateManagerSelect(){
-  const perfil=document.getElementById('f-perfil')?.value||'Otro';
-  const hint=document.getElementById('manager-hint');
-  if(hint) hint.textContent=perfil==='Engineer'?'Muestra TEMs':perfil==='Core Team'?'Muestra Managers y Leads':'Muestra todos los roles de liderazgo';
-  const sel=document.getElementById('f-manager');if(!sel)return;
-  const lista=getManagersParaPerfil(perfil);
-  if(!lista.length){sel.innerHTML='<option value="">— No hay managers de ese tipo —</option>';return;}
-  sel.innerHTML='<option value="">— Sin manager —</option>'+lista.map(m=>`<option value="${m}">${m}</option>`).join('');
-}
-
-function fillProyectosSelect(id, valorActual=''){
-  const sel=document.getElementById(id);if(!sel)return;
-  sel.innerHTML=
-    '<option value="">— Sin proyecto —</option>'+
-    cacheProyectos.map(p=>`<option value="${p}" ${p===valorActual?'selected':''}>${p}</option>`).join('')+
-    '<option value="__nuevo__">＋ Nuevo proyecto...</option>';
-  sel.onchange=()=>onProyectoChange(id);
-}
-
-function onProyectoChange(selId){
-  const sel=document.getElementById(selId);
-  if(!sel||sel.value!=='__nuevo__') return;
-  // Mostrar input inline para nuevo proyecto
-  const fg=sel.closest('.field-group');
-  if(!fg) return;
-  // Evitar duplicar
-  if(fg.querySelector('#f-proyecto-nuevo')) return;
-  sel.style.display='none';
-  const wrapper=document.createElement('div');
-  wrapper.style.cssText='display:flex;gap:8px;align-items:center;';
-  wrapper.innerHTML=`
-    <input class="field-input" id="f-proyecto-nuevo" placeholder="Nombre del nuevo proyecto" style="flex:1">
-    <button type="button" onclick="cancelarNuevoProyecto('${selId}')" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 12px;cursor:pointer;font-size:12px;color:var(--text2);font-family:'Plus Jakarta Sans',sans-serif;">✕</button>`;
-  fg.appendChild(wrapper);
-  document.getElementById('f-proyecto-nuevo').focus();
-}
-
-function cancelarNuevoProyecto(selId){
-  const sel=document.getElementById(selId);
-  if(!sel) return;
-  sel.value='';
-  sel.style.display='';
-  const input=document.getElementById('f-proyecto-nuevo');
-  if(input) input.closest('div').remove();
-}
-
-// Obtiene el valor del proyecto seleccionado (sea del select o del input nuevo)
-function getProyectoValue(){
-  const inputNuevo=document.getElementById('f-proyecto-nuevo');
-  if(inputNuevo) return inputNuevo.value.trim();
-  return document.getElementById('f-proyecto')?.value||'';
-}
-
-// Si hay proyecto nuevo, lo crea en Airtable y actualiza el cache
-async function resolverProyectoNuevo(){
-  const inputNuevo=document.getElementById('f-proyecto-nuevo');
-  if(!inputNuevo) return getProyectoValue();
-  const nombre=inputNuevo.value.trim();
-  if(!nombre) return '';
-  // Verificar si ya existe
-  if(!cacheProyectos.includes(nombre)){
-    await atPost('Proyectos',{Proyecto:nombre}).catch(()=>{});
-    cacheProyectos.push(nombre);
-    cacheProyectos.sort((a,b)=>a.localeCompare(b,'es'));
-  }
-  return nombre;
-}
-
-async function mountIngresoForm(){
-  fillProyectosSelect('f-proyecto');
-  if(!cacheProyectos.length){
-    try{const d=await atGet('Proyectos');cacheProyectos=d.records.map(r=>r.fields.Proyecto||'').filter(Boolean);fillProyectosSelect('f-proyecto');}catch(e){}
-  }
-  updateManagerSelect();
-}
-
-// ─── FORMULARIOS ─────────────────────────────────────────────────────────────
-// FORMULARIO SIMPLE (HR) — solo campos esenciales
-function buildIngresoSimpleHTML(){
-  return`
-<div class="form-simple-badge"><i class="ti ti-user" style="font-size:14px"></i> Formulario para HR — campos esenciales</div>
-<div class="field-group"><label class="field-label">Nombre completo *</label><input class="field-input" id="f-nombre" placeholder="Ej: Sofía González"></div>
-<div class="field-group"><label class="field-label">Rol en empresa *</label>
-  <select class="field-input" id="f-rol-empresa" onchange="onRolEmpresaChange()">
-    <option value="">— Seleccioná un rol —</option>
-    <option value="Engineer">Engineer</option>
-    <option value="TEM">TEM</option>
-    <option value="Manager">Manager</option>
-    <option value="Lead">Lead</option>
-    <option value="Core Team">Core Team</option>
-    <option value="Otro">Otro</option>
-  </select>
-</div>
-<input type="hidden" id="f-perfil" value="Otro">
-<div class="field-group"><label class="field-label">Proyecto</label><select class="field-input" id="f-proyecto"></select><div class="field-hint">Elegí de la lista o seleccioná "＋ Nuevo proyecto" para crear uno</div></div>
-<div class="field-group"><label class="field-label">Fecha de ingreso *</label><input class="field-input" id="f-ingreso" type="date"></div>
-<div class="field-group"><label class="field-label">Comentarios</label><textarea class="field-input" id="f-comentarios" placeholder="Información adicional, contexto, aclaraciones..."></textarea></div>
-<div class="auto-preview"><strong>Se crearán automáticamente:</strong>👤 Persona · 📋 Checklist de ingreso en Pre-ingreso · ⭐ Reminder aniversario · 📝 Reminder Glassdoor (4 meses, solo Engineers)</div>`;
-}
-
-// FORMULARIO COMPLETO (admin)
-function buildIngresoCompletoHTML(){
-  return`
-<div class="field-group"><label class="field-label">Nombre completo *</label><input class="field-input" id="f-nombre" placeholder="Ej: Sofía González"></div>
-<div class="field-group"><label class="field-label">Mail</label><input class="field-input" id="f-mail" type="email" placeholder="sofia@beon.tech"></div>
-<div class="field-group"><label class="field-label">Rol en empresa</label>
-  <select class="field-input" id="f-rol-empresa" onchange="onRolEmpresaChange()">
-    <option value="">— Sin rol —</option>
-    <option value="Engineer">Engineer</option><option value="TEM">TEM</option>
-    <option value="Manager">Manager</option><option value="Lead">Lead</option>
-    <option value="Core Team">Core Team</option><option value="Otro">Otro</option>
-  </select>
-</div>
-<div class="field-group"><label class="field-label">Perfil (checklist)</label>
-  <select class="field-input" id="f-perfil" onchange="updateManagerSelect()">
-    <option value="Otro">Otro</option><option value="Engineer">Engineer</option>
-    <option value="Core Team">Core Team</option><option value="Ambos">Ambos</option>
-  </select>
-  <div class="field-hint">Define ítems de checklist y managers disponibles</div>
-</div>
-<div class="field-group"><label class="field-label">Proyecto</label><select class="field-input" id="f-proyecto"></select><div class="field-hint">Elegí de la lista o seleccioná "＋ Nuevo proyecto" para crear uno</div></div>
-<div class="field-group"><label class="field-label">Manager</label>
-  <select class="field-input" id="f-manager"><option value="">— Seleccioná un perfil primero —</option></select>
-  <div class="field-hint" id="manager-hint"></div>
-</div>
-<div class="field-group"><label class="field-label">Fecha de ingreso</label><input class="field-input" id="f-ingreso" type="date"></div>
-<div class="field-group"><label class="field-label">Fecha de cumpleaños</label><input class="field-input" id="f-cumple" type="date"></div>
-<div class="auto-preview"><strong>Se crearán automáticamente:</strong>👤 Persona · 📋 Checklist · 🎂 Reminder cumpleaños · ⭐ Aniversario · 📝 Glassdoor (4 meses, solo Engineers)</div>`;
-}
-
-async function saveIngresoSimple(){
-  const v=id=>document.getElementById(id)?.value||'';
-  if(!v('f-nombre')){toast('El nombre es obligatorio',true);return false;}
-  if(!v('f-ingreso')){toast('La fecha de ingreso es obligatoria',true);return false;}
-  const nombre=v('f-nombre').trim(),rol=v('f-rol-empresa'),fecha=v('f-ingreso');
-  const perfilChecklist=rol==='Engineer'?'Engineer':rol==='Core Team'||rol==='Manager'||rol==='Lead'?'Core Team':'Otro';
-  const proyecto=await resolverProyectoNuevo();
-
-  // Verificar si ya existe en Personas
-  const existePersona=cachePersonasRaw.some(p=>(p.fields.Nombre||'').trim().toLowerCase()===nombre.toLowerCase());
-  if(!existePersona){
-    await atPost('Personas',{Nombre:nombre,'Rol en empresa':rol||undefined,Proyecto:proyecto||undefined,'Fecha de ingreso':fecha,'Nivel Loyalty':'Spark',Notas:v('f-comentarios')||undefined});
-  }
-
-  // Verificar si ya existe en Checklist
-  const checkRecs=await atGet('Checklist',`&filterByFormula=AND({Tipo}="Ingreso",{Persona}="${nombre}")`).then(d=>d.records||[]).catch(()=>[]);
-  if(!checkRecs.length){
-    const diasIngreso=fecha?Math.floor((new Date()-new Date(fecha+'T12:00:00'))/86400000):-1;
-    if(diasIngreso>=15){
-      const itemsCompletos=Array(getItems('Ingreso',perfilChecklist).length).fill(true);
-      await atPost('Checklist',{Persona:nombre,Tipo:'Ingreso',Rol:perfilChecklist,Fecha:fecha,EstadoKanban:'Onboarding completo',ItemsCompletados:JSON.stringify(itemsCompletos)});
-    } else {
-      await atPost('Checklist',{Persona:nombre,Tipo:'Ingreso',Rol:perfilChecklist,Fecha:fecha,EstadoKanban:'Pre-ingreso'});
-    }
-  }
-
-  // Crear reminders si no existen ya para esta persona
-  const eventosExistentes=await atGet('Eventos',`&filterByFormula=FIND("${nombre.replace(/"/g,'')}",{Evento})`).then(d=>d.records||[]).catch(()=>[]);
-  const tieneAniv=eventosExistentes.some(r=>(r.fields.Evento||'').toLowerCase().includes('aniversario'));
-  const tieneGlassdoor=eventosExistentes.some(r=>(r.fields.Evento||'').toLowerCase().includes('glassdoor'));
-  const ing=new Date(fecha+'T12:00:00');
-  let reminderErrors=[];
-  if(!tieneAniv){
-    const aniv=new Date(ing);aniv.setFullYear(aniv.getFullYear()+1);
-    try{await atPost('Eventos',{Evento:`⭐ Aniversario 1 año — ${nombre}`,Tipo:'Aniversario',Fecha:aniv.toISOString().split('T')[0],Estado:'Pendiente'});}
-    catch(e){console.error('Error creando aniversario:',e.message);reminderErrors.push('aniversario');}
-  }
-  if(!tieneGlassdoor&&perfilChecklist==='Engineer'){
-    const gd=new Date(ing);gd.setMonth(gd.getMonth()+4);
-    try{await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Otro',Fecha:gd.toISOString().split('T')[0],Estado:'Pendiente'});}
-    catch(e){console.error('Error creando Glassdoor reminder:',e.message);reminderErrors.push('Glassdoor');}
-  }
-  // Crear registro en Reviews
-  if(!existePersona){
-    try{
-      const manager=document.getElementById('f-manager')?.value||undefined;
-      await atPost('Reviews',{Persona:nombre,Manager:manager||undefined,Estado:'Sin iniciar'});
-    }catch(e){console.error('Error creando review:',e.message);}
-  }
-
-  if(reminderErrors.length){
-    toast(`⚠️ ${nombre} agregado, pero fallaron reminders: ${reminderErrors.join(', ')}. Abrí la consola del navegador para ver el error.`,false);
-  } else {
-    toast(`${nombre} ${existePersona?'ya existía — checklist creado':'agregado'} con reminders ✓`);
-  }
-  if(!existePersona){
-    const rolEmoji=perfilChecklist==='Engineer'?'🧑‍💻':'👥';
-    await sendSlack(`${rolEmoji} *Nuevo ingreso en BEON*\n*${nombre}* se suma como *${perfilChecklist}*${fecha?' · '+fmt(fecha):''} 🎉`);
-  }
-  return true;
-}
-
-async function saveIngresoCompleto(){
-  const v=id=>document.getElementById(id)?.value||'';
-  if(!v('f-nombre')){toast('El nombre es obligatorio',true);return false;}
-  const nombre=v('f-nombre').trim(),perfil=v('f-perfil'),fecha=v('f-ingreso');
-  const proyecto=await resolverProyectoNuevo();
-
-  // Verificar si ya existe en Personas
-  const existePersona=cachePersonasRaw.some(p=>(p.fields.Nombre||'').trim().toLowerCase()===nombre.toLowerCase());
-  if(existePersona){
-    toast(`⚠️ "${nombre}" ya existe en Personas. Solo se creará el checklist si falta.`,false);
-  } else {
-    await atPost('Personas',{Nombre:nombre,Mail:v('f-mail')||undefined,'Rol en empresa':v('f-rol-empresa')||undefined,Proyecto:proyecto||undefined,'Fecha de ingreso':fecha||undefined,'Fecha de cumpleaños':v('f-cumple')||undefined,Manager:v('f-manager')||undefined,'Nivel Loyalty':'Spark'});
-  }
-
-  // Verificar si ya existe en Checklist
-  const checkRecs=await atGet('Checklist',`&filterByFormula=AND({Tipo}="Ingreso",{Persona}="${nombre}")`).then(d=>d.records||[]).catch(()=>[]);
-  if(!checkRecs.length){
-    const diasIngreso2=fecha?Math.floor((new Date()-new Date(fecha+'T12:00:00'))/86400000):-1;
-    if(diasIngreso2>=15){
-      const itemsCompletos2=Array(getItems('Ingreso',perfil||'Otro').length).fill(true);
-      await atPost('Checklist',{Persona:nombre,Tipo:'Ingreso',Rol:perfil,Fecha:fecha||undefined,EstadoKanban:'Onboarding completo',ItemsCompletados:JSON.stringify(itemsCompletos2)});
-    } else {
-      await atPost('Checklist',{Persona:nombre,Tipo:'Ingreso',Rol:perfil,Fecha:fecha||undefined,EstadoKanban:'Pre-ingreso'});
-    }
-  }
-
-  // Crear reminders faltantes — siempre verifica independientemente de si la persona ya existía
-  const fechaFinal=fecha||
-    cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim().toLowerCase()===nombre.toLowerCase())?.fields['Fecha de ingreso']||'';
-
-  let reminderErrors2=[];
-  if(fechaFinal){
-    let eventosExistentes=[];
-    try{
-      const eq=await atGet('Eventos',`&filterByFormula=FIND("${nombre.replace(/"/g,'')}",{Evento})`);
-      eventosExistentes=eq.records||[];
-    }catch(e){}
-
-    const tieneCumple    =eventosExistentes.some(r=>(r.fields.Evento||'').toLowerCase().includes('cumpleaños'));
-    const tieneAniv      =eventosExistentes.some(r=>(r.fields.Evento||'').toLowerCase().includes('aniversario'));
-    const tieneGlassdoor =eventosExistentes.some(r=>(r.fields.Evento||'').toLowerCase().includes('glassdoor'));
-
-    const ing=new Date(fechaFinal+'T12:00:00');
-    if(!tieneCumple&&v('f-cumple')){
-      try{await atPost('Eventos',{Evento:`🎂 Cumpleaños — ${nombre}`,Tipo:'Cumpleaños',Fecha:v('f-cumple'),Estado:'Pendiente'});}
-      catch(e){console.error('Error creando cumple:',e.message);reminderErrors2.push('cumpleaños');}
-    }
-    if(!tieneAniv){
-      const aniv=new Date(ing);aniv.setFullYear(aniv.getFullYear()+1);
-      try{await atPost('Eventos',{Evento:`⭐ Aniversario 1 año — ${nombre}`,Tipo:'Aniversario',Fecha:aniv.toISOString().split('T')[0],Estado:'Pendiente'});}
-      catch(e){console.error('Error creando aniversario:',e.message);reminderErrors2.push('aniversario');}
-    }
-    if(!tieneGlassdoor&&(v('f-rol')==='Engineer'||v('f-rol-completo')==='Engineer')){
-      const gd=new Date(ing);gd.setMonth(gd.getMonth()+4);
-      try{await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Otro',Fecha:gd.toISOString().split('T')[0],Estado:'Pendiente'});}
-      catch(e){console.error('Error creando Glassdoor:',e.message);reminderErrors2.push('Glassdoor');}
-    }
-    if(reminderErrors2.length){
-      toast(`⚠️ ${nombre} guardado, pero fallaron reminders: ${reminderErrors2.join(', ')}. Abrí la consola del navegador para ver el error.`,false);
-    }
-  } else {
-    toast('⚠️ Sin fecha de ingreso — reminders no creados. Cargá la fecha y guardá de nuevo.',false);
-  }
-
-  // Crear registro en Reviews
-  if(!existePersona){
-    try{
-      const mgr=v('f-manager')||undefined;
-      await atPost('Reviews',{Persona:nombre,Manager:mgr||undefined,Estado:'Sin iniciar'});
-    }catch(e){console.error('Error creando review:',e.message);}
-  }
-
-  if(!reminderErrors2.length) toast(`${nombre} ${existePersona?'actualizado':'agregado'} con checklist y reminders ✓`);
-  if(!existePersona){
-    const rolSlack=v('f-rol')||'';
-    const rolEmoji=rolSlack==='Engineer'?'🧑‍💻':'👥';
-    const proyStr=v('f-proyecto')?` · Proyecto: *${v('f-proyecto')}*`:'';
-    await sendSlack(`${rolEmoji} *Nuevo ingreso en BEON*\n*${nombre}* se suma como *${rolSlack}*${proyStr}${fechaFinal?' · '+fmt(fechaFinal):''} 🎉`);
-  }
-  return true;
-}
-
-const FORMS={
-  ingresos:{
-    title:'Nuevo ingreso',
-    html:()=>buildIngresoCompletoHTML(),
-    onMount:mountIngresoForm,
-    save:saveIngresoCompleto
-  },
-  ingresos_full:{
-    title:'Nuevo ingreso — completo',
-    html:()=>buildIngresoCompletoHTML(),
-    onMount:mountIngresoForm,
-    save:saveIngresoCompleto
-  },
-  personas:{
-    title:'Nueva persona',
-    html:()=>buildIngresoCompletoHTML(),
-    onMount:mountIngresoForm,
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-nombre')){toast('El nombre es obligatorio',true);return false;}
-      const proyecto=await resolverProyectoNuevo();
-      await atPost('Personas',{Nombre:v('f-nombre'),Mail:v('f-mail')||undefined,'Rol en empresa':v('f-rol-empresa')||undefined,Proyecto:proyecto||undefined,'Fecha de ingreso':v('f-ingreso')||undefined,'Fecha de cumpleaños':v('f-cumple')||undefined,Manager:v('f-manager')||undefined});
-      return true;
-    }
-  },
-  egresos:{title:'Nuevo egreso',html:()=>`
-<div class="field-group"><label class="field-label">Nombre completo *</label><input class="field-input" id="f-nombre" placeholder="Ej: Sofía González"></div>
-<div class="field-group"><label class="field-label">Fecha de offboarding</label><input class="field-input" id="f-fecha" type="date"></div>
-<div class="field-group"><label class="field-label">Motivo (opcional)</label><input class="field-input" id="f-motivo" placeholder="Ej: Renuncia voluntaria"></div>`,
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-nombre')){toast('El nombre es obligatorio',true);return false;}
-      await atPost('Checklist',{Persona:v('f-nombre'),Tipo:'Egreso',Rol:'—',Fecha:v('f-fecha')||undefined,EstadoKanban:'Aviso dado'});
-      toast(`Egreso de ${v('f-nombre')} creado ✓`);return true;
-    }},
-  eventos:{title:'Nuevo reminder',html:()=>`
-<div class="field-group"><label class="field-label">Descripción *</label><input class="field-input" id="f-nombre" placeholder="Ej: Pedirle review a Lucía"></div>
-<div class="field-group"><label class="field-label">Tipo</label><select class="field-input" id="f-tipo"><option value="Otro">Recordatorio</option><option value="Reminder GPTW">Reminder GPTW</option><option value="Encuesta satisfacción">Encuesta satisfacción</option></select></div>
-<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-fecha" type="date"></div>
-<div class="field-hint" style="padding:0 0 8px">Una vez llegada la fecha, el reminder se marcará como completado automáticamente.</div>`,
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-nombre')){toast('La descripción es obligatoria',true);return false;}
-      if(!v('f-fecha')){toast('La fecha es obligatoria',true);return false;}
-      await atPost('Eventos',{Evento:v('f-nombre'),Tipo:v('f-tipo'),Fecha:v('f-fecha'),Estado:'Pendiente'});return true;
-    }},
-  reviews:{title:'Nueva review',html:()=>`
-<div class="field-group"><label class="field-label">Persona *</label><input class="field-input" id="f-nombre"></div>
-<div class="field-group"><label class="field-label">Manager</label><input class="field-input" id="f-mgr"></div>
-<div class="field-group"><label class="field-label">Fecha</label><input class="field-input" id="f-fecha" type="date"></div>
-<div class="field-group"><label class="field-label">Objetivo</label><textarea class="field-input" id="f-obj"></textarea></div>
-<div class="field-group"><label class="field-label">Estado</label><select class="field-input" id="f-estado"><option>Sin iniciar</option><option>En progreso</option><option>Completa</option></select></div>`,
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-nombre')){toast('La persona es obligatoria',true);return false;}
-      await atPost('Reviews',{Persona:v('f-nombre'),Manager:v('f-mgr'),Fecha:v('f-fecha')||undefined,Objetivo:v('f-obj'),Estado:v('f-estado')});return true;
-    }},
-  proyectos:{title:'Nuevo proyecto',html:()=>`
-<div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-nombre"></div>
-<div class="field-group"><label class="field-label">Fecha de publicación</label><input class="field-input" id="f-fecha" type="date"></div>
-<div class="field-group"><label class="field-label">Notas</label><textarea class="field-input" id="f-notas"></textarea></div>`,
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-nombre')){toast('El nombre es obligatorio',true);return false;}
-      await atPost('Proyectos',{Proyecto:v('f-nombre'),'Fecha de publicación':v('f-fecha')||undefined,Notas:v('f-notas')});return true;
-    }},
-  checklist:{title:'Nuevo checklist',html:()=>`
-<div class="field-group"><label class="field-label">Persona *</label><input class="field-input" id="f-nombre"></div>
-<div class="field-group"><label class="field-label">Tipo</label><select class="field-input" id="f-tipo" onchange="toggleRol()"><option>Ingreso</option><option>Egreso</option></select></div>
-<div class="field-group" id="fg-rol"><label class="field-label">Rol / Perfil</label><select class="field-input" id="f-rol"><option>Otro</option><option>Engineer</option><option>Core Team</option><option>Ambos</option></select></div>
-<div class="field-group"><label class="field-label">Fecha</label><input class="field-input" id="f-fecha" type="date"></div>
-<div id="rem-preview" class="auto-preview"><strong>Se crearán automáticamente en Reminders:</strong>🎂 Cumpleaños · ⭐ Aniversario · 📋 Glassdoor (4 meses)</div>`,
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-nombre')){toast('La persona es obligatoria',true);return false;}
-      const tipo=v('f-tipo'),rol=tipo==='Egreso'?'—':v('f-rol'),fecha=v('f-fecha');
-      await atPost('Checklist',{Persona:v('f-nombre'),Tipo:tipo,Rol:rol,Fecha:fecha||undefined,EstadoKanban:tipo==='Ingreso'?'Pre-ingreso':'Aviso dado'});
-      if(tipo==='Ingreso'&&fecha){
-        const n=v('f-nombre'),ing=new Date(fecha+'T12:00:00');
-        await atPost('Eventos',{Evento:`🎂 Cumpleaños — ${n}`,Tipo:'Cumpleaños',Fecha:fecha,Estado:'Pendiente'});
-        const aniv=new Date(ing);aniv.setFullYear(aniv.getFullYear()+1);
-        await atPost('Eventos',{Evento:`⭐ Aniversario 1 año — ${n}`,Tipo:'Aniversario',Fecha:aniv.toISOString().split('T')[0],Estado:'Pendiente'});
-        const gd=new Date(ing);gd.setMonth(gd.getMonth()+4);
-        if(rol==='Engineer'){
-          await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${n}`,Tipo:'Otro',Fecha:gd.toISOString().split('T')[0],Estado:'Pendiente'});
-        }
-        toast(`Checklist + reminders creados para ${n} ✓`);
-      }
-      return true;
-    }},
-  gettogether:{title:'Registrar Get Together',html:()=>{
-    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
-    const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
-    return`
-<div class="field-group"><label class="field-label">Persona *</label>
-  <select class="field-input" id="f-gt-persona">
-    <option value="">Seleccioná una persona…</option>
-    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
-  </select>
-</div>
-<div class="field-group"><label class="field-label">Ciudad *</label><input class="field-input" id="f-gt-ciudad" placeholder="Ej: Buenos Aires"></div>
-<div class="field-group"><label class="field-label">Proyecto</label>
-  <select class="field-input" id="f-gt-proyecto">
-    <option value="">Sin proyecto</option>
-    ${proyectos.map(p=>`<option value="${p}">${p}</option>`).join('')}
-  </select>
-</div>
-<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-gt-fecha" type="date"></div>
-`;},
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-gt-persona')){toast('Seleccioná una persona',true);return false;}
-      if(!v('f-gt-ciudad')){toast('La ciudad es obligatoria',true);return false;}
-      if(!v('f-gt-fecha')){toast('La fecha es obligatoria',true);return false;}
-      const fields={Persona:v('f-gt-persona'),Ciudad:v('f-gt-ciudad'),Fecha:v('f-gt-fecha')};
-      if(v('f-gt-proyecto')) fields.Proyecto=v('f-gt-proyecto');
-      await atPost('Get Together',fields);return true;
-    }},
-
-  offsites:{title:'Registrar Off Site',html:()=>{
-    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
-    const proyectos=[...new Set(cacheProyectosRaw?.map(p=>p.fields.Proyecto||'').filter(Boolean)||[])].sort();
-    return`
-<div class="field-group"><label class="field-label">Persona *</label>
-  <select class="field-input" id="f-os-persona">
-    <option value="">Seleccioná una persona…</option>
-    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
-  </select>
-</div>
-<div class="field-group"><label class="field-label">Proyecto *</label>
-  <select class="field-input" id="f-os-proyecto">
-    <option value="">Seleccioná un proyecto…</option>
-    ${proyectos.map(p=>`<option value="${p}">${p}</option>`).join('')}
-  </select>
-</div>
-<div class="field-group"><label class="field-label">Destino *</label><input class="field-input" id="f-os-destino" placeholder="Ej: Denver, Colorado"></div>
-<div class="field-group"><label class="field-label">Fecha inicio *</label><input class="field-input" id="f-os-inicio" type="date"></div>
-<div class="field-group"><label class="field-label">Fecha fin</label><input class="field-input" id="f-os-fin" type="date"></div>
-<div class="field-group"><label class="field-label">Notas</label><textarea class="field-input" id="f-os-notas" placeholder="Descripción del off site (opcional)"></textarea></div>
-`;},
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-os-persona')){toast('Seleccioná una persona',true);return false;}
-      if(!v('f-os-proyecto')){toast('Seleccioná un proyecto',true);return false;}
-      if(!v('f-os-destino')){toast('El destino es obligatorio',true);return false;}
-      if(!v('f-os-inicio')){toast('La fecha de inicio es obligatoria',true);return false;}
-      const fields={Persona:v('f-os-persona'),Proyecto:v('f-os-proyecto'),Destino:v('f-os-destino'),'Fecha inicio':v('f-os-inicio')};
-      if(v('f-os-fin')) fields['Fecha fin']=v('f-os-fin');
-      if(v('f-os-notas')) fields.Descripción=v('f-os-notas');
-      await atPost('Off Sites',fields);return true;
-    }},
-
-  ambassadors:{title:'Registrar asistencia AW',html:()=>{
+    ambassadors:{title:'Registrar asistencia AW',html:()=>{
     const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
     // Obtener ediciones únicas del cache para mostrar como referencia
     const ediciones=[...new Set(cacheAWRaw.map(r=>r.fields['Édición AW']||'').filter(Boolean))].sort();
@@ -4028,6 +3597,41 @@ const FORMS={
       if(v('f-loyalty')) fields['Nivel Loyalty']=v('f-loyalty');
       if(v('f-valor')) fields.Valor=Number(v('f-valor'));
       await atPost('Beneficios',fields);return true;
+    }},
+
+  gettogether:{title:'Registrar Get Together',html:()=>{
+    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+    const paises=[...new Set(cacheGetTogetherRaw.map(r=>r.fields['País']||'').filter(Boolean))].sort();
+    return`
+<div class="field-group"><label class="field-label">BEONer *</label>
+  <select class="field-input" id="f-gt-persona">
+    <option value="">Seleccioná una persona…</option>
+    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">País *</label>
+  <input class="field-input" id="f-gt-pais" list="gt-paises-list" placeholder="Ej: Argentina">
+  <datalist id="gt-paises-list">${paises.map(p=>`<option value="${p}">`).join('')}</datalist>
+</div>
+<div class="field-group"><label class="field-label">Ciudad *</label><input class="field-input" id="f-gt-ciudad" placeholder="Ej: Buenos Aires"></div>
+<div class="field-group"><label class="field-label">Proyecto</label>
+  <select class="field-input" id="f-gt-proyecto">
+    <option value="">Sin proyecto</option>
+    ${proyectos.map(p=>`<option value="${p}">${p}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-gt-fecha" type="date"></div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-gt-persona')){toast('Seleccioná una persona',true);return false;}
+      if(!v('f-gt-pais')){toast('El país es obligatorio',true);return false;}
+      if(!v('f-gt-ciudad')){toast('La ciudad es obligatoria',true);return false;}
+      if(!v('f-gt-fecha')){toast('La fecha es obligatoria',true);return false;}
+      const fields={BEONer:v('f-gt-persona'),'País':v('f-gt-pais'),Ciudad:v('f-gt-ciudad'),Fecha:v('f-gt-fecha')};
+      if(v('f-gt-proyecto')) fields.Proyecto=v('f-gt-proyecto');
+      await atPost('Get Together',fields);return true;
     }}
 };
 

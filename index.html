@@ -2913,13 +2913,18 @@ function switchOSTab(tab,btn){
 function renderOSMetricas(){
   const personas=new Set(), proyectos=new Set();
   let diasTotal=0;
+  const viajesUnicos=new Set();
   cacheOSRaw.forEach(r=>{
     const f=r.fields;
     const p=f.Persona||'';
     const proy=f.Proyecto||'';
     if(p) personas.add(p);
     if(proy) proyectos.add(proy);
-    diasTotal+=Number(f['Días']||0);
+    const key=`${f.Destino||''}|${f['Fecha inicio']||''}`;
+    if(key!=='|'&&!viajesUnicos.has(key)){
+      viajesUnicos.add(key);
+      diasTotal+=calcDiasOS(f);
+    }
   });
   document.getElementById('os-total').textContent=cacheOSRaw.length;
   document.getElementById('os-personas').textContent=personas.size;
@@ -2937,27 +2942,41 @@ function filtrarOSPersona(){ renderOSPersona(); }
 // Cache precalculado del mapa de proyectos — se construye una vez al cargar
 let cacheOSProyMap = {};
 
+function calcDiasOS(f){
+  // Intentar campo Días primero, sino calcular de fechas
+  if(f['Días']&&Number(f['Días'])>0) return Number(f['Días']);
+  if(f['Dias']&&Number(f['Dias'])>0) return Number(f['Dias']);
+  if(f['dias']&&Number(f['dias'])>0) return Number(f['dias']);
+  if(f['Fecha inicio']&&f['Fecha fin']){
+    const d1=new Date(f['Fecha inicio']+'T12:00:00');
+    const d2=new Date(f['Fecha fin']+'T12:00:00');
+    const diff=Math.round((d2-d1)/86400000)+1;
+    return diff>0?diff:0;
+  }
+  return 0;
+}
+
 function buildOSProyMap(){
   cacheOSProyMap = {};
   cacheOSRaw.forEach(r=>{
     const f=r.fields;
     const proy=Array.isArray(f.Proyecto)?f.Proyecto[0]:(f.Proyecto||'Sin proyecto');
     const persona=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||''));
-    if(!cacheOSProyMap[proy]) cacheOSProyMap[proy]={count:0,personas:new Set(),destinos:{},viajesUnicos:new Set()};
+    const dias=calcDiasOS(f);
+    if(!cacheOSProyMap[proy]) cacheOSProyMap[proy]={count:0,personas:new Set(),destinos:{},viajesUnicos:new Map(),diasUnicos:0};
     cacheOSProyMap[proy].count++;
     if(persona) cacheOSProyMap[proy].personas.add(persona);
-    // Agrupar registros por destino
     const dest=(f.Destino||'').trim();
     const fechaInicio=f['Fecha inicio']||'';
     if(dest){
       if(!cacheOSProyMap[proy].destinos[dest]) cacheOSProyMap[proy].destinos[dest]=[];
-      cacheOSProyMap[proy].destinos[dest].push({persona,dias:Number(f['Días']||0),fechaInicio});
+      cacheOSProyMap[proy].destinos[dest].push({persona,dias,fechaInicio});
     }
-    // Viaje único = destino + fecha inicio (evita contar días por cada persona del mismo viaje)
+    // Viaje único = destino + fecha inicio → sumar días una sola vez
     const viajeKey=`${dest}|${fechaInicio}`;
     if(viajeKey!=='|'&&!cacheOSProyMap[proy].viajesUnicos.has(viajeKey)){
-      cacheOSProyMap[proy].viajesUnicos.add(viajeKey);
-      cacheOSProyMap[proy].diasUnicos=(cacheOSProyMap[proy].diasUnicos||0)+Number(f['Días']||0);
+      cacheOSProyMap[proy].viajesUnicos.set(viajeKey, dias);
+      cacheOSProyMap[proy].diasUnicos+=dias;
     }
   });
 }
@@ -2975,7 +2994,10 @@ function openOSProyModal(proy){
   const destinos=Object.entries(d.destinos).sort((a,b)=>b[1].length-a[1].length);
   let html='';
   destinos.forEach(([dest,viajes])=>{
-    const diasDest=viajes.reduce((s,v)=>s+v.dias,0);
+    // Días únicos del destino = un valor por fecha de inicio única
+    const viajesUnicosDestino=new Map();
+    viajes.forEach(v=>{if(!viajesUnicosDestino.has(v.fechaInicio)) viajesUnicosDestino.set(v.fechaInicio,v.dias);});
+    const diasDest=[...viajesUnicosDestino.values()].reduce((s,d)=>s+d,0);
     const personas=[...new Set(viajes.map(v=>v.persona).filter(Boolean))];
     html+=`<div style="margin-bottom:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:10px">

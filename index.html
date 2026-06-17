@@ -2943,16 +2943,22 @@ function buildOSProyMap(){
     const f=r.fields;
     const proy=Array.isArray(f.Proyecto)?f.Proyecto[0]:(f.Proyecto||'Sin proyecto');
     const persona=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||''));
-    if(!cacheOSProyMap[proy]) cacheOSProyMap[proy]={count:0,personas:new Set(),destinos:{},dias:0};
+    if(!cacheOSProyMap[proy]) cacheOSProyMap[proy]={count:0,personas:new Set(),destinos:{},viajesUnicos:new Set()};
     cacheOSProyMap[proy].count++;
     if(persona) cacheOSProyMap[proy].personas.add(persona);
     // Agrupar registros por destino
     const dest=(f.Destino||'').trim();
+    const fechaInicio=f['Fecha inicio']||'';
     if(dest){
       if(!cacheOSProyMap[proy].destinos[dest]) cacheOSProyMap[proy].destinos[dest]=[];
-      cacheOSProyMap[proy].destinos[dest].push({persona,dias:Number(f['Días']||0),fechaInicio:f['Fecha inicio']||''});
+      cacheOSProyMap[proy].destinos[dest].push({persona,dias:Number(f['Días']||0),fechaInicio});
     }
-    cacheOSProyMap[proy].dias+=Number(f['Días']||0);
+    // Viaje único = destino + fecha inicio (evita contar días por cada persona del mismo viaje)
+    const viajeKey=`${dest}|${fechaInicio}`;
+    if(viajeKey!=='|'&&!cacheOSProyMap[proy].viajesUnicos.has(viajeKey)){
+      cacheOSProyMap[proy].viajesUnicos.add(viajeKey);
+      cacheOSProyMap[proy].diasUnicos=(cacheOSProyMap[proy].diasUnicos||0)+Number(f['Días']||0);
+    }
   });
 }
 
@@ -2963,7 +2969,7 @@ function openOSProyModal(proy){
   overlay.style.display='flex';
   document.getElementById('os-proy-title').textContent=proy;
   document.getElementById('os-proy-subtitle').textContent=
-    `${d.count} viaje${d.count!==1?'s':''} · ${d.personas.size} persona${d.personas.size!==1?'s':''} · ${d.dias} días totales`;
+    `${d.count} viaje${d.count!==1?'s':''} · ${d.personas.size} persona${d.personas.size!==1?'s':''} · ${d.diasUnicos||0} días totales`;
 
   // Construir contenido agrupado por destino
   const destinos=Object.entries(d.destinos).sort((a,b)=>b[1].length-a[1].length);
@@ -3021,7 +3027,7 @@ function renderOSPersona(){
       <td>${avH(nombre)}${nombre}</td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.count}</td>
       <td style="font-size:12px;color:var(--text2)">${destStr||'—'}</td>
-      <td style="font-size:13px">${d.dias||'—'} días</td>
+      <td style="font-size:13px">${d.diasUnicos||'—'} días</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';

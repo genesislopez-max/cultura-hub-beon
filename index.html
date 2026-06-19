@@ -2467,7 +2467,7 @@ function filtrarGD(){
     const nombre=(r.fields.Evento||'').toLowerCase();
     const estado=(r.fields.Estado||'Pendiente').toLowerCase();
     const matchQ=!q||nombre.includes(q);
-    const matchE=!estadoFil||(estadoFil==='pendiente'&&estado!=='solicitada'&&estado!=='completado')||(estadoFil==='solicitada'&&estado==='solicitada');
+    const matchE=!estadoFil||(estadoFil==='pendiente'&&estado!=='completado')||(estadoFil==='solicitada'&&estado==='completado');
     return matchQ&&matchE;
   }).sort((a,b)=>(a.fields.Fecha||'').localeCompare(b.fields.Fecha||''));
   const tb=document.getElementById('tbody-glassdoor');
@@ -2476,7 +2476,7 @@ function filtrarGD(){
   tb.innerHTML=filtrados.map((r,idx)=>{
     const f=r.fields;
     const nombre=(f.Evento||'').replace(/[^—]+—\s*/,'').trim()||f.Evento||'—';
-    const solicitada=f.Estado==='Solicitada';
+    const solicitada=f.Estado==='Completado'||f.Estado==='Solicitada';
     const diasRestantes=f.Fecha?Math.round((new Date(f.Fecha+'T12:00:00')-hoy2)/86400000):null;
     let diasStr='';
     if(!solicitada&&diasRestantes!==null){
@@ -2497,10 +2497,10 @@ function filtrarGD(){
 
 async function marcarGDSolicitada(id){
   const hoy=new Date().toISOString().split('T')[0];
-  // Solo actualizar Estado — sin campo Fecha solicitada para evitar errores de campo inexistente
+  // Marcar como Completado en Airtable (es el estado válido para "ya gestionada")
   const result=await fetch(`https://api.airtable.com/v0/${BASE}/Eventos/${id}`,{
     method:'PATCH',headers:HDR,
-    body:JSON.stringify({fields:{Estado:'Solicitada'}})
+    body:JSON.stringify({fields:{Estado:'Completado'}})
   });
   if(!result.ok){
     const err=await result.json();
@@ -2508,9 +2508,9 @@ async function marcarGDSolicitada(id){
     toast(`⚠️ Error: ${err.error?.message||result.statusText}`,false);
     return;
   }
-  // Actualizar cache local inmediatamente
+  // Actualizar cache local — marcar visualmente como Solicitada
   const rec=cacheGDRecs.find(r=>r.id===id);
-  if(rec){ rec.fields.Estado='Solicitada'; rec.fields['Fecha solicitada']=hoy; }
+  if(rec){ rec.fields.Estado='Completado'; rec.fields['Fecha solicitada']=hoy; }
   toast('✅ Glassdoor review marcada como solicitada');
   filtrarGD();
 }
@@ -3224,6 +3224,7 @@ function renderOSHistorial(){
   });
   (()=>{const _e=document.getElementById('os-badge-historial');if(_e) _e.textContent=`${recs.length} registros`;})();
   const tb=document.getElementById('os-tbody-historial');
+  if(!tb) return;
   tb.innerHTML=recs.map((r,idx)=>{
     const f=r.fields;
     const bg=idx%2===0?'background:var(--bg2)':'';

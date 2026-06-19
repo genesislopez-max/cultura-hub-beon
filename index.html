@@ -1881,7 +1881,7 @@ async function loadPersonas(){
   const allEng=[...engineers];
 
   document.getElementById('bc-personas').textContent=recs.length;
-  document.getElementById('badge-personas-h') && (document.getElementById('badge-personas-h').textContent=`${recs.length} personas`);
+  {const _e=document.getElementById('badge-personas-h');if(_e) _e.textContent=`${recs.length} personas`;}
   document.getElementById('m-personas').textContent=recs.length;
   document.getElementById('m-coreteam').textContent=coreTeam.length;
   document.getElementById('m-engineers').textContent=engineers.length;
@@ -3218,7 +3218,7 @@ function renderOSHistorial(){
     const texto=`${f.Persona||''} ${f.Proyecto||''} ${f.Destino||''}`.toLowerCase();
     return(!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil);
   });
-  document.getElementById('os-badge-historial').textContent=`${recs.length} registros`;
+  (()=>{const _e=document.getElementById('os-badge-historial');if(_e) _e.textContent=`${recs.length} registros`;})();
   const tb=document.getElementById('os-tbody-historial');
   tb.innerHTML=recs.map((r,idx)=>{
     const f=r.fields;
@@ -3938,8 +3938,8 @@ const FORMS={
 
 function toggleRol(){
   const t=document.getElementById('f-tipo')?.value;
-  document.getElementById('fg-rol').style.display=t==='Egreso'?'none':'block';
-  document.getElementById('rem-preview').style.display=t==='Egreso'?'none':'block';
+  {const _fg=document.getElementById('fg-rol');if(_fg) _fg.style.display=t==='Egreso'?'none':'block';}
+  {const _e=document.getElementById('rem-preview');if(_e) _e.style.display=t==='Egreso'?'none':'block';}
 }
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────

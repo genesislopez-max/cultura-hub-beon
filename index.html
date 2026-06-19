@@ -2077,9 +2077,9 @@ async function loadAniversarios(personas){
     let html='';
     Object.entries(grupos).sort(([a],[b])=>a.localeCompare(b)).forEach(([,{label,items}])=>{
       const esActual=label.toLowerCase().includes(now.toLocaleDateString('es-AR',{month:'long'}).toLowerCase());
-      html+=`<tr><td colspan="4" style="padding:14px 16px 10px;background:${esActual?'#EEF2FF':'var(--bg2)'};border-top:2px solid ${esActual?'var(--blue)':'var(--border)'};border-bottom:1px solid var(--border)">
-  <span style="font-size:12px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${esActual?'var(--blue)':'var(--text2)'}">${label}</span>
-  ${esActual?'<span style="margin-left:8px;font-size:11px;font-weight:600;color:var(--blue);background:#D6DEFF;padding:2px 8px;border-radius:20px">Este mes</span>':''}
+      html+=`<tr><td colspan="4" style="padding:12px 18px;background:${esActual?'linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%)':'var(--bg2)'};border-left:3px solid ${esActual?'var(--blue)':'var(--border)'};border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <span style="font-size:12px;font-weight:700;color:${esActual?'var(--blue)':'var(--text2)'}">${label}</span>
+  ${esActual?'<span style="margin-left:8px;font-size:11px;color:var(--blue);opacity:0.7">· Este mes</span>':''}
 </td></tr>`;
       items.forEach(r=>{
         const dl=r.days===0?'¡Hoy! 🎉':r.days===1?'Mañana':`en ${r.days} días`;

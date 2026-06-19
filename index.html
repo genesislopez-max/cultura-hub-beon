@@ -317,7 +317,6 @@ textarea.field-input{resize:vertical;min-height:80px;}
           <div class="metric"><div class="metric-label">Total equipo</div><div class="metric-val" id="m-personas">—</div><div class="metric-sub">personas activas</div></div>
           <div class="metric"><div class="metric-label">Core Team</div><div class="metric-val" id="m-coreteam" style="color:var(--purple)">—</div><div class="metric-sub">en el equipo</div></div>
           <div class="metric"><div class="metric-label">Engineers</div><div class="metric-val" id="m-engineers" style="color:var(--blue)">—</div><div class="metric-sub">en proyectos</div></div>
-          <div class="metric"><div class="metric-label">Reviews en progreso</div><div class="metric-val" id="m-reviews" style="color:#9a6700">—</div><div class="metric-sub">del ciclo activo</div></div>
         </div>
         <div class="summary-grid">
           <div class="summary-card primary">
@@ -2338,6 +2337,7 @@ function filtrarPersonas(){
 }
 
 function filtrarReviews(){
+  if(!document.getElementById('tbody-reviews')) return;
   const q=(document.getElementById('reviews-search')?.value||'').toLowerCase();
   const manager=document.getElementById('reviews-manager')?.value||'';
   const estado=document.getElementById('reviews-estado')?.value||'';
@@ -2428,7 +2428,15 @@ async function loadReviews(){
   const recs=d.records||[];
   // Glassdoor desde Eventos
   const dGD=await atGet('Eventos','&sort[0][field]=Fecha&sort[0][direction]=asc');
-  const gdRecs=(dGD.records||[]).filter(r=>(r.fields.Evento||'').toLowerCase().includes('glassdoor'));
+  // Solo Engineers — cruzar con cachePersonasRaw
+  const engineerNames=new Set(
+    cachePersonasRaw.filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>(p.fields.Nombre||'').trim())
+  );
+  const gdRecs=(dGD.records||[]).filter(r=>{
+    if(!(r.fields.Evento||'').toLowerCase().includes('glassdoor')) return false;
+    const nombre=(r.fields.Evento||'').replace(/.*—\s*/,'').trim();
+    return engineerNames.has(nombre);
+  });
   cacheGDRecs=gdRecs;
 
   // Métricas

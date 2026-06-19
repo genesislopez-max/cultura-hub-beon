@@ -2054,7 +2054,9 @@ async function loadAniversarios(personas){
       const fa=new Date(a.fecha+'T12:00:00'), fb=new Date(b.fecha+'T12:00:00');
       const pa=new Date(fa);pa.setFullYear(now.getFullYear());if(pa<now)pa.setFullYear(now.getFullYear()+1);
       const pb=new Date(fb);pb.setFullYear(now.getFullYear());if(pb<now)pb.setFullYear(now.getFullYear()+1);
-      if(pa.getTime()!==pb.getTime()) return pa.getTime()-pb.getTime();
+      // Primero por mes
+      if(pa.getMonth()!==pb.getMonth()||pa.getFullYear()!==pb.getFullYear()) return pa.getTime()-pb.getTime();
+      // Dentro del mismo mes: más años primero
       return b.años-a.años;
     });
 
@@ -2072,7 +2074,7 @@ async function loadAniversarios(personas){
 
     let html='';
     Object.entries(grupos).sort(([a],[b])=>a.localeCompare(b)).forEach(([,{label,items,esActual}])=>{
-      html+=`<div style="margin-bottom:0;border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-top:16px;">
+      html+=`<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:16px;">
         <div style="padding:12px 18px;background:linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%);border-left:3px solid var(--blue);display:flex;align-items:center;gap:10px;">
           <span style="font-size:13px;font-weight:700;color:var(--blue)">${label.charAt(0).toUpperCase()+label.slice(1)}</span>
           ${esActual?'<span style="font-size:11px;font-weight:600;color:var(--blue);background:#D6DEFF;padding:2px 8px;border-radius:20px">Este mes</span>':''}

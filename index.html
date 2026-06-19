@@ -2497,9 +2497,18 @@ function filtrarGD(){
 
 async function marcarGDSolicitada(id){
   const hoy=new Date().toISOString().split('T')[0];
-  await atPatch(`Eventos/${id}`,{Estado:'Solicitada','Fecha solicitada':hoy}).catch(e=>console.error(e));
+  try{
+    await atPatch(`Eventos/${id}`,{Estado:'Solicitada','Fecha solicitada':hoy});
+  }catch(e){
+    try{ await atPatch(`Eventos/${id}`,{Estado:'Solicitada'}); }catch(e2){
+      console.error('Error:',e2); toast('⚠️ No se pudo actualizar',false); return;
+    }
+  }
+  // Actualizar cache local inmediatamente
+  const rec=cacheGDRecs.find(r=>r.id===id);
+  if(rec){ rec.fields.Estado='Solicitada'; rec.fields['Fecha solicitada']=hoy; }
   toast('✅ Glassdoor review marcada como solicitada');
-  await loadReviews();
+  filtrarGD(); // Re-renderizar solo la tabla sin recargar todo
 }
 
 

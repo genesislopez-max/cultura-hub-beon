@@ -282,11 +282,10 @@ textarea.field-input{resize:vertical;min-height:80px;}
     <div class="sb-section">Eventos</div>
     <button class="sb-item" onclick="showSection('cumpleanos',this)"><i class="ti ti-cake"></i>Cumpleaños</button>
     <button class="sb-item" onclick="showSection('aniversarios',this)"><i class="ti ti-star"></i>Aniversarios</button>
-    <button class="sb-item" onclick="showSection('eventos',this)"><i class="ti ti-bell"></i>Reminders</button>
     <div class="sb-section">Gestión</div>
     <button class="sb-item" onclick="showSection('ingresos',this)"><i class="ti ti-user-plus"></i>Ingresos <span class="bc" id="bc-ingresos">0</span></button>
     <button class="sb-item" onclick="showSection('egresos',this)"><i class="ti ti-user-minus"></i>Egresos <span class="bc" id="bc-egresos">0</span></button>
-    <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-clipboard-list"></i>Reviews</button>
+    <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-brand-google"></i>Glassdoor</button>
     <button class="sb-item" onclick="showSection('proyectos',this)"><i class="ti ti-folder"></i>Proyectos</button>
     <div class="sb-section">Beneficios</div>
     <button class="sb-item" onclick="showSection('beneficios',this)"><i class="ti ti-gift"></i>Beneficios</button>
@@ -545,26 +544,38 @@ textarea.field-input{resize:vertical;min-height:80px;}
 
       <!-- REVIEWS -->
       <div class="section-page" id="page-reviews">
-        <div class="table-wrap">
-          <div class="table-head"><span class="table-head-title">Ciclo de Reviews</span><span class="badge badge-amber" id="badge-reviews-h">—</span></div>
-          <div class="search-bar">
-            <div class="search-wrap">
-              <i class="ti ti-search search-icon"></i>
-              <input class="search-input" id="reviews-search" placeholder="Buscar por persona…" oninput="filtrarReviews()">
-            </div>
-            <select class="filter-select" id="reviews-manager" onchange="filtrarReviews()">
-              <option value="">Todos los managers</option>
-            </select>
-            <select class="filter-select" id="reviews-estado" onchange="filtrarReviews()">
-              <option value="">Todos los estados</option>
-              <option value="Sin iniciar">Sin iniciar</option>
-              <option value="En progreso">En progreso</option>
-              <option value="Completa">Completa</option>
-            </select>
-          </div>
-          <table class="data-table"><thead><tr><th>Persona</th><th>Manager</th><th>Fecha</th><th>Objetivo</th><th>Estado</th></tr></thead>
-          <tbody id="tbody-reviews"></tbody></table>
+
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Glassdoor pendientes</div><div class="metric-val" style="color:#9a6700" id="rv-gd-pend">—</div><div class="metric-sub">para solicitar</div></div>
+          <div class="metric"><div class="metric-label">Próxima a solicitar</div><div class="metric-val" style="color:var(--blue);font-size:15px" id="rv-gd-prox">—</div><div class="metric-sub" id="rv-gd-prox-dias"></div></div>
+
         </div>
+
+        <!-- GLASSDOOR -->
+        <div id="rv-tab-glassdoor">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head">
+              <span class="table-head-title">Glassdoor Reviews — Engineers</span>
+              <span class="badge badge-blue" id="rv-badge-gd">—</span>
+            </div>
+            <div class="search-bar">
+              <div class="search-wrap"><i class="ti ti-search search-icon"></i>
+                <input class="search-input" id="gd-search" placeholder="Buscar persona…" oninput="filtrarGD()">
+              </div>
+              <select class="filter-select" id="gd-estado" onchange="filtrarGD()">
+                <option value="">Todos</option>
+                <option value="pendiente">Pendientes</option>
+                <option value="solicitada">Solicitadas</option>
+              </select>
+            </div>
+            <table class="data-table">
+              <thead><tr><th>Persona</th><th>Fecha a solicitar</th><th>Estado</th><th>Fecha solicitada</th><th></th></tr></thead>
+              <tbody id="tbody-glassdoor"></tbody>
+            </table>
+          </div>
+        </div>
+
+
       </div>
 
       <!-- PROYECTOS -->
@@ -2406,16 +2417,84 @@ function poblarFiltrosReviews(){
   if(sel) sel.innerHTML='<option value="">Todos los managers</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
 
+let cacheGDRecs=[];
+
 async function loadReviews(){
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const año=hoy.getFullYear();
+
+  // Reviews internas
   const d=await atGet('Reviews');
   const recs=d.records||[];
-  document.getElementById('m-reviews').textContent=recs.filter(r=>r.fields.Estado==='En progreso').length;
-  document.getElementById('badge-reviews-h').textContent=`${recs.length} reviews`;
-  const sb={'Sin iniciar':'badge-red','En progreso':'badge-amber','Completa':'badge-green'};
-  const tb=document.getElementById('tbody-reviews');
-  tb.innerHTML=recs.length?recs.map(r=>{const f=r.fields;return`<tr><td>${avH(f.Persona)}${f.Persona||'—'}</td><td>${f.Manager||'—'}</td><td>${fmt(f.Fecha)}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.Objetivo||'—'}</td><td><span class="badge ${sb[f.Estado]||'badge-amber'}">${f.Estado||'Sin iniciar'}</span></td></tr>`;}).join(''):'<tr class="empty-row"><td colspan="5">No hay reviews cargadas</td></tr>';
-  poblarFiltrosReviews();
+  // Glassdoor desde Eventos
+  const dGD=await atGet('Eventos','&sort[0][field]=Fecha&sort[0][direction]=asc');
+  const gdRecs=(dGD.records||[]).filter(r=>(r.fields.Evento||'').toLowerCase().includes('glassdoor'));
+  cacheGDRecs=gdRecs;
+
+  // Métricas
+  const pendientes=gdRecs.filter(r=>r.fields.Estado!=='Completado'&&r.fields.Estado!=='Solicitada');
+  document.getElementById('rv-gd-pend').textContent=pendientes.length;
+  document.getElementById('rv-badge-gd').textContent=`${gdRecs.length} engineers`;
+
+  // Próxima a solicitar
+  const proxima=pendientes.slice().sort((a,b)=>(a.fields.Fecha||'').localeCompare(b.fields.Fecha||''))[0];
+  if(proxima){
+    const nombre=(proxima.fields.Evento||'').replace(/.*—\s*/,'').trim();
+    const dias=proxima.fields.Fecha?Math.round((new Date(proxima.fields.Fecha+'T12:00:00')-hoy)/86400000):null;
+    document.getElementById('rv-gd-prox').textContent=nombre;
+    document.getElementById('rv-gd-prox-dias').textContent=dias===0?'¡Hoy!':dias===1?'Mañana':dias!==null?`en ${dias} días`:'sin fecha';
+  } else {
+    document.getElementById('rv-gd-prox').textContent='—';
+    document.getElementById('rv-gd-prox-dias').textContent='al día';
+  }
+
+  filtrarGD();
 }
+
+function filtrarGD(){
+  const q=(document.getElementById('gd-search')?.value||'').toLowerCase();
+  const estadoFil=document.getElementById('gd-estado')?.value||'';
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const filtrados=cacheGDRecs.filter(r=>{
+    const nombre=(r.fields.Evento||'').toLowerCase();
+    const estado=(r.fields.Estado||'Pendiente').toLowerCase();
+    const matchQ=!q||nombre.includes(q);
+    const matchE=!estadoFil||(estadoFil==='pendiente'&&estado!=='solicitada'&&estado!=='completado')||(estadoFil==='solicitada'&&estado==='solicitada');
+    return matchQ&&matchE;
+  }).sort((a,b)=>(a.fields.Fecha||'').localeCompare(b.fields.Fecha||''));
+  const tb=document.getElementById('tbody-glassdoor');
+  if(!tb) return;
+  const hoy2=new Date();hoy2.setHours(0,0,0,0);
+  tb.innerHTML=filtrados.map((r,idx)=>{
+    const f=r.fields;
+    const nombre=(f.Evento||'').replace(/[^—]+—\s*/,'').trim()||f.Evento||'—';
+    const solicitada=f.Estado==='Solicitada';
+    const diasRestantes=f.Fecha?Math.round((new Date(f.Fecha+'T12:00:00')-hoy2)/86400000):null;
+    let diasStr='';
+    if(!solicitada&&diasRestantes!==null){
+      if(diasRestantes<0) diasStr='<span style="color:#C62828;font-size:11px"> · vencida</span>';
+      else if(diasRestantes===0) diasStr='<span style="color:#C62828;font-weight:600;font-size:11px"> · Hoy</span>';
+      else if(diasRestantes<=30) diasStr=`<span style="color:#E65100;font-size:11px"> · en ${diasRestantes}d</span>`;
+    }
+    const bg=idx%2===0?'background:var(--bg2)':'';
+    return`<tr style="${bg};opacity:${solicitada?'0.6':'1'}">
+      <td>${avH(nombre)}${nombre}</td>
+      <td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}${diasStr}</td>
+      <td><span class="badge ${solicitada?'badge-green':'badge-amber'}">${solicitada?'Solicitada':'Pendiente'}</span></td>
+      <td style="font-size:12px;color:var(--text2)">${f['Fecha solicitada']?fmt(f['Fecha solicitada']):'—'}</td>
+      <td>${!solicitada?`<button onclick="marcarGDSolicitada('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Marcar solicitada</button>`:''}</td>
+    </tr>`;
+  }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
+}
+
+async function marcarGDSolicitada(id){
+  const hoy=new Date().toISOString().split('T')[0];
+  await atPatch(`Eventos/${id}`,{Estado:'Solicitada','Fecha solicitada':hoy}).catch(e=>console.error(e));
+  toast('✅ Glassdoor review marcada como solicitada');
+  await loadReviews();
+}
+
+
 
 // Cache de publicaciones por proyecto
 let cacheMeetByProyecto={};  // { 'NombreProyecto': [{id, fecha, link, notas}] }
@@ -3850,7 +3929,7 @@ function toggleRol(){
 const ADD=['ingresos','egresos','personas','eventos','reviews','proyectos','checklist','beneficios','beneficios-asignados','ambassadors','offsites','gettogether'];
 const ADD_FULL_SECTIONS=['ingresos'];
 const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo egreso',personas:'Nueva persona',eventos:'Nuevo reminder',reviews:'Nueva review',proyectos:'Nuevo proyecto',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together'};
-const TITLES={inicio:'Inicio',personas:'Personas del equipo',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',eventos:'Reminders y eventos',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Reviews',proyectos:'Proyectos',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together'};
+const TITLES={inicio:'Inicio',personas:'Personas del equipo',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',eventos:'Reminders y eventos',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together'};
 let currentForm=null;
 let currentFormFull=null;
 
@@ -3979,7 +4058,6 @@ async function loadAll(){
   await Promise.all([
     loadCumpleanos(personas),
     loadAniversarios(personas),
-    loadEventos(),
     loadReviews(),
     loadChecklist(),
     loadBeneficios(),

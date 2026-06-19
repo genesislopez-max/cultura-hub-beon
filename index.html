@@ -2077,7 +2077,8 @@ async function loadAniversarios(personas){
     let html='';
     Object.entries(grupos).sort(([a],[b])=>a.localeCompare(b)).forEach(([,{label,items}])=>{
       const esActual=label.toLowerCase().includes(now.toLocaleDateString('es-AR',{month:'long'}).toLowerCase());
-      html+=`<tr><td colspan="4" style="padding:12px 18px;background:${esActual?'linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%)':'var(--bg2)'};border-left:3px solid ${esActual?'var(--blue)':'var(--border)'};border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+      html+=`<tr><td colspan="4" style="padding:0;height:12px;background:transparent;border:none"></td></tr>
+<tr><td colspan="4" style="padding:12px 18px;background:${esActual?'linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%)':'var(--bg2)'};border-left:3px solid ${esActual?'var(--blue)':'var(--border)'};border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
   <span style="font-size:12px;font-weight:700;color:${esActual?'var(--blue)':'var(--text2)'}">${label}</span>
   ${esActual?'<span style="margin-left:8px;font-size:11px;color:var(--blue);opacity:0.7">· Este mes</span>':''}
 </td></tr>`;

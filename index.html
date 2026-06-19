@@ -2497,18 +2497,22 @@ function filtrarGD(){
 
 async function marcarGDSolicitada(id){
   const hoy=new Date().toISOString().split('T')[0];
-  try{
-    await atPatch(`Eventos/${id}`,{Estado:'Solicitada','Fecha solicitada':hoy});
-  }catch(e){
-    try{ await atPatch(`Eventos/${id}`,{Estado:'Solicitada'}); }catch(e2){
-      console.error('Error:',e2); toast('⚠️ No se pudo actualizar',false); return;
-    }
+  // Solo actualizar Estado — sin campo Fecha solicitada para evitar errores de campo inexistente
+  const result=await fetch(`https://api.airtable.com/v0/${BASE}/Eventos/${id}`,{
+    method:'PATCH',headers:HDR,
+    body:JSON.stringify({fields:{Estado:'Solicitada'}})
+  });
+  if(!result.ok){
+    const err=await result.json();
+    console.error('Error Airtable:',err);
+    toast(`⚠️ Error: ${err.error?.message||result.statusText}`,false);
+    return;
   }
   // Actualizar cache local inmediatamente
   const rec=cacheGDRecs.find(r=>r.id===id);
   if(rec){ rec.fields.Estado='Solicitada'; rec.fields['Fecha solicitada']=hoy; }
   toast('✅ Glassdoor review marcada como solicitada');
-  filtrarGD(); // Re-renderizar solo la tabla sin recargar todo
+  filtrarGD();
 }
 
 

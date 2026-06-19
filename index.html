@@ -2047,15 +2047,49 @@ async function loadAniversarios(personas){
   listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">• ${r.nombre} ${e(r)} ${r.años}a</div>`).join('');
   moreEl.style.display=esteM.length>5?'block':'none';
   const tb=document.getElementById('tbody-aniv');
-  tb.innerHTML=rows.length?rows.map(r=>{
-    const dl=r.days===0?'¡Hoy! 🎉':r.days===1?'Mañana':`en ${r.days} días`;
-    const em=r.años>=5?'🏆':r.años>=3?'🎉':'⭐';
-    const ingDate=new Date(r.fecha+'T12:00:00');
-    const proxAniv=new Date(ingDate);proxAniv.setFullYear(now.getFullYear());
-    if(proxAniv<now) proxAniv.setFullYear(now.getFullYear()+1);
-    const proxAnivStr=proxAniv.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
-    return`<tr data-nombre="${r.nombre.toLowerCase()}" data-años="${r.años}"><td>${avH(r.nombre)}${r.nombre}</td><td>${fmt(r.fecha)}</td><td>${proxAnivStr}</td><td><span class="badge badge-purple">${r.años} ${r.años===1?'año':'años'} ${em} · ${dl}</span></td></tr>`;
-  }).join(''):'<tr class="empty-row"><td colspan="4">Se calculan desde la fecha de ingreso</td></tr>';
+  if(!rows.length){
+    tb.innerHTML='<tr class="empty-row"><td colspan="4">Se calculan desde la fecha de ingreso</td></tr>';
+  } else {
+    // Ordenar: primero por mes del próximo aniversario, luego por años (más a menos)
+    const rowsOrdenados=[...rows].sort((a,b)=>{
+      const fa=new Date(a.fecha+'T12:00:00'), fb=new Date(b.fecha+'T12:00:00');
+      const pa=new Date(fa);pa.setFullYear(now.getFullYear());if(pa<now)pa.setFullYear(now.getFullYear()+1);
+      const pb=new Date(fb);pb.setFullYear(now.getFullYear());if(pb<now)pb.setFullYear(now.getFullYear()+1);
+      // Primero por mes del próximo aniversario
+      if(pa.getMonth()!==pb.getMonth()) return pa.getMonth()-pb.getMonth();
+      // Dentro del mismo mes, de más años a menos
+      return b.años-a.años;
+    });
+
+    // Agrupar por mes del próximo aniversario
+    const grupos={};
+    rowsOrdenados.forEach(r=>{
+      const fa=new Date(r.fecha+'T12:00:00');
+      const prox=new Date(fa);prox.setFullYear(now.getFullYear());
+      if(prox<now) prox.setFullYear(now.getFullYear()+1);
+      const mesKey=prox.getMonth();
+      const mesLabel=prox.toLocaleDateString('es-AR',{month:'long',year:'numeric'});
+      const key=`${prox.getFullYear()}-${String(prox.getMonth()).padStart(2,'0')}`;
+      if(!grupos[key]) grupos[key]={label:mesLabel,items:[]};
+      grupos[key].items.push(r);
+    });
+
+    let html='';
+    Object.entries(grupos).sort(([a],[b])=>a.localeCompare(b)).forEach(([,{label,items}])=>{
+      const esActual=label.toLowerCase().includes(now.toLocaleDateString('es-AR',{month:'long'}).toLowerCase());
+      html+=`<tr><td colspan="4" style="padding:10px 16px 6px;background:var(--bg2);font-size:11px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:${esActual?'var(--blue)':'var(--text3)'};border-bottom:1px solid var(--border)">${label}${esActual?' · Este mes':''}</td></tr>`;
+      items.forEach(r=>{
+        const dl=r.days===0?'¡Hoy! 🎉':r.days===1?'Mañana':`en ${r.days} días`;
+        const em=r.años>=5?'🏆':r.años>=3?'🎉':'⭐';
+        const ingDate=new Date(r.fecha+'T12:00:00');
+        const proxAniv=new Date(ingDate);proxAniv.setFullYear(now.getFullYear());
+        if(proxAniv<now) proxAniv.setFullYear(now.getFullYear()+1);
+        const proxAnivStr=proxAniv.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
+        html+=`<tr data-nombre="${r.nombre.toLowerCase()}" data-años="${r.años}"><td>${avH(r.nombre)}${r.nombre}</td><td>${fmt(r.fecha)}</td><td>${proxAnivStr}</td><td><span class="badge badge-purple">${r.años} ${r.años===1?'año':'años'} ${em} · ${dl}</span></td></tr>`;
+      });
+    });
+    tb.innerHTML=html;
+  }
   // Poblar filtro por año de aniversario
   const añosDisponibles=[...new Set(rows.map(r=>r.años))].sort((a,b)=>a-b);
   const selAño=document.getElementById('aniv-año');
@@ -2071,16 +2105,33 @@ function filtrarAniversarios(){
   const tb=document.getElementById('tbody-aniv');
   if(!tb) return;
   let count=0;
+  const dataRows=[];
   tb.querySelectorAll('tr').forEach(tr=>{
     if(tr.classList.contains('empty-row')){tr.style.display='none';return;}
-    const nombre=tr.dataset.nombre||tr.textContent.toLowerCase();
+    // Si es header de mes (no tiene data-nombre), saltarlo por ahora
+    if(!tr.dataset.nombre) return;
+    const nombre=tr.dataset.nombre||'';
     const años=tr.dataset.años||'';
     const matchQ=!q||nombre.includes(q);
     const matchAño=!año||años===año;
     const visible=matchQ&&matchAño;
     tr.style.display=visible?'':'none';
     if(visible) count++;
+    dataRows.push({tr,visible});
   });
+  // Ocultar headers de mes que no tienen filas visibles
+  let currentHeader=null;
+  let headerTieneVisible=false;
+  tb.querySelectorAll('tr').forEach(tr=>{
+    if(!tr.dataset.nombre&&!tr.classList.contains('empty-row')){
+      if(currentHeader) currentHeader.style.display=headerTieneVisible?'':'none';
+      currentHeader=tr;
+      headerTieneVisible=false;
+    } else if(tr.dataset.nombre&&tr.style.display!=='none'){
+      headerTieneVisible=true;
+    }
+  });
+  if(currentHeader) currentHeader.style.display=headerTieneVisible?'':'none';
   let emptyRow=tb.querySelector('.empty-row');
   if(count===0){
     if(!emptyRow){emptyRow=document.createElement('tr');emptyRow.className='empty-row';emptyRow.innerHTML='<td colspan="4">Sin resultados</td>';tb.appendChild(emptyRow);}

@@ -2241,7 +2241,7 @@ async function sincronizarGlassdoor(){
         const gdDate=new Date(ing);gdDate.setMonth(gdDate.getMonth()+4);
         if(gdDate>=hoy){
           try{
-            await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Otro',Fecha:gdDate.toISOString().split('T')[0],Estado:'Pendiente'});
+            await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Glassdoor',Fecha:gdDate.toISOString().split('T')[0],Estado:'Pendiente'});
             creados++;
           }catch(e){console.error('GD error',nombre,e.message);}
         } else { omitidos++; }
@@ -2490,15 +2490,17 @@ async function loadReviews(){
   const d=await atGet('Reviews');
   const recs=d.records||[];
   // Glassdoor desde Eventos
-  const dGD=await atGet('Eventos','&sort[0][field]=Fecha&sort[0][direction]=asc');
+  const dGD=await atGet('Eventos',`&sort[0][field]=Fecha&sort[0][direction]=asc&filterByFormula={Tipo}="Glassdoor"`);
   // Solo Engineers — cruzar con cachePersonasRaw
   const engineerNames=new Set(
     cachePersonasRaw.filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>(p.fields.Nombre||'').trim())
   );
   const gdRecs=(dGD.records||[]).filter(r=>{
-    if(!(r.fields.Evento||'').toLowerCase().includes('glassdoor')) return false;
+    // Filtrar por Tipo=Glassdoor (más preciso que buscar en texto)
+    if(r.fields.Tipo!=='Glassdoor') return false;
+    // Solo Engineers — doble verificación
     const nombre=(r.fields.Evento||'').replace(/.*—\s*/,'').trim();
-    return engineerNames.has(nombre);
+    return !nombre||engineerNames.size===0||engineerNames.has(nombre);
   });
   cacheGDRecs=gdRecs;
 

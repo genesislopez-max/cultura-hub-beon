@@ -948,6 +948,21 @@ textarea.field-input{resize:vertical;min-height:80px;}
   </div>
 </div>
 
+<!-- MODAL AW PERSONA -->
+<div class="modal-overlay" id="aw-per-overlay" onclick="closeAWPerModal()" style="display:none;opacity:1;pointer-events:all">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:500px;width:95vw;padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:flex-end;padding:14px 16px 0;">
+      <button onclick="closeAWPerModal()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;line-height:1;padding:4px;border-radius:6px;"><i class="ti ti-x"></i></button>
+    </div>
+    <div style="padding:0 24px 24px;">
+      <div id="aw-per-nombre" style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px"></div>
+      <div id="aw-per-subtitle" style="font-size:13px;color:var(--text3);margin-bottom:20px"></div>
+      <div id="aw-per-info" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)"></div>
+      <div id="aw-per-historial"></div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL GLASSDOOR PERSONA -->
 <div class="modal-overlay" id="gd-modal-overlay" onclick="closeGDModal()" style="display:none;opacity:1;pointer-events:all">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:500px;width:95vw;padding:0;overflow:hidden">
@@ -3466,6 +3481,76 @@ function previewAWPct(){
   preview.style.color=pct===50?'#0F6E56':'#9a6700';
 }
 
+function openAWPerModal(nombre){
+  const overlay=document.getElementById('aw-per-overlay');
+  overlay.style.display='flex';
+
+  // Info de la persona desde cachePersonasRaw
+  const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+  const pf=persona?.fields||{};
+  const nivel=pf['Nivel Loyalty']||'Spark';
+  const nivelColors2={'Spark':'badge-nivel-Spark','Ray':'badge-nivel-Ray','Lightning':'badge-nivel-Lightning','Thunder':'badge-nivel-Thunder','Storm':'badge-nivel-Storm'};
+
+  document.getElementById('aw-per-nombre').textContent=nombre;
+  document.getElementById('aw-per-subtitle').innerHTML=`<span class="badge ${nivelColors2[nivel]||'badge-gray'}">${nivel}</span>`;
+
+  // Info grid
+  const infoItems=[
+    {label:'Mail',val:pf.Mail?`<a href="mailto:${pf.Mail}" style="color:var(--blue)">${pf.Mail}</a>`:'—'},
+    {label:'TEM / Manager',val:pf.Manager||'—'},
+    {label:'Proyecto',val:pf.Proyecto||'—'},
+    {label:'Ingreso',val:fmt(pf['Fecha de ingreso'])||'—'},
+  ];
+  document.getElementById('aw-per-info').innerHTML=infoItems.map(({label,val})=>`
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px">${label}</div>
+      <div style="font-size:13px">${val}</div>
+    </div>`).join('');
+
+  // Historial de AW
+  const asistencias=cacheAWRaw.filter(r=>{
+    const p=Array.isArray(r.fields.Persona)?r.fields.Persona[0]:(r.fields.Persona||'');
+    return p.trim()===nombre.trim();
+  }).sort((a,b)=>(b.fields['Edición AW']||'').localeCompare(a.fields['Edición AW']||''));
+
+  const regla=AW_RULES[nivel]||AW_RULES.Spark;
+  const cobertura=nivel==='Storm'?'Ilimitadas · 50% vuelo':
+    asistencias.length<regla.asistenciasConVuelo?
+    `${regla.asistenciasConVuelo-asistencias.length} restante${regla.asistenciasConVuelo-asistencias.length!==1?'s':''} con 50% vuelo`:
+    'Sin cobertura de vuelo disponible';
+
+  let histHtml=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px;display:flex;justify-content:space-between">
+    <span>Asistencias (${asistencias.length})</span>
+    <span style="color:${nivel==='Storm'?'#0F6E56':asistencias.length<regla.asistenciasConVuelo?'var(--blue)':'#9a6700'}">${cobertura}</span>
+  </div>`;
+
+  if(asistencias.length){
+    histHtml+=asistencias.map((r,idx)=>{
+      const f=r.fields;
+      const ed=f['Edición AW']||'—';
+      const acomp=f['Acompañantes'];
+      let pctRaw=f['Porcentaje cubierto'];
+      const pct=pctRaw!=null?(pctRaw<=1?Math.round(pctRaw*100):Number(pctRaw)):null;
+      const bg=idx%2===0?'background:var(--bg2)':'';
+      return`<div style="padding:10px 0;border-bottom:0.5px solid var(--border);${bg}display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:500">${ed}</div>
+          ${acomp?`<div style="font-size:11px;color:var(--text3)">${acomp} acompañante${acomp!==1?'s':''}</div>`:''}
+        </div>
+        <div style="font-size:12px;font-weight:600;color:${pct===50?'var(--blue)':pct===0?'var(--text3)':'var(--text2)'}">${pct!=null?pct+'% vuelo':'—'}</div>
+      </div>`;
+    }).join('');
+  } else {
+    histHtml+='<div style="color:var(--text3);font-size:13px">Sin asistencias registradas</div>';
+  }
+
+  document.getElementById('aw-per-historial').innerHTML=histHtml;
+}
+
+function closeAWPerModal(){
+  document.getElementById('aw-per-overlay').style.display='none';
+}
+
 function filtrarAW(){ renderAWPersonas(); }
 function filtrarAWHistorial(){ renderAWHistorial(); }
 
@@ -3524,7 +3609,7 @@ function renderAWPersonas(){
     }
 
     const bg=idx%2===0?'background:var(--bg2)':'';
-    return`<tr style="${bg}">
+    return`<tr class="tr-clickable" style="${bg}" onclick="openAWPerModal(this.dataset.nombre)" data-nombre="${nombre.replace(/"/g,'&quot;')}">
       <td>${avH(nombre)}${nombre}</td>
       <td><span class="badge ${nivelColors[nivel]||'badge-gray'}">${nivel}</span></td>
       <td style="font-weight:600;font-size:15px">${veces}</td>

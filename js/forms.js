@@ -130,5 +130,214 @@ const FORMS={
       const fields={BEONer:v('f-gt-persona'),'País':v('f-gt-pais'),Ciudad:v('f-gt-ciudad'),Fecha:v('f-gt-fecha')};
       if(v('f-gt-proyecto')) fields.Proyecto=v('f-gt-proyecto');
       await atPost('Get Together',fields);return true;
+    }},
+
+  personas:{title:'Nueva persona',html:()=>{
+    const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+    return`
+<div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-per-nombre" placeholder="Nombre y apellido"></div>
+<div class="field-group"><label class="field-label">Mail</label><input class="field-input" id="f-per-mail" type="email" placeholder="nombre@beon.tech"></div>
+<div class="field-group"><label class="field-label">Rol en empresa *</label>
+  <select class="field-input" id="f-per-rol">
+    <option value="Engineer">Engineer</option>
+    <option value="Core Team">Core Team</option>
+    <option value="Supervisor">Supervisor</option>
+    <option value="TEM">TEM</option>
+    <option value="Lead">Lead</option>
+    <option value="Manager">Manager</option>
+    <option value="COO">COO</option>
+    <option value="Founder">Founder</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Nivel Loyalty</label>
+  <select class="field-input" id="f-per-nivel">
+    <option value="Spark">⚡ Spark</option>
+    <option value="Ray">☀️ Ray</option>
+    <option value="Lightning">🌩 Lightning</option>
+    <option value="Thunder">🌪 Thunder</option>
+    <option value="Storm">🌊 Storm</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Proyecto</label>
+  <input class="field-input" id="f-per-proyecto" list="per-proyectos-list" placeholder="Ej: Atlas">
+  <datalist id="per-proyectos-list">${proyectos.map(p=>`<option value="${p}">`).join('')}</datalist>
+</div>
+<div class="field-group"><label class="field-label">Manager</label><input class="field-input" id="f-per-manager" placeholder="TEM / Manager a cargo"></div>
+<div class="field-group"><label class="field-label">Fecha de ingreso</label><input class="field-input" id="f-per-ingreso" type="date"></div>
+<div class="field-group"><label class="field-label">Fecha de cumpleaños</label><input class="field-input" id="f-per-cumple" type="date"></div>
+<div class="field-hint">Si cargás la fecha de ingreso, se crea automáticamente el checklist de onboarding en Ingresos.</div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-per-nombre')){toast('El nombre es obligatorio',true);return false;}
+      const fields={Nombre:v('f-per-nombre'),'Rol en empresa':v('f-per-rol')||'Engineer','Nivel Loyalty':v('f-per-nivel')||'Spark'};
+      if(v('f-per-mail')) fields.Mail=v('f-per-mail');
+      if(v('f-per-proyecto')) fields.Proyecto=v('f-per-proyecto');
+      if(v('f-per-manager')) fields.Manager=v('f-per-manager');
+      if(v('f-per-ingreso')) fields['Fecha de ingreso']=v('f-per-ingreso');
+      if(v('f-per-cumple')) fields['Fecha de cumpleaños']=v('f-per-cumple');
+      await atPost('Personas',fields);return true;
+    }},
+
+  proyectos:{title:'Nuevo proyecto',html:()=>`
+<div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-proy-nombre" placeholder="Ej: Atlas"></div>
+<div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-proy-fecha" type="date"></div>
+<div class="field-group"><label class="field-label">Estado</label>
+  <select class="field-input" id="f-proy-estado">
+    <option value="Activo">Activo</option>
+    <option value="De Baja">De Baja</option>
+  </select>
+</div>`,
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-proy-nombre')){toast('El nombre es obligatorio',true);return false;}
+      const fields={Proyecto:v('f-proy-nombre'),Estado:v('f-proy-estado')||'Activo'};
+      if(v('f-proy-fecha')) fields['Fecha de Inicio']=v('f-proy-fecha');
+      await atPost('Proyectos',fields);return true;
+    }},
+
+  ingresos:{title:'Nuevo ingreso',html:()=>{
+    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    return`
+<div class="field-group"><label class="field-label">Persona *</label>
+  <input class="field-input" id="f-ing-persona" list="ing-personas-list" placeholder="Nombre de la persona">
+  <datalist id="ing-personas-list">${personas.map(n=>`<option value="${n}">`).join('')}</datalist>
+</div>
+<div class="field-group"><label class="field-label">Rol *</label>
+  <select class="field-input" id="f-ing-rol">
+    <option value="Engineer">Engineer</option>
+    <option value="Core Team">Core Team</option>
+    <option value="Ambos">Ambos</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Fecha de ingreso *</label><input class="field-input" id="f-ing-fecha" type="date"></div>
+<div class="field-hint">Se crea la tarjeta en "Pre-ingreso" en el Kanban, con el checklist de onboarding correspondiente al rol.</div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-ing-persona')){toast('La persona es obligatoria',true);return false;}
+      if(!v('f-ing-fecha')){toast('La fecha de ingreso es obligatoria',true);return false;}
+      await atPost('Checklist',{Persona:v('f-ing-persona'),Tipo:'Ingreso',Rol:v('f-ing-rol')||'Engineer',Fecha:v('f-ing-fecha'),EstadoKanban:'Pre-ingreso'});
+      return true;
+    }},
+
+  egresos:{title:'Nuevo egreso',html:()=>{
+    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    return`
+<div class="field-group"><label class="field-label">Persona *</label>
+  <select class="field-input" id="f-egr-persona">
+    <option value="">Seleccioná una persona…</option>
+    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Fecha de aviso *</label><input class="field-input" id="f-egr-fecha" type="date"></div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-egr-persona')){toast('La persona es obligatoria',true);return false;}
+      if(!v('f-egr-fecha')){toast('La fecha es obligatoria',true);return false;}
+      await atPost('Checklist',{Persona:v('f-egr-persona'),Tipo:'Egreso',Fecha:v('f-egr-fecha'),EstadoKanban:'Aviso dado'});
+      return true;
+    }},
+
+  checklist:{title:'Nuevo checklist',html:()=>{
+    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    return`
+<div class="field-group"><label class="field-label">Tipo *</label>
+  <select class="field-input" id="f-tipo" onchange="toggleRol()">
+    <option value="Ingreso">Ingreso</option>
+    <option value="Egreso">Egreso</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Persona *</label>
+  <input class="field-input" id="f-cl-persona" list="cl-personas-list" placeholder="Nombre de la persona">
+  <datalist id="cl-personas-list">${personas.map(n=>`<option value="${n}">`).join('')}</datalist>
+</div>
+<div class="field-group" id="fg-rol"><label class="field-label">Rol</label>
+  <select class="field-input" id="f-cl-rol">
+    <option value="Engineer">Engineer</option>
+    <option value="Core Team">Core Team</option>
+    <option value="Ambos">Ambos</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-cl-fecha" type="date"></div>
+<div class="field-hint" id="rem-preview">El checklist se inicia en la primera etapa y se completa desde el Kanban de Ingresos/Egresos.</div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      const tipo=v('f-tipo')||'Ingreso';
+      if(!v('f-cl-persona')){toast('La persona es obligatoria',true);return false;}
+      if(!v('f-cl-fecha')){toast('La fecha es obligatoria',true);return false;}
+      const fields={Persona:v('f-cl-persona'),Tipo:tipo,Fecha:v('f-cl-fecha'),EstadoKanban:tipo==='Egreso'?'Aviso dado':'Pre-ingreso'};
+      if(tipo==='Ingreso') fields.Rol=v('f-cl-rol')||'Engineer';
+      await atPost('Checklist',fields);return true;
+    }},
+
+  eventos:{title:'Nuevo reminder',html:()=>`
+<div class="field-group"><label class="field-label">Evento *</label><input class="field-input" id="f-ev-evento" placeholder="Ej: Renovación de visa — Juan Pérez"></div>
+<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-ev-fecha" type="date"></div>
+<div class="field-group"><label class="field-label">Tipo</label>
+  <select class="field-input" id="f-ev-tipo">
+    <option value="Manual">Manual</option>
+    <option value="Glassdoor">Glassdoor</option>
+  </select>
+</div>`,
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-ev-evento')){toast('El evento es obligatorio',true);return false;}
+      if(!v('f-ev-fecha')){toast('La fecha es obligatoria',true);return false;}
+      await atPost('Eventos',{Evento:v('f-ev-evento'),Fecha:v('f-ev-fecha'),Tipo:v('f-ev-tipo')||'Manual',Estado:'Pendiente'});
+      return true;
+    }},
+
+  reviews:{title:'Nueva review Glassdoor',html:()=>{
+    const personas=cachePersonasRaw.filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    return`
+<div class="field-group"><label class="field-label">Persona *</label>
+  <select class="field-input" id="f-rv-persona">
+    <option value="">Seleccioná una persona…</option>
+    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Fecha a solicitar *</label><input class="field-input" id="f-rv-fecha" type="date"></div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-rv-persona')){toast('Seleccioná una persona',true);return false;}
+      if(!v('f-rv-fecha')){toast('La fecha es obligatoria',true);return false;}
+      await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${v('f-rv-persona')}`,Tipo:'Glassdoor',Fecha:v('f-rv-fecha'),Estado:'Pendiente'});
+      return true;
+    }},
+
+  offsites:{title:'Registrar Off Site',html:()=>{
+    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+    return`
+<div class="field-group"><label class="field-label">Persona *</label>
+  <select class="field-input" id="f-os-persona">
+    <option value="">Seleccioná una persona…</option>
+    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Proyecto</label>
+  <select class="field-input" id="f-os-proyecto">
+    <option value="">Sin proyecto</option>
+    ${proyectos.map(p=>`<option value="${p}">${p}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Destino *</label><input class="field-input" id="f-os-destino" placeholder="Ej: Miami, USA"></div>
+<div class="field-group"><label class="field-label">Fecha inicio *</label><input class="field-input" id="f-os-inicio" type="date"></div>
+<div class="field-group"><label class="field-label">Fecha fin *</label><input class="field-input" id="f-os-fin" type="date"></div>
+<div class="field-group"><label class="field-label">Descripción</label><textarea class="field-input" id="f-os-desc" placeholder="Notas del viaje"></textarea></div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      if(!v('f-os-persona')){toast('La persona es obligatoria',true);return false;}
+      if(!v('f-os-destino')){toast('El destino es obligatorio',true);return false;}
+      if(!v('f-os-inicio')||!v('f-os-fin')){toast('Las fechas de inicio y fin son obligatorias',true);return false;}
+      const fields={Persona:v('f-os-persona'),Destino:v('f-os-destino'),'Fecha inicio':v('f-os-inicio'),'Fecha fin':v('f-os-fin')};
+      if(v('f-os-proyecto')) fields.Proyecto=v('f-os-proyecto');
+      if(v('f-os-desc')) fields.Descripción=v('f-os-desc');
+      await atPost('Off Sites',fields);return true;
     }}
 };

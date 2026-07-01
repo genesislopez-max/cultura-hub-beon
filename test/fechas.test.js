@@ -19,14 +19,17 @@ test('daysTo: sin fecha devuelve 9999 (centinela de "sin datos")', ()=>{
   assert.equal(ctx.daysTo(undefined),9999);
 });
 
-test('daysTo: para una fecha que cae exactamente N días hacia adelante, devuelve N+1', ()=>{
-  // daysTo normaliza la fecha objetivo a mediodía y "hoy" a medianoche, así que
-  // el resultado siempre queda un día por encima de la diferencia calendario
-  // real — es un comportamiento existente de la app, no algo que inventé yo.
+test('daysTo: una fecha que cae exactamente hoy devuelve 0 (no 1)', ()=>{
+  const hoy=new Date();
+  const fechaStr=`2019-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+  assert.equal(ctx.daysTo(fechaStr),0);
+});
+
+test('daysTo: para una fecha que cae exactamente N días hacia adelante, devuelve N', ()=>{
   const hoy=new Date();hoy.setHours(0,0,0,0);
   const en10dias=new Date(hoy);en10dias.setDate(en10dias.getDate()+10);
   const fechaStr=`2019-${String(en10dias.getMonth()+1).padStart(2,'0')}-${String(en10dias.getDate()).padStart(2,'0')}`;
-  assert.equal(ctx.daysTo(fechaStr),11);
+  assert.equal(ctx.daysTo(fechaStr),10);
 });
 
 test('getRolGroup: agrupa los roles de conducción en "Core Team"', ()=>{

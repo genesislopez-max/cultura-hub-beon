@@ -157,20 +157,29 @@
             <span class="table-head-title" style="color:#0026B0">Engineers & Tech</span>
             <span class="badge badge-blue" id="badge-personas-eng">—</span>
           </div>
+          <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>Nombre</th><th>Mail</th><th>Rol</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Ingreso</th><th>Antigüedad</th><th>Manager</th><th>Cumpleaños</th></tr></thead>
             <tbody id="tbody-personas-eng"></tbody>
           </table>
+          </div>
+          <div class="pag-bar" id="pag-bar-eng" style="display:none">
+            <button class="pag-btn" id="pag-prev-eng" onclick="cambiarPaginaPersonas('eng',-1)">← Anterior</button>
+            <span class="pag-info" id="pag-info-eng"></span>
+            <button class="pag-btn" id="pag-next-eng" onclick="cambiarPaginaPersonas('eng',1)">Siguiente →</button>
+          </div>
         </div>
         <div class="table-wrap" id="wrap-coreteam" style="border-radius:13px;">
           <div class="table-head" style="background:linear-gradient(90deg,#F3EEFF 0%,var(--bg2) 100%);border-left:3px solid #7432FF;border-radius:13px 13px 0 0;">
             <span class="table-head-title" style="color:#4A1FAA">Core Team</span>
             <span class="badge badge-purple" id="badge-personas-core">—</span>
           </div>
+          <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>Nombre</th><th>Mail</th><th>Rol</th><th>Área</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Ingreso</th><th>Antigüedad</th><th>Manager</th><th>Cumpleaños</th></tr></thead>
             <tbody id="tbody-personas-core"></tbody>
           </table>
+          </div>
           <div class="pag-bar" id="pag-bar-core" style="display:none">
             <button class="pag-btn" id="pag-prev-core" onclick="cambiarPaginaPersonas('core',-1)">← Anterior</button>
             <span class="pag-info" id="pag-info-core"></span>
@@ -189,8 +198,10 @@
         </div>
         <div class="table-wrap">
           <div class="table-head"><span class="table-head-title">Cumpleaños del equipo</span><span class="badge badge-purple" id="badge-cumple-h">—</span></div>
+          <div class="table-scroll">
           <table class="data-table"><thead><tr><th>Persona</th><th>Fecha de cumpleaños</th><th>Próximo</th><th>Días restantes</th></tr></thead>
           <tbody id="tbody-cumple"></tbody></table>
+          </div>
         </div>
       </div>
 
@@ -213,7 +224,7 @@
               <option value="">Todos los años</option>
             </select>
           </div>
-          <div id="aniv-container"></div>
+          <div id="aniv-container" class="table-scroll"></div>
         </div>
       </div>
 
@@ -247,7 +258,7 @@
               <option value="completado">Solo completados</option>
             </select>
           </div>
-          <div id="eventos-container"></div>
+          <div id="eventos-container" class="table-scroll"></div>
         </div>
       </div>
 
@@ -321,10 +332,12 @@
                 <option value="solicitada">Solicitadas</option>
               </select>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>Persona</th><th>Fecha a solicitar</th><th>Estado</th><th>Fecha solicitada</th><th></th></tr></thead>
               <tbody id="tbody-glassdoor"></tbody>
             </table>
+          </div>
           </div>
         </div>
 
@@ -341,10 +354,12 @@
               <input class="search-input" id="proyectos-search" placeholder="Buscar proyecto…" oninput="filtrarProyectos()">
             </div>
           </div>
+          <div class="table-scroll">
           <table class="data-table">
             <thead><tr><th>Proyecto</th><th>Inicio</th><th>Devs</th><th>Publicaciones</th><th>Último Meet</th><th>Promedio entre pubs.</th><th></th></tr></thead>
             <tbody id="tbody-proyectos"></tbody>
           </table>
+          </div>
         </div>
       </div>
 
@@ -353,8 +368,10 @@
         <div id="checklist-list-view">
           <div class="table-wrap">
             <div class="table-head"><span class="table-head-title">Checklist Ingreso / Egreso</span><span class="badge badge-green" id="badge-checklist-h">—</span></div>
+            <div class="table-scroll">
             <table class="data-table"><thead><tr><th>Persona</th><th>Tipo</th><th>Rol</th><th>Fecha</th><th>Estado</th><th>Progreso</th><th></th></tr></thead>
             <tbody id="tbody-checklist"></tbody></table>
+          </div>
           </div>
         </div>
         <div id="checklist-detail-view" style="display:none">
@@ -431,7 +448,7 @@
                 <option value="Inactivo">Inactivo</option>
               </select>
             </div>
-            <div id="benef-catalogo-container"></div>
+            <div id="benef-catalogo-container" class="table-scroll"></div>
           </div>
         </div>
 
@@ -461,10 +478,12 @@
                 <option value="Storm">🌊 Storm</option>
               </select>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>Persona</th><th>Grupo</th><th>Nivel Loyalty</th><th>Beneficios activos</th><th>Presupuesto usado / Tope</th><th></th></tr></thead>
               <tbody id="tbody-benef-personas"></tbody>
             </table>
+          </div>
           </div>
         </div>
 
@@ -506,10 +525,12 @@
                 <option value="Storm">🌊 Storm</option>
               </select>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>Persona</th><th>Nivel</th><th>Veces asistió</th><th>Cobertura próxima vez</th><th>Asistencias disponibles</th><th>Ediciones</th></tr></thead>
               <tbody id="aw-tbody-personas"></tbody>
             </table>
+          </div>
           </div>
         </div>
 
@@ -526,10 +547,12 @@
                 <input class="search-input" id="aw-hist-search" placeholder="Buscar persona o destino…" oninput="filtrarAWHistorial()">
               </div>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>Persona</th><th>Nivel</th><th>Edición AW</th><th>Acompañantes</th><th>% Cubierto vuelo</th></tr></thead>
               <tbody id="aw-tbody-historial"></tbody>
             </table>
+          </div>
           </div>
         </div>
 
@@ -563,10 +586,12 @@
                 <input class="search-input" id="os-search-persona" placeholder="Buscar persona…" oninput="filtrarOSPersona()">
               </div>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>Persona</th><th>Off sites</th><th>Destinos</th><th>Días totales</th><th>Último off site</th></tr></thead>
               <tbody id="os-tbody-persona"></tbody>
             </table>
+          </div>
           </div>
         </div>
 
@@ -583,10 +608,12 @@
                 <input class="search-input" id="os-search-proyecto" placeholder="Buscar proyecto…" oninput="filtrarOSProyecto()">
               </div>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>Proyecto</th><th>Off sites</th><th>Personas</th><th>Destinos</th><th>Días totales</th></tr></thead>
               <tbody id="os-tbody-proyecto"></tbody>
             </table>
+          </div>
           </div>
         </div>
 
@@ -619,10 +646,12 @@
                 <option value="">Todos los países</option>
               </select>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>#</th><th>BEONer</th><th>Encuentros</th><th>Países visitados</th><th>Primer GT</th><th>Último GT</th></tr></thead>
               <tbody id="gt-tbody-persona"></tbody>
             </table>
+          </div>
           </div>
         </div>
 
@@ -638,10 +667,12 @@
                 <option value="">Todos los países</option>
               </select>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>País</th><th>Ciudad</th><th>Encuentros</th><th>BEONers</th><th>Último encuentro</th></tr></thead>
               <tbody id="gt-tbody-ciudad"></tbody>
             </table>
+          </div>
           </div>
         </div>
 
@@ -660,10 +691,12 @@
                 <option value="">Todos los proyectos</option>
               </select>
             </div>
+            <div class="table-scroll">
             <table class="data-table">
               <thead><tr><th>BEONer</th><th>País</th><th>Ciudad</th><th>Proyecto</th><th>Fecha</th></tr></thead>
               <tbody id="gt-tbody-hist"></tbody>
             </table>
+          </div>
           </div>
         </div>
       </div>

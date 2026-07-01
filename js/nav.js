@@ -32,6 +32,7 @@ function showSection(name,btn){
     currentForm=null;
     currentFormFull=null;
   }
+  cargarSeccionLazy(name);
 }
 
 function openModal(){
@@ -123,38 +124,65 @@ function resetConfig(){
   document.getElementById('config-screen').style.display='flex';
 }
 
-// Secciones que se cargan en paralelo — si alguna falla, no bloquea a las demás
-const SECCIONES_LOAD_ALL=[
-  ['Cumpleaños',personas=>loadCumpleanos(personas)],
-  ['Aniversarios',personas=>loadAniversarios(personas)],
-  ['Glassdoor',()=>loadReviews()],
-  ['Checklist',()=>loadChecklist()],
-  ['Beneficios',()=>loadBeneficios()],
-  ['Ambassador Week',()=>loadAmbassadors()],
-  ['Off Sites',()=>loadOffsites()],
-  ['Get Together',()=>loadGetTogether()],
-  ['Ingresos',()=>loadKanbanIngresos()],
-  ['Egresos',()=>loadKanbanEgresos()],
-];
-
-async function loadAll(){
+// Secciones que necesita el dashboard de Inicio — se cargan siempre al arrancar
+async function cargarSeccionesIniciales(){
   const personas=await loadPersonas();
   await loadProyectos();
   await sincronizarPersonasEnKanban(personas);
-  const resultados=await Promise.allSettled(SECCIONES_LOAD_ALL.map(([,fn])=>fn(personas)));
-  const fallidas=resultados
-    .map((r,i)=>({nombre:SECCIONES_LOAD_ALL[i][0],r}))
-    .filter(({r})=>r.status==='rejected');
+  const resultados=await Promise.allSettled([
+    loadCumpleanos(personas),
+    loadAniversarios(personas),
+    loadKanbanIngresos(),
+    loadKanbanEgresos(),
+  ]);
+  const nombres=['Cumpleaños','Aniversarios','Ingresos','Egresos'];
+  const fallidas=resultados.map((r,i)=>({nombre:nombres[i],r})).filter(({r})=>r.status==='rejected');
   fallidas.forEach(({nombre,r})=>console.error(`Error cargando "${nombre}":`,r.reason));
+  if(fallidas.length) toast(`⚠️ No se pudo cargar: ${fallidas.map(f=>f.nombre).join(', ')}`,true);
+}
+
+// Secciones que recién se piden a Airtable la primera vez que el usuario las visita
+const SECCIONES_LAZY=[
+  ['eventos','Reminders',loadEventos],
+  ['reviews','Glassdoor',loadReviews],
+  ['checklist','Checklist',loadChecklist],
+  ['beneficios','Beneficios',loadBeneficios],
+  ['ambassadors','Ambassador Week',loadAmbassadors],
+  ['offsites','Off Sites',loadOffsites],
+  ['gettogether','Get Together',loadGetTogether],
+];
+
+// Se llama al entrar a una sección — si ya se cargó antes en esta sesión, no repite el fetch
+function cargarSeccionLazy(name){
+  const entry=SECCIONES_LAZY.find(([id])=>id===name);
+  if(!entry||seccionesCargadas.has(name)) return;
+  const [id,label,loader]=entry;
+  seccionesCargadas.add(id);
+  loader().catch(e=>{
+    seccionesCargadas.delete(id); // permite reintentar si el usuario vuelve a entrar
+    console.error(`Error cargando "${label}":`,e);
+    toast(`⚠️ No se pudo cargar ${label}: ${e.message}`,true);
+  });
+}
+
+// Recarga todo — se usa después de guardar/eliminar registros, donde no sabemos
+// de antemano qué secciones pueden haberse visto afectadas
+async function loadAll(){
+  await cargarSeccionesIniciales();
+  const resultados=await Promise.allSettled(SECCIONES_LAZY.map(([id,,loader])=>loader().then(()=>seccionesCargadas.add(id))));
+  const fallidas=resultados
+    .map((r,i)=>({label:SECCIONES_LAZY[i][1],r}))
+    .filter(({r})=>r.status==='rejected');
+  fallidas.forEach(({label,r})=>console.error(`Error cargando "${label}":`,r.reason));
   if(fallidas.length){
-    toast(`⚠️ No se pudo cargar: ${fallidas.map(f=>f.nombre).join(', ')}`,true);
+    toast(`⚠️ No se pudo cargar: ${fallidas.map(f=>f.label).join(', ')}`,true);
   }
 }
 
 async function iniciarHub(){
   document.getElementById('page-date').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   try{
-    await loadAll();
+    await cargarSeccionesIniciales();
     setBanner('Hub conectado a Airtable ✓','ok');
     document.getElementById('dot').className='dot ok';
     document.getElementById('conn-status').textContent='Conectado a Airtable';

@@ -47,3 +47,6 @@ let cacheCapacitaciones=[], cacheGetTogetherRaw=[];
 // Nav / modal de alta de registros
 let currentForm=null;
 let currentFormFull=null;
+
+// Lazy loading — secciones que ya se cargaron en esta sesión (ver nav.js)
+let seccionesCargadas=new Set();

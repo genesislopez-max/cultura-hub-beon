@@ -5,13 +5,31 @@ async function sendSlack(text){
   }catch(e){console.error('Slack error:',e.message);}
 }
 // ─── AIRTABLE ────────────────────────────────────────────────────────────────
+// Wrapper único para todas las llamadas a Airtable: normaliza errores de red
+// (fetch caído) y de la API (respuesta no-ok) en un solo Error con mensaje legible.
+async function atRequest(url,options){
+  let r;
+  try{
+    r=await fetch(url,options);
+  }catch(networkErr){
+    throw new Error('Sin conexión con Airtable — revisá tu internet.');
+  }
+  if(!r.ok){
+    const body=await r.json().catch(()=>null);
+    const msg=body?.error?.message||r.statusText||`Error ${r.status}`;
+    const err=new Error(r.status===401||r.status===403?`Token inválido o sin permisos (${msg})`:msg);
+    err.status=r.status;
+    throw err;
+  }
+  return r;
+}
+
 async function atGet(table,qs=''){
   // Paginación automática — Airtable devuelve max 100 por request
   let allRecords=[], offset=null;
   do {
     const offsetParam=offset?`&offset=${offset}`:'';
-    const r=await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?pageSize=100${qs}${offsetParam}`,{headers:HDR});
-    if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
+    const r=await atRequest(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?pageSize=100${qs}${offsetParam}`,{headers:HDR});
     const data=await r.json();
     allRecords=[...allRecords,...(data.records||[])];
     offset=data.offset||null;
@@ -19,18 +37,15 @@ async function atGet(table,qs=''){
   return {records:allRecords};
 }
 async function atPost(table,fields){
-  const r=await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}`,{method:'POST',headers:HDR,body:JSON.stringify({records:[{fields}]})});
-  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
+  const r=await atRequest(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}`,{method:'POST',headers:HDR,body:JSON.stringify({records:[{fields}]})});
   return r.json();
 }
 async function atPatch(path,fields){
-  const r=await fetch(`https://api.airtable.com/v0/${BASE}/${path}`,{method:'PATCH',headers:HDR,body:JSON.stringify({fields})});
-  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
+  const r=await atRequest(`https://api.airtable.com/v0/${BASE}/${path}`,{method:'PATCH',headers:HDR,body:JSON.stringify({fields})});
   return r.json();
 }
 async function atDelete(table,id){
-  const r=await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}/${id}`,{method:'DELETE',headers:HDR});
-  if(!r.ok){const e=await r.json();throw new Error(e.error?.message||r.statusText);}
+  const r=await atRequest(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}/${id}`,{method:'DELETE',headers:HDR});
   return r.json();
 }
 // Elimina hasta 10 registros de una vez (límite de Airtable)
@@ -40,6 +55,6 @@ async function atDeleteBatch(table,ids){
   for(let i=0;i<ids.length;i+=10) chunks.push(ids.slice(i,i+10));
   for(const chunk of chunks){
     const qs=chunk.map(id=>`records[]=${id}`).join('&');
-    await fetch(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?${qs}`,{method:'DELETE',headers:HDR});
+    await atRequest(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?${qs}`,{method:'DELETE',headers:HDR});
   }
 }

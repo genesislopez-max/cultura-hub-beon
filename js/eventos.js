@@ -38,7 +38,7 @@ async function limpiarGlassdoorCoreTeam(){
   let eliminados=0;
   for(const r of aEliminar){
     try{
-      await fetch(`https://api.airtable.com/v0/${BASE}/Eventos/${r.id}`,{method:'DELETE',headers:HDR});
+      await atDelete('Eventos',r.id);
       eliminados++;
     }catch(e){console.error('Error eliminando reminder:',r.id,e.message);}
   }

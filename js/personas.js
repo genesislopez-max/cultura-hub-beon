@@ -1,0 +1,276 @@
+function renderPagina(grupo){
+  const {page,data}=pagState[grupo];
+  const tb=document.getElementById(`tbody-personas-${grupo}`);
+  const bar=document.getElementById(`pag-bar-${grupo}`);
+  const info=document.getElementById(`pag-info-${grupo}`);
+  const btnPrev=document.getElementById(`pag-prev-${grupo}`);
+  const btnNext=document.getElementById(`pag-next-${grupo}`);
+  if(!tb) return;
+  if(!data.length){if(bar) bar.style.display='none';return;}
+  const totalPags=Math.ceil(data.length/PAG_SIZE);
+  const inicio=page*PAG_SIZE, fin=Math.min(inicio+PAG_SIZE,data.length);
+  const slice=data.slice(inicio,fin);
+  if(grupo==='eng'){
+    tb.innerHTML=slice.map(rowHtmlEng).join('')||'<tr class="empty-row"><td colspan="9">Sin resultados</td></tr>';
+  } else {
+    tb.innerHTML=slice.map(rowHtml).join('')||'<tr class="empty-row"><td colspan="10">Sin resultados</td></tr>';
+  }
+  if(totalPags>1){
+    if(bar) bar.style.display='flex';
+    if(info) info.textContent=`${inicio+1}–${fin} de ${data.length} personas`;
+    if(btnPrev) btnPrev.disabled=page===0;
+    if(btnNext) btnNext.disabled=page>=totalPags-1;
+  } else {
+    if(bar) bar.style.display='none';
+  }
+}
+
+function cambiarPaginaPersonas(grupo,dir){
+  const totalPags=Math.ceil(pagState[grupo].data.length/PAG_SIZE);
+  pagState[grupo].page=Math.max(0,Math.min(pagState[grupo].page+dir,totalPags-1));
+  renderPagina(grupo);
+  document.getElementById(`wrap-${grupo==='eng'?'engineers':'coreteam'}`)?.scrollIntoView({behavior:'smooth',block:'start'});
+}
+// ─── PERSONAS ────────────────────────────────────────────────────────────────
+function calcAntiguedad(fechaStr){
+  if(!fechaStr) return '—';
+  const ing=new Date(fechaStr+'T12:00:00'), hoy=new Date();
+  const anos=hoy.getFullYear()-ing.getFullYear()-((hoy.getMonth()<ing.getMonth()||(hoy.getMonth()===ing.getMonth()&&hoy.getDate()<ing.getDate()))?1:0);
+  const meses=(hoy.getMonth()-ing.getMonth()+12)%12;
+  if(anos===0) return meses===0?'< 1 mes':`${meses} mes${meses!==1?'es':''}`;
+  if(meses===0) return `${anos} año${anos!==1?'s':''}`;
+  return `${anos} año${anos!==1?'s':''} y ${meses} mes${meses!==1?'es':''}`;
+}
+function nivelBadgeHtml(recordId, nivelActual){
+  const nivel=nivelActual||'Spark';
+  return`<div class="nivel-select-wrap" id="nw-${recordId}">
+    <button class="nivel-badge nivel-${nivel}" onclick="toggleNivelDropdown('${recordId}')">
+      ${nivel}
+    </button>
+    <div class="nivel-dropdown" id="nd-${recordId}" style="display:none">
+      ${NIVELES.map(n=>`<div class="nivel-option" onclick="cambiarNivel('${recordId}','${n}','${nivel}',event)">
+        <span class="nivel-badge nivel-${n}" style="cursor:default">${n}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function rowHtmlEng(r){
+  const f=r.fields, rol=f['Rol en empresa']||'';
+  const nivel=f['Nivel Loyalty']||'Spark';
+  return`<tr>
+    <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
+    <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
+    <td>${nivelBadgeHtml(r.id, nivel)}</td>
+    <td style="font-size:12px">${f.Proyecto||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de ingreso'])}</td>
+    <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
+    <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de cumpleaños'])}</td>
+  </tr>`;
+}
+
+function rowHtml(r){
+  const f=r.fields, rol=f['Rol en empresa']||'';
+  const nivel=f['Nivel Loyalty']||'Spark';
+  const area=f['Área']||f['Area']||'—';
+  return`<tr>
+    <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
+    <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${area}</td>
+    <td>${nivelBadgeHtml(r.id, nivel)}</td>
+    <td style="font-size:12px">${f.Proyecto||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de ingreso'])}</td>
+    <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
+    <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de cumpleaños'])}</td>
+  </tr>`;
+}
+
+async function loadPersonas(){
+  const d=await atGet('Personas','&sort[0][field]=Nombre&sort[0][direction]=asc');
+  const recs=d.records||[];
+  cachePersonasRaw=recs;
+  cachePersonasPorRol={TEM:[],Manager:[],Lead:[]};
+
+  // Roles que pertenecen a Core Team
+  const CORE_ROLES=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
+  // Roles que pertenecen a Engineers & Tech
+  const ENG_ROLES=new Set(['Engineer']);
+
+  const engineers=[], coreTeam=[];
+
+  recs.forEach(r=>{
+    const rol=(r.fields['Rol en empresa']||'').trim(),nom=r.fields.Nombre||'';
+    if(!nom)return;
+    if(rol==='TEM') cachePersonasPorRol.TEM.push(nom);
+    if(rol==='Manager') cachePersonasPorRol.Manager.push(nom);
+    if(rol==='Lead') cachePersonasPorRol.Lead.push(nom);
+    if(CORE_ROLES.has(rol)) coreTeam.push(r);
+    else engineers.push(r); // Engineer y cualquier rol no clasificado va a Engineers
+  });
+
+  const allEng=[...engineers];
+
+  document.getElementById('bc-personas').textContent=recs.length;
+  {const _e=document.getElementById('badge-personas-h');if(_e) _e.textContent=`${recs.length} personas`;}
+  document.getElementById('m-personas').textContent=recs.length;
+  document.getElementById('m-coreteam').textContent=coreTeam.length;
+  document.getElementById('m-engineers').textContent=engineers.length;
+
+  // Tabla Engineers & Tech
+  document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;
+  pagState.eng={page:0,data:allEng};
+  renderPagina('eng');
+
+  // Tabla Core Team
+  document.getElementById('badge-personas-core').textContent=`${coreTeam.length} personas`;
+  pagState.core={page:0,data:coreTeam};
+  renderPagina('core');
+
+  poblarFiltrosPersonas();
+  return recs;
+}
+
+// Cierra todos los dropdowns de nivel abiertos al hacer click fuera
+document.addEventListener('click',()=>{
+  document.querySelectorAll('.nivel-dropdown').forEach(d=>d.style.display='none');
+});
+
+function toggleNivelDropdown(recordId){
+  event.stopPropagation();
+  const dd=document.getElementById('nd-'+recordId);
+  if(!dd) return;
+  const wasOpen=dd.style.display==='block';
+  document.querySelectorAll('.nivel-dropdown').forEach(d=>d.style.display='none');
+  dd.style.display=wasOpen?'none':'block';
+}
+
+async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
+  e.stopPropagation();
+  // Cerrar dropdown
+  document.getElementById('nd-'+recordId).style.display='none';
+  if(nuevoNivel===nivelAnterior) return;
+
+  // Actualizar badge visualmente de inmediato
+  const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
+  const btn=document.querySelector(`#nw-${recordId} .nivel-badge`);
+  if(btn){
+    btn.className=`nivel-badge nivel-${nuevoNivel}`;
+    btn.innerHTML=`${nuevoNivel}`;
+    // Actualizar onclick del dropdown para reflejar nuevo nivel actual
+    document.querySelector(`#nw-${recordId} .nivel-badge`).setAttribute('onclick',`toggleNivelDropdown('${recordId}')`);
+  }
+
+  // Guardar en Airtable
+  try{
+    await atPatch(`Personas/${recordId}`,{'Nivel Loyalty':nuevoNivel});
+  }catch(err){
+    toast('Error al guardar nivel: '+err.message,true);
+    return;
+  }
+
+  // Obtener nombre de la persona para el recordatorio
+  const persona=cachePersonasRaw.find(p=>p.id===recordId);
+  const nombre=persona?.fields?.Nombre||'esta persona';
+
+  // Notificar Slack
+  const nivelEmojisSlack={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
+  await sendSlack(`${nivelEmojisSlack[nuevoNivel]||'⭐'} *Cambio de nivel Loyalty*\n*${nombre}* pasó de *${nivelAnterior}* a *${nuevoNivel}* 💪`);
+
+  // Mostrar banner recordatorio en la sección de personas
+  mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior);
+}
+
+function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior){
+  // Remover banner anterior si existe
+  const existing=document.getElementById('brevo-reminder-banner');
+  if(existing) existing.remove();
+
+  const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
+  const banner=document.createElement('div');
+  banner.id='brevo-reminder-banner';
+  banner.className='nivel-pending-banner';
+  banner.innerHTML=`
+    <i class="ti ti-mail"></i>
+    <div style="flex:1">
+      <strong>${nombre}</strong> subió al nivel <strong>${nuevoNivel}</strong>
+      ${nivelAnterior&&nivelAnterior!=='Spark'?`<span style="color:var(--text3);font-weight:400"> (antes: ${nivelAnterior})</span>`:''}
+      — Recordá enviar el mail de bienvenida desde Brevo
+    </div>
+    <button onclick="this.closest('.nivel-pending-banner').remove()" style="background:none;border:none;cursor:pointer;color:#9a6700;font-size:18px;padding:2px;line-height:1;">×</button>`;
+
+  // Insertar arriba de la primera tabla de personas
+  const wrap=document.getElementById('wrap-engineers');
+  if(wrap) wrap.parentNode.insertBefore(banner,wrap);
+
+  // Auto-ocultar después de 20 segundos
+  setTimeout(()=>banner.remove?.(), 20000);
+  toast(`Nivel de ${nombre} actualizado a ${nuevoNivel} ✓`);
+}
+function filtrarPersonas(){
+  const q=(document.getElementById('personas-search')?.value||'').toLowerCase();
+  const rol=document.getElementById('personas-rol')?.value||'';
+  const loyalty=document.getElementById('personas-loyalty')?.value||'';
+  const proyecto=document.getElementById('personas-proyecto')?.value||'';
+  const manager=document.getElementById('personas-manager')?.value||'';
+
+  let engCount=0, coreCount=0;
+
+  ['tbody-personas-eng','tbody-personas-core'].forEach(tbId=>{
+    const tb=document.getElementById(tbId);
+    if(!tb) return;
+    let count=0;
+    tb.querySelectorAll('tr').forEach(tr=>{
+      if(tr.classList.contains('empty-row')){tr.style.display='none';return;}
+      const cells=[...tr.querySelectorAll('td')].map(td=>td.textContent.toLowerCase());
+      const nombre=cells[0]||'', mail=cells[1]||'', rolCell=cells[2]||'',
+            loyaltyCell=cells[3]||'', proyectoCell=cells[4]||'', managerCell=cells[7]||'';
+      const matchQ=!q||(nombre+mail+proyectoCell).includes(q);
+      const matchRol=!rol||rolCell.includes(rol.toLowerCase());
+      const matchLoyalty=!loyalty||loyaltyCell.includes(loyalty.toLowerCase());
+      const matchProyecto=!proyecto||proyectoCell.includes(proyecto.toLowerCase());
+      const matchManager=!manager||managerCell.includes(manager.toLowerCase());
+      const visible=matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager;
+      tr.style.display=visible?'':'none';
+      if(visible) count++;
+    });
+    if(tbId==='tbody-personas-eng') engCount=count;
+    else coreCount=count;
+    // Mostrar empty si no hay resultados
+    let emptyRow=tb.querySelector('.empty-row');
+    if(count===0){
+      if(!emptyRow){
+        emptyRow=document.createElement('tr');
+        emptyRow.className='empty-row';
+        emptyRow.innerHTML='<td colspan="9">Sin resultados</td>';
+        tb.appendChild(emptyRow);
+      }
+      emptyRow.style.display='';
+    } else if(emptyRow){ emptyRow.style.display='none'; }
+  });
+  const eB=document.getElementById('badge-personas-eng');
+  const cB=document.getElementById('badge-personas-core');
+  if(eB) eB.textContent=`${engCount} personas`;
+  if(cB) cB.textContent=`${coreCount} personas`;
+  // Actualizar paginación con resultados filtrados
+  const engFiltered=[...document.getElementById('tbody-personas-eng').querySelectorAll('tr:not([style*="display: none"])')];
+  // Resetear página al filtrar
+  pagState.eng.page=0;
+  pagState.core.page=0;
+}
+
+function poblarFiltrosPersonas(){
+  const proyectos=[...new Set(cachePersonasRaw.map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+  const managers=[...new Set(cachePersonasRaw.map(p=>p.fields.Manager||'').filter(Boolean))].sort();
+  const selProy=document.getElementById('personas-proyecto');
+  const selMgr=document.getElementById('personas-manager');
+  if(selProy){
+    selProy.innerHTML='<option value="">Todos los proyectos</option>'+proyectos.map(p=>`<option value="${p}">${p}</option>`).join('');
+  }
+  if(selMgr){
+    selMgr.innerHTML='<option value="">Todos los managers</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
+  }
+}

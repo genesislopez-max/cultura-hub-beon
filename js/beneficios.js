@@ -1,0 +1,259 @@
+// ─── BENEFICIOS con filtro por grupo ─────────────────────────────────────────
+// ── CACHE BENEFICIOS COMPLETO ────────────────────────────────────────────────
+async function loadBeneficios(){
+  const [dBenef, dAsig, dPres] = await Promise.all([
+    atGet('Beneficios','&sort[0][field]=Beneficio&sort[0][direction]=asc'),
+    atGet('Beneficios Asignados'),
+    atGet('Presupuesto Loyalty')
+  ]);
+  cacheBeneficiosRaw=dBenef.records||[];
+  cachePresupuestoLoyalty=dPres.records||[];
+
+  // Resolver linked records en Beneficios Asignados
+  cacheBenefAsignados=(dAsig.records||[]).map(r=>{
+    const f={...r.fields};
+    // Persona: si es linked record (array de IDs), resolver a nombre
+    if(Array.isArray(f.Persona)){
+      const id=f.Persona[0];
+      const match=cachePersonasRaw.find(p=>p.id===id);
+      f.Persona=match?match.fields.Nombre:id;
+    }
+    // Beneficio: si es linked record (array de IDs), resolver a nombre
+    if(Array.isArray(f.Beneficio)){
+      const id=f.Beneficio[0];
+      const match=cacheBeneficiosRaw.find(b=>b.id===id);
+      f.Beneficio=match?match.fields.Beneficio:id;
+    }
+    return {...r, fields:f};
+  });
+  renderBenefCatalogo();
+  renderBenefPersonas();
+  renderBenefMetricas();
+}
+
+function switchBenefTab(tab, btn){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('benef-tab-catalogo').style.display=tab==='catalogo'?'':'none';
+  document.getElementById('benef-tab-personas').style.display=tab==='personas'?'':'none';
+}
+
+function renderBenefMetricas(){
+  const activos=cacheBeneficiosRaw.filter(r=>(r.fields.Estado||'Activo')==='Activo').length;
+  document.getElementById('mb-activos').textContent=activos;
+
+  // Presupuesto total usado = suma de valores de beneficios asignados activos
+  let totalUsado=0;
+  cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo').forEach(a=>{
+    if(a.fields.Monto){
+      totalUsado+=Number(a.fields.Monto)||0;
+    } else {
+      const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
+      const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===bNombre);
+      if(benef?.fields.Valor) totalUsado+=Number(benef.fields.Valor)||0;
+    }
+  });
+  document.getElementById('mb-presupuesto').textContent=totalUsado>0?`$${totalUsado.toLocaleString('es-AR')}`:'—';
+
+  // Personas con/sin beneficios
+  const personasConBenef=new Set(cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo').map(a=>{
+    return Array.isArray(a.fields.Persona)?a.fields.Persona[0]:a.fields.Persona;
+  }));
+  const totalPersonas=cachePersonasRaw.length;
+  document.getElementById('mb-personas').textContent=personasConBenef.size;
+  document.getElementById('mb-personas-sub').textContent=`de ${totalPersonas} en el equipo`;
+  document.getElementById('mb-sinbenef').textContent=Math.max(0,totalPersonas-personasConBenef.size);
+}
+
+
+// Niveles Loyalty en orden
+function tieneAccesoBeneficio(nivelPersona, nivelBeneficio){
+  if(!nivelBeneficio||nivelBeneficio==='Todos') return true;
+  const idxPersona=LOYALTY_ORDER.indexOf(nivelPersona);
+  const idxBenef=LOYALTY_ORDER.indexOf(nivelBeneficio);
+  return idxPersona>=idxBenef;
+}
+function filtrarBeneficios(){
+  renderBenefCatalogo();
+}
+
+function renderBenefCatalogo(){
+  const q=(document.getElementById('benef-search')?.value||'').toLowerCase();
+  const grupo=document.getElementById('benef-grupo')?.value||'';
+  const cat=document.getElementById('benef-cat')?.value||'';
+  const loyalty=document.getElementById('benef-loyalty')?.value||'';
+  const estado=document.getElementById('benef-estado')?.value||'';
+
+  let recs=cacheBeneficiosRaw.filter(r=>{
+    const f=r.fields;
+    const g=f.Grupo||'Ambos';
+    const matchQ=!q||(f.Beneficio||'').toLowerCase().includes(q)||(f.Descripción||'').toLowerCase().includes(q);
+    const matchG=!grupo||g===grupo||g==='Ambos';
+    const matchC=!cat||(f.Categoría||'')=== cat;
+    // Filtro loyalty: mostrar beneficios accesibles desde ese nivel o superiores
+    const matchL=!loyalty||tieneAccesoBeneficio(loyalty, f['Nivel Loyalty']||'Todos');
+    const matchE=!estado||(f.Estado||'Activo')===estado;
+    return matchQ&&matchG&&matchC&&matchL&&matchE;
+  });
+
+  document.getElementById('badge-beneficios-h').textContent=`${recs.length} beneficios`;
+  const grupoBadge={Engineers:'badge-blue','Core Team':'badge-purple',Ambos:'badge-gray'};
+  const loyaltyColors={'Spark':'badge-nivel-Spark','Ray':'badge-nivel-Ray','Lightning':'badge-nivel-Lightning','Thunder':'badge-nivel-Thunder','Storm':'badge-nivel-Storm'};
+
+  // Agrupar por grupo para render dividido
+  const engineers=recs.filter(r=>{const g=r.fields.Grupo||'Ambos';return g==='Engineers'||g==='Ambos';});
+  const coreTeam=recs.filter(r=>{const g=r.fields.Grupo||'Ambos';return g==='Core Team'||g==='Ambos';});
+
+  function benefRow(r){
+    const f=r.fields;
+    const g=f.Grupo||'Ambos';
+    const nivel=f['Nivel Loyalty']||'';
+    const valor=f.Valor?`$${Number(f.Valor).toLocaleString('es-AR')}/mes`:'—';
+    return`<tr>
+      <td><strong>${f.Beneficio||'—'}</strong><div style="font-size:11px;color:var(--text3);margin-top:2px">${f.Descripción||''}</div></td>
+      <td><span class="badge ${grupoBadge[g]||'badge-gray'}">${g}</span></td>
+      <td><span class="badge badge-blue">${f.Categoría||'—'}</span></td>
+      <td>${(!nivel||nivel==='Todos')?'<span style="color:var(--text3);font-size:12px">Todos los niveles</span>':`<span class="badge ${loyaltyColors[nivel]||'badge-gray'}">desde ${nivel}</span>`}</td>
+      <td style="font-size:13px;font-weight:500">${valor}</td>
+      <td><span class="badge ${(f.Estado||'Activo')==='Activo'?'badge-green':'badge-amber'}">${f.Estado||'Activo'}</span></td>
+    </tr>`;
+  }
+
+  const container=document.getElementById('benef-catalogo-container');
+  if(!recs.length){
+    container.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Sin resultados</div>';
+    return;
+  }
+
+  const tableHead=`<table class="data-table"><thead><tr><th>Beneficio</th><th>Grupo</th><th>Categoría</th><th>Nivel mínimo</th><th>Valor</th><th>Estado</th></tr></thead><tbody>`;
+
+  let html='';
+  if(engineers.length){
+    html+=`<div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:var(--bg2);border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--blue)">Engineers & Tech</span>
+      <span style="flex:1;height:1px;background:var(--border)"></span>
+      <span class="badge badge-blue">${engineers.length} beneficio${engineers.length!==1?'s':''}</span>
+    </div>`;
+    html+=tableHead+engineers.map(benefRow).join('')+'</tbody></table>';
+  }
+  if(coreTeam.length){
+    html+=`<div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:var(--bg2);border-bottom:1px solid var(--border);border-top:2px solid var(--border);margin-top:8px">
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#4A1FAA">Core Team</span>
+      <span style="flex:1;height:1px;background:var(--border)"></span>
+      <span class="badge badge-purple">${coreTeam.length} beneficio${coreTeam.length!==1?'s':''}</span>
+    </div>`;
+    html+=tableHead+coreTeam.map(benefRow).join('')+'</tbody></table>';
+  }
+  container.innerHTML=html;
+}
+
+function actualizarMontoBenef(){
+  const sel=document.getElementById('f-ba-beneficio');
+  if(!sel) return;
+  const nombre=sel.value;
+  const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===nombre);
+  const montoInput=document.getElementById('f-ba-monto');
+  if(montoInput&&benef?.fields.Valor){
+    montoInput.value=Number(benef.fields.Valor);
+    montoInput.placeholder='Valor del catálogo (podés modificarlo)';
+  } else if(montoInput){
+    montoInput.value='';
+    montoInput.placeholder='Ingresá el monto para esta persona';
+  }
+}
+
+function filtrarBenefPersonas(){ renderBenefPersonas(); }
+
+function renderBenefPersonas(){
+  const q=(document.getElementById('benef-persona-search')?.value||'').toLowerCase();
+  const grupoFil=document.getElementById('benef-persona-grupo')?.value||'';
+  const loyaltyFil=document.getElementById('benef-persona-loyalty')?.value||'';
+
+  // Construir mapa de topes por grupo+nivel desde cachePresupuestoLoyalty
+  const topeMap={};
+  cachePresupuestoLoyalty.forEach(r=>{
+    const g=r.fields.Grupo||'', n=r.fields.Nivel||'', t=Number(r.fields['Tope anual beneficios']||0);
+    topeMap[`${g}|${n}`]=t;
+  });
+
+  const personas=cachePersonasRaw.filter(p=>{
+    const nombre=(p.fields.Nombre||'').toLowerCase();
+    const grupo=getRolGroup(p.fields['Rol en empresa']||'');
+    const nivel=p.fields['Nivel Loyalty']||'Spark';
+    const matchQ=!q||nombre.includes(q);
+    const matchG=!grupoFil||grupo===grupoFil;
+    const matchL=!loyaltyFil||nivel===loyaltyFil;
+    return matchQ&&matchG&&matchL;
+  });
+
+  document.getElementById('badge-benef-personas').textContent=`${personas.length} personas`;
+
+  const tb=document.getElementById('tbody-benef-personas');
+  if(!personas.length){
+    tb.innerHTML='<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
+    return;
+  }
+
+  tb.innerHTML=personas.map((p,idx)=>{
+    const f=p.fields;
+    const nombre=f.Nombre||'—';
+    const grupo=getRolGroup(f['Rol en empresa']||'');
+    const nivel=f['Nivel Loyalty']||'Spark';
+    const tope=topeMap[`${grupo}|${nivel}`]||0;
+
+    // Beneficios accesibles según nivel + asignados activos
+    const beneficiosAccesibles=cacheBeneficiosRaw.filter(b=>{
+      const g=b.fields.Grupo||'Ambos';
+      const grupoOk=g===grupo||g==='Ambos';
+      const nivelOk=tieneAccesoBeneficio(nivel, b.fields['Nivel Loyalty']||'Todos');
+      return grupoOk&&nivelOk&&(b.fields.Estado||'Activo')==='Activo';
+    });
+    // Beneficios asignados activos para esta persona
+    const asignados=cacheBenefAsignados.filter(a=>{
+      const pNombre=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'');
+      return pNombre.trim()===nombre.trim()&&(a.fields.Estado||'Activo')==='Activo';
+    });
+
+    // Sumar valor: usa Monto del asignado si existe, sino Valor del catálogo
+    let usado=0;
+    asignados.forEach(a=>{
+      if(a.fields.Monto){
+        usado+=Number(a.fields.Monto)||0;
+      } else {
+        // Beneficio ya resuelto a nombre en loadBeneficios
+        const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
+        const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===bNombre);
+        if(benef?.fields.Valor) usado+=Number(benef.fields.Valor)||0;
+      }
+    });
+
+    const pct=tope>0?Math.min(100,Math.round((usado/tope)*100)):0;
+    const barColor=pct>=90?'#C62828':pct>=70?'#E65100':'var(--blue)';
+    const usadoStr=usado>0?`$${usado.toLocaleString('es-AR')}`:'$0';
+    const topeStr=tope>0?`$${tope.toLocaleString('es-AR')}`:'Sin tope';
+
+    const grupoBadge=grupo==='Engineers'?'badge-blue':'badge-purple';
+    const nivelColors={'Spark':'badge-nivel-Spark','Ray':'badge-nivel-Ray','Lightning':'badge-nivel-Lightning','Thunder':'badge-nivel-Thunder','Storm':'badge-nivel-Storm'};
+    const nivelEmoji={'Spark':'⚡','Ray':'☀️','Lightning':'🌩','Thunder':'🌪','Storm':'🌊'};
+    const bg=idx%2===0?'background:var(--bg2)':'';
+
+    return`<tr style="${bg}">
+      <td>${avH(nombre)}${nombre}</td>
+      <td><span class="badge ${grupoBadge}">${grupo}</span></td>
+      <td><span class="badge ${nivelColors[nivel]||'badge-gray'}">${nivel}</span></td>
+      <td style="font-size:13px">
+        <span style="font-weight:600">${asignados.length}</span>
+        <span style="color:var(--text3);font-size:11px"> asignados / ${beneficiosAccesibles.length} disponibles</span>
+      </td>
+      <td style="min-width:180px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>
+          </div>
+          <span style="font-size:12px;color:${pct>=90?'#C62828':pct>=70?'#E65100':'var(--text2)'};font-weight:${pct>=70?'600':'400'};white-space:nowrap">${usadoStr} / ${topeStr}</span>
+        </div>
+      </td>
+      <td><button onclick="verBenefPersona('${nombre.replace(/'/g,"\'")}','${grupo}','${nivel}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button></td>
+    </tr>`;
+  }).join('');
+}

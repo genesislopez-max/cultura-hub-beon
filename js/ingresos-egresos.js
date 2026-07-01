@@ -85,10 +85,8 @@ function setupDragDrop(boardId){
 }
 function renderCard(r,tipo){
   const f=r.fields,rol=f.Rol||'Otro';
-  const items=getItems(tipo,rol);
-  const st=clState[r.id]||Array(items.length).fill(false);
-  const comp=st.slice(0,items.length).filter(Boolean).length;
-  const pct=Math.round(comp/items.length*100);
+  const st=clState[r.id]||[];
+  const {comp,total,pct}=contarProgreso(tipo,rol,st);
   const rbc=rol==='Engineer'?'badge-blue':rol==='Core Team'?'badge-purple':rol==='Ambos'?'badge-amber':'badge-gray';
   const nombre=f.Persona||'—';
   const div=document.createElement('div');
@@ -97,14 +95,19 @@ function renderCard(r,tipo){
     <div class="kc-name">${avH(nombre)}${nombre}</div>
     <div class="kc-meta">
       ${f.Proyecto?`📁 ${f.Proyecto}<br>`:''}
+      ${f.Mail?`✉️ ${f.Mail}<br>`:''}
+      ${f['País']?`🌎 ${f['País']}<br>`:''}
       ${f.Fecha?`📅 ${fmt(f.Fecha)}<br>`:''}
       <span class="badge ${rbc}" style="margin-top:3px">${rol}</span>
     </div>
     <div class="kc-progress">
       <div class="kc-bar"><div class="kc-bar-fill" style="width:${pct}%"></div></div>
-      <span class="kc-pct">${comp}/${items.length}</span>
+      <span class="kc-pct">${comp}/${total}</span>
     </div>
     <div class="kc-actions">
+      ${tipo==='Ingreso'?`<button class="kc-btn-edit" title="Editar persona" onclick="event.stopPropagation();abrirEdicionPersona('${nombre.replace(/'/g,"\\'")}')">
+        <i class="ti ti-pencil"></i>
+      </button>`:''}
       <button class="kc-btn-del" title="Eliminar ingreso" onclick="event.stopPropagation();confirmarEliminar('${r.id}','${nombre.replace(/'/g,"\\'")}')">
         <i class="ti ti-trash"></i>
       </button>
@@ -138,12 +141,20 @@ async function sincronizarPersonasEnKanban(personasRecs){
     // Tiene fecha de ingreso → crear checklist automáticamente
     const rol=p.fields['Rol en empresa']||'Otro';
     const perfilChecklist=rol==='Engineer'?'Engineer':rol==='Core Team'||rol==='Manager'||rol==='Lead'?'Core Team':'Otro';
-    await atPost('Checklist',{
+    const fields={
       Persona:nombre,
       Tipo:'Ingreso',
       Rol:perfilChecklist,
       Fecha:p.fields['Fecha de ingreso']||undefined,
-      EstadoKanban:'Pre-ingreso'
+      EstadoKanban:'Pre-ingreso',
+    };
+    // Copiamos estos datos a la tarjeta del Kanban para no tener que ir a buscarlos a Personas
+    if(p.fields.Proyecto) fields.Proyecto=p.fields.Proyecto;
+    if(p.fields.Mail) fields.Mail=p.fields.Mail;
+    if(p.fields['País']) fields['País']=p.fields['País'];
+    await atPost('Checklist',fields).then(()=>{
+      const detalle=[rol,p.fields.Proyecto,p.fields['Fecha de ingreso']?`ingresa el ${fmt(p.fields['Fecha de ingreso'])}`:''].filter(Boolean).join(' · ');
+      sendSlack(`🎉 *Nuevo ingreso registrado en el Hub*\n${nombre}${detalle?' — '+detalle:''}`);
     }).catch(()=>{});
   }
 }
@@ -350,14 +361,13 @@ function renderChecklistItemsInline(id,tipo,rol,fecha){
   const etapas=tipo==='Egreso'?ETAPAS_EGRESO:ETAPAS_INGRESO;
   if(!clState[id]) clState[id]=Array(items.length).fill(false);
   clState[id]=items.map((_,i)=>clState[id][i]===true);
-  const comp=clState[id].filter(Boolean).length;
-  const pct=Math.round(comp/items.length*100);
-  document.getElementById('cl-progress').textContent=`${comp}/${items.length} completados (${pct}%)`;
+  const {comp,total,pct}=contarProgreso(tipo,rol,clState[id]);
+  document.getElementById('cl-progress').textContent=`${comp}/${total} completados (${pct}%)`;
   document.getElementById('cl-progress').className=`badge ${pct===100?'badge-green':pct>0?'badge-amber':'badge-red'}`;
   let html='';
   etapas.forEach(etapa=>{
     if(tipo==='Ingreso'&&etapa==='Onboarding completo') return;
-    const its=items.filter(it=>it.e===etapa);
+    const its=items.filter(it=>it.e===etapa&&it.activo!==false);
     if(!its.length) return;
     const idxs=its.map(it=>items.indexOf(it));
     const ec=idxs.filter(i=>clState[id][i]).length;
@@ -394,14 +404,13 @@ function renderChecklistItems(id,tipo,rol,fecha){
   const etapas=tipo==='Egreso'?ETAPAS_EGRESO:ETAPAS_INGRESO;
   if(!clState[id]) clState[id]=Array(items.length).fill(false);
   clState[id]=items.map((_,i)=>clState[id][i]===true);
-  const comp=clState[id].filter(Boolean).length;
-  const pct=Math.round(comp/items.length*100);
-  document.getElementById('detail-progress').textContent=`${comp}/${items.length} completados (${pct}%)`;
+  const {comp,total,pct}=contarProgreso(tipo,rol,clState[id]);
+  document.getElementById('detail-progress').textContent=`${comp}/${total} completados (${pct}%)`;
   document.getElementById('detail-progress').className=`badge ${pct===100?'badge-green':pct>0?'badge-amber':'badge-red'}`;
   let html='';
   etapas.forEach(etapa=>{
     if(tipo==='Ingreso'&&etapa==='Onboarding completo') return;
-    const its=items.filter(it=>it.e===etapa);
+    const its=items.filter(it=>it.e===etapa&&it.activo!==false);
     if(!its.length) return;
     const idxs=its.map(it=>items.indexOf(it));
     const ec=idxs.filter(i=>clState[id][i]).length;
@@ -446,10 +455,8 @@ async function toggleItem(id,idx,tipo,rol,fecha){
 
 // Actualiza solo la barra de progreso de una tarjeta ya renderizada en el kanban
 function updateCardProgress(id,tipo,rol){
-  const items=getItems(tipo,rol);
-  const st=clState[id]||Array(items.length).fill(false);
-  const comp=st.slice(0,items.length).filter(Boolean).length;
-  const pct=Math.round(comp/items.length*100);
+  const st=clState[id]||[];
+  const {comp,total,pct}=contarProgreso(tipo,rol,st);
   // Buscar la tarjeta en el DOM por data o por búsqueda de texto del nombre
   const allCards=document.querySelectorAll('.kanban-card');
   allCards.forEach(card=>{
@@ -462,7 +469,7 @@ function updateCardProgress(id,tipo,rol){
     const barFill=card.querySelector('.kc-bar-fill');
     const pctEl=card.querySelector('.kc-pct');
     if(barFill) barFill.style.width=pct+'%';
-    if(pctEl) pctEl.textContent=`${comp}/${items.length}`;
+    if(pctEl) pctEl.textContent=`${comp}/${total}`;
   });
 }
 function closeChecklist(){
@@ -486,8 +493,7 @@ async function loadChecklist(){
     const saved=f.ItemsCompletados?JSON.parse(f.ItemsCompletados):[];
     clState[r.id]=items.map((_,i)=>saved[i]===true);
     recMeta[r.id]={tipo,rol,fecha:f.Fecha||'',etapa:f.EstadoKanban||''};
-    const comp=clState[r.id].filter(Boolean).length;
-    const pct=Math.round(comp/items.length*100);
+    const {comp,total,pct}=contarProgreso(tipo,rol,clState[r.id]);
     const eb=pct===100?'badge-green':pct>0?'badge-amber':'badge-red';
     const tb2=tipo==='Ingreso'?'badge-green':'badge-red';
     const rb=rol==='Engineer'?'badge-blue':rol==='Core Team'?'badge-purple':rol==='Ambos'?'badge-amber':'badge-gray';
@@ -497,7 +503,7 @@ async function loadChecklist(){
       <td><span class="badge ${rb}">${rol}</span></td>
       <td>${fmt(f.Fecha)}</td>
       <td><span class="badge ${eb}">${pct===100?'Completo ✓':pct>0?'En progreso':'Pendiente'}</span></td>
-      <td style="min-width:120px"><div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--blue);border-radius:3px"></div></div><span style="font-size:11px;color:var(--text2)">${comp}/${items.length}</span></div></td>
+      <td style="min-width:120px"><div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:var(--blue);border-radius:3px"></div></div><span style="font-size:11px;color:var(--text2)">${comp}/${total}</span></div></td>
       <td><button onclick="openChecklist('${r.id}','${(f.Persona||'').replace(/'/g,"\\'")}','${tipo}','${rol}','${f.Fecha||''}','${f.EstadoKanban||''}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button></td>
     </tr>`;
   }).join('');

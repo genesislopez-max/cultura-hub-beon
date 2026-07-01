@@ -188,6 +188,8 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .kc-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
 .kc-btn-del{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:3px 5px;border-radius:5px;transition:all 0.15s;line-height:1;}
 .kc-btn-del:hover{color:#A32D2D;background:#FCEBEB;}
+.kc-btn-edit{background:none;border:none;cursor:pointer;color:var(--text3);font-size:14px;padding:3px 5px;border-radius:5px;transition:all 0.15s;line-height:1;}
+.kc-btn-edit:hover{color:var(--blue);background:#EEF2FF;}
 .kc-btn-complete{background:none;border:1px solid var(--border);cursor:pointer;color:var(--blue);font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.15s;}
 .kc-btn-complete:hover{background:#EEF2FF;border-color:var(--blue);}
 /* Confirm dialog */

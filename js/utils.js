@@ -15,7 +15,7 @@ function fmt(d){if(!d)return'—';const dt=new Date(d+'T12:00:00');return dt.toL
 function daysTo(ds){
   if(!ds)return 9999;
   const now=new Date();now.setHours(0,0,0,0);
-  let d=new Date(ds+'T12:00:00');d.setFullYear(now.getFullYear());
+  let d=new Date(ds+'T12:00:00');d.setHours(0,0,0,0);d.setFullYear(now.getFullYear());
   if(d<now)d.setFullYear(now.getFullYear()+1);
   return Math.round((d-now)/86400000);
 }

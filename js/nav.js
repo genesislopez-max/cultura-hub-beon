@@ -63,6 +63,39 @@ async function openModalFull(){
   // Info al usuario
   if(datos.nombre) toast(`Pre-llenado con datos de ${datos.nombre} ✓`);
 }
+// Rellena un <select> de proyectos con el cache actual, opcionalmente preseleccionando uno
+function fillProyectosSelect(selectId, selected){
+  const sel=document.getElementById(selectId);
+  if(!sel) return;
+  const opts=[...new Set((cacheProyectos||[]).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">Sin proyecto</option>'+opts.map(p=>`<option value="${p}"${p===selected?' selected':''}>${p}</option>`).join('');
+}
+function buildIngresoSimpleHTML(){
+  return`
+<div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-nombre" placeholder="Nombre y apellido"></div>
+<div class="field-group"><label class="field-label">Rol en empresa *</label>
+  <select class="field-input" id="f-rol-empresa">
+    <option value="Engineer">Engineer</option>
+    <option value="Core Team">Core Team</option>
+    <option value="Supervisor">Supervisor</option>
+    <option value="TEM">TEM</option>
+    <option value="Lead">Lead</option>
+    <option value="Manager">Manager</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Proyecto</label><select class="field-input" id="f-proyecto"></select></div>
+<div class="field-group"><label class="field-label">Fecha de ingreso *</label><input class="field-input" id="f-ingreso" type="date"></div>
+`;
+}
+async function saveIngresoSimple(){
+  const v=id=>document.getElementById(id)?.value||'';
+  if(!v('f-nombre')){toast('El nombre es obligatorio',true);return false;}
+  if(!v('f-ingreso')){toast('La fecha de ingreso es obligatoria',true);return false;}
+  const fields={Nombre:v('f-nombre'),'Rol en empresa':v('f-rol-empresa')||'Engineer','Fecha de ingreso':v('f-ingreso')};
+  if(v('f-proyecto')) fields.Proyecto=v('f-proyecto');
+  await atPost('Personas',fields);
+  return true;
+}
 // HR rápido — formulario simple
 function openModalHR(){
   const hrForm={

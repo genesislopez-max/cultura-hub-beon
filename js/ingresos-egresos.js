@@ -134,12 +134,31 @@ async function loadKanbans(){
 // FIX PRINCIPAL: sincroniza personas que están en Personas pero no en Checklist
 async function sincronizarPersonasEnKanban(personasRecs){
   const checklistRecs=await atGet('Checklist','&filterByFormula={Tipo}="Ingreso"').then(d=>d.records||[]).catch(()=>[]);
-  const nombresEnChecklist=new Set(checklistRecs.map(r=>(r.fields.Persona||'').trim().toLowerCase()));
+  const checklistPorNombre=new Map(checklistRecs.map(r=>[(r.fields.Persona||'').trim().toLowerCase(),r]));
   for(const p of personasRecs){
     const nombre=(p.fields.Nombre||'').trim();
-    if(!nombre||nombresEnChecklist.has(nombre.toLowerCase())) continue;
-    // Tiene fecha de ingreso → crear checklist automáticamente
+    if(!nombre) continue;
     const rol=p.fields['Rol en empresa']||'Otro';
+    const denormalizados={};
+    if(p.fields.Proyecto) denormalizados.Proyecto=p.fields.Proyecto;
+    if(p.fields.Mail) denormalizados.Mail=p.fields.Mail;
+    if(p.fields['País']) denormalizados['País']=p.fields['País'];
+
+    const existente=checklistPorNombre.get(nombre.toLowerCase());
+    if(existente){
+      // Ya tiene tarjeta en el Kanban — si le faltan datos que Personas ya tiene
+      // (por ejemplo, se completaron después con "Editar"), los copiamos ahora.
+      const faltantes={};
+      for(const campo of ['Proyecto','Mail','País']){
+        if(denormalizados[campo]&&!existente.fields[campo]) faltantes[campo]=denormalizados[campo];
+      }
+      if(Object.keys(faltantes).length){
+        await atPatch(`Checklist/${existente.id}`,faltantes).catch(e=>console.error(`Error completando datos del checklist de "${nombre}":`,e));
+      }
+      continue;
+    }
+
+    // No tiene checklist todavía → lo creamos, con los datos ya copiados
     const perfilChecklist=rol==='Engineer'?'Engineer':rol==='Core Team'||rol==='Manager'||rol==='Lead'?'Core Team':'Otro';
     const fields={
       Persona:nombre,
@@ -147,15 +166,15 @@ async function sincronizarPersonasEnKanban(personasRecs){
       Rol:perfilChecklist,
       Fecha:p.fields['Fecha de ingreso']||undefined,
       EstadoKanban:'Pre-ingreso',
+      ...denormalizados,
     };
-    // Copiamos estos datos a la tarjeta del Kanban para no tener que ir a buscarlos a Personas
-    if(p.fields.Proyecto) fields.Proyecto=p.fields.Proyecto;
-    if(p.fields.Mail) fields.Mail=p.fields.Mail;
-    if(p.fields['País']) fields['País']=p.fields['País'];
     await atPost('Checklist',fields).then(()=>{
       const detalle=[rol,p.fields.Proyecto,p.fields['Fecha de ingreso']?`ingresa el ${fmt(p.fields['Fecha de ingreso'])}`:''].filter(Boolean).join(' · ');
       sendSlack(`🎉 *Nuevo ingreso registrado en el Hub*\n${nombre}${detalle?' — '+detalle:''}`);
-    }).catch(()=>{});
+    }).catch(e=>{
+      console.error(`Error creando el checklist de "${nombre}":`,e);
+      toast(`⚠️ No se pudo crear el checklist de ${nombre}: ${e.message}`,true);
+    });
   }
 }
 

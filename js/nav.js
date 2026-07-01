@@ -123,22 +123,32 @@ function resetConfig(){
   document.getElementById('config-screen').style.display='flex';
 }
 
+// Secciones que se cargan en paralelo — si alguna falla, no bloquea a las demás
+const SECCIONES_LOAD_ALL=[
+  ['Cumpleaños',personas=>loadCumpleanos(personas)],
+  ['Aniversarios',personas=>loadAniversarios(personas)],
+  ['Glassdoor',()=>loadReviews()],
+  ['Checklist',()=>loadChecklist()],
+  ['Beneficios',()=>loadBeneficios()],
+  ['Ambassador Week',()=>loadAmbassadors()],
+  ['Off Sites',()=>loadOffsites()],
+  ['Get Together',()=>loadGetTogether()],
+  ['Ingresos',()=>loadKanbanIngresos()],
+  ['Egresos',()=>loadKanbanEgresos()],
+];
+
 async function loadAll(){
   const personas=await loadPersonas();
   await loadProyectos();
   await sincronizarPersonasEnKanban(personas);
-  await Promise.all([
-    loadCumpleanos(personas),
-    loadAniversarios(personas),
-    loadReviews(),
-    loadChecklist(),
-    loadBeneficios(),
-    loadAmbassadors(),
-    loadOffsites(),
-    loadGetTogether(),
-    loadKanbanIngresos(),
-    loadKanbanEgresos(),
-  ]);
+  const resultados=await Promise.allSettled(SECCIONES_LOAD_ALL.map(([,fn])=>fn(personas)));
+  const fallidas=resultados
+    .map((r,i)=>({nombre:SECCIONES_LOAD_ALL[i][0],r}))
+    .filter(({r})=>r.status==='rejected');
+  fallidas.forEach(({nombre,r})=>console.error(`Error cargando "${nombre}":`,r.reason));
+  if(fallidas.length){
+    toast(`⚠️ No se pudo cargar: ${fallidas.map(f=>f.nombre).join(', ')}`,true);
+  }
 }
 
 async function iniciarHub(){
@@ -149,8 +159,8 @@ async function iniciarHub(){
     document.getElementById('dot').className='dot ok';
     document.getElementById('conn-status').textContent='Conectado a Airtable';
   }catch(e){
-    // Si falla con 401, probablemente el token es inválido
-    if(e.message&&e.message.includes('401')){
+    // Si falla con 401/403, el token es inválido o no tiene permisos
+    if(e.status===401||e.status===403){
       setBanner('Token inválido — revisá tu configuración','err');
       document.getElementById('dot').className='dot err';
       document.getElementById('conn-status').textContent='Token inválido';

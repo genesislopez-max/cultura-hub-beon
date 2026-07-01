@@ -150,14 +150,11 @@ function closeGDModal(){
 
 async function guardarFechaGD(){
   const fecha=document.getElementById('gd-modal-fecha')?.value;
-  if(!fecha||!gdModalId){ toast('Ingresá una fecha',false); return; }
-  const result=await fetch(`https://api.airtable.com/v0/${BASE}/Eventos/${gdModalId}`,{
-    method:'PATCH',headers:HDR,
-    body:JSON.stringify({fields:{Estado:'Completado'}})
-  });
-  if(!result.ok){
-    const err=await result.json();
-    toast(`⚠️ Error: ${err.error?.message||result.statusText}`,false);
+  if(!fecha||!gdModalId){ toast('Ingresá una fecha',true); return; }
+  try{
+    await atPatch(`Eventos/${gdModalId}`,{Estado:'Completado'});
+  }catch(e){
+    toast(`⚠️ Error: ${e.message}`,true);
     return;
   }
   // Actualizar cache local
@@ -170,15 +167,11 @@ async function guardarFechaGD(){
 
 async function marcarGDSolicitada(id){
   const hoy=new Date().toISOString().split('T')[0];
-  // Marcar como Completado en Airtable (es el estado válido para "ya gestionada")
-  const result=await fetch(`https://api.airtable.com/v0/${BASE}/Eventos/${id}`,{
-    method:'PATCH',headers:HDR,
-    body:JSON.stringify({fields:{Estado:'Completado'}})
-  });
-  if(!result.ok){
-    const err=await result.json();
-    console.error('Error Airtable:',err);
-    toast(`⚠️ Error: ${err.error?.message||result.statusText}`,false);
+  try{
+    // Marcar como Completado en Airtable (es el estado válido para "ya gestionada")
+    await atPatch(`Eventos/${id}`,{Estado:'Completado'});
+  }catch(e){
+    toast(`⚠️ Error: ${e.message}`,true);
     return;
   }
   // Actualizar cache local — marcar visualmente como Solicitada

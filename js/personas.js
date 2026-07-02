@@ -6,15 +6,16 @@ function renderPagina(grupo){
   const btnPrev=document.getElementById(`pag-prev-${grupo}`);
   const btnNext=document.getElementById(`pag-next-${grupo}`);
   if(!tb) return;
-  if(!data.length){if(bar) bar.style.display='none';return;}
+  const colspan=grupo==='eng'?9:10;
+  if(!data.length){
+    tb.innerHTML=`<tr class="empty-row"><td colspan="${colspan}">Sin resultados</td></tr>`;
+    if(bar) bar.style.display='none';
+    return;
+  }
   const totalPags=Math.ceil(data.length/PAG_SIZE);
   const inicio=page*PAG_SIZE, fin=Math.min(inicio+PAG_SIZE,data.length);
   const slice=data.slice(inicio,fin);
-  if(grupo==='eng'){
-    tb.innerHTML=slice.map(rowHtmlEng).join('')||'<tr class="empty-row"><td colspan="9">Sin resultados</td></tr>';
-  } else {
-    tb.innerHTML=slice.map(rowHtml).join('')||'<tr class="empty-row"><td colspan="10">Sin resultados</td></tr>';
-  }
+  tb.innerHTML=grupo==='eng'?slice.map(rowHtmlEng).join(''):slice.map(rowHtml).join('');
   if(totalPags>1){
     if(bar) bar.style.display='flex';
     if(info) info.textContent=`${inicio+1}–${fin} de ${data.length} personas`;
@@ -122,12 +123,12 @@ async function loadPersonas(){
 
   // Tabla Engineers & Tech
   document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;
-  pagState.eng={page:0,data:allEng};
+  pagState.eng={page:0,data:allEng,all:allEng};
   renderPagina('eng');
 
   // Tabla Core Team
   document.getElementById('badge-personas-core').textContent=`${coreTeam.length} personas`;
-  pagState.core={page:0,data:coreTeam};
+  pagState.core={page:0,data:coreTeam,all:coreTeam};
   renderPagina('core');
 
   poblarFiltrosPersonas();
@@ -210,56 +211,39 @@ function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior){
   setTimeout(()=>banner.remove?.(), 20000);
   toast(`Nivel de ${nombre} actualizado a ${nuevoNivel} ✓`);
 }
+// Filtra sobre los datos completos (pagState[grupo].all), no sobre las filas
+// ya renderizadas — así busca en TODAS las personas, no solo en la página actual.
 function filtrarPersonas(){
-  const q=(document.getElementById('personas-search')?.value||'').toLowerCase();
+  const q=(document.getElementById('personas-search')?.value||'').trim().toLowerCase();
   const rol=document.getElementById('personas-rol')?.value||'';
   const loyalty=document.getElementById('personas-loyalty')?.value||'';
   const proyecto=document.getElementById('personas-proyecto')?.value||'';
   const manager=document.getElementById('personas-manager')?.value||'';
 
-  let engCount=0, coreCount=0;
+  const matchPersona=r=>{
+    const f=r.fields;
+    const nombre=(f.Nombre||'').toLowerCase(), mail=(f.Mail||'').toLowerCase(),
+          proy=(f.Proyecto||'').toLowerCase(), ciudad=(f.Ciudad||'').toLowerCase();
+    const matchQ=!q||nombre.includes(q)||mail.includes(q)||proy.includes(q)||ciudad.includes(q);
+    const matchRol=!rol||(f['Rol en empresa']||'')===rol;
+    const matchLoyalty=!loyalty||(f['Nivel Loyalty']||'Spark')===loyalty;
+    const matchProyecto=!proyecto||(f.Proyecto||'')===proyecto;
+    const matchManager=!manager||(f.Manager||'')===manager;
+    return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager;
+  };
 
-  ['tbody-personas-eng','tbody-personas-core'].forEach(tbId=>{
-    const tb=document.getElementById(tbId);
-    if(!tb) return;
-    let count=0;
-    tb.querySelectorAll('tr').forEach(tr=>{
-      if(tr.classList.contains('empty-row')){tr.style.display='none';return;}
-      const cells=[...tr.querySelectorAll('td')].map(td=>td.textContent.toLowerCase());
-      const nombre=cells[0]||'', mail=cells[1]||'', rolCell=cells[2]||'',
-            loyaltyCell=cells[3]||'', proyectoCell=cells[4]||'', managerCell=cells[7]||'';
-      const matchQ=!q||(nombre+mail+proyectoCell).includes(q);
-      const matchRol=!rol||rolCell.includes(rol.toLowerCase());
-      const matchLoyalty=!loyalty||loyaltyCell.includes(loyalty.toLowerCase());
-      const matchProyecto=!proyecto||proyectoCell.includes(proyecto.toLowerCase());
-      const matchManager=!manager||managerCell.includes(manager.toLowerCase());
-      const visible=matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager;
-      tr.style.display=visible?'':'none';
-      if(visible) count++;
-    });
-    if(tbId==='tbody-personas-eng') engCount=count;
-    else coreCount=count;
-    // Mostrar empty si no hay resultados
-    let emptyRow=tb.querySelector('.empty-row');
-    if(count===0){
-      if(!emptyRow){
-        emptyRow=document.createElement('tr');
-        emptyRow.className='empty-row';
-        emptyRow.innerHTML='<td colspan="9">Sin resultados</td>';
-        tb.appendChild(emptyRow);
-      }
-      emptyRow.style.display='';
-    } else if(emptyRow){ emptyRow.style.display='none'; }
+  ['eng','core'].forEach(grupo=>{
+    const all=pagState[grupo].all||pagState[grupo].data;
+    pagState[grupo].all=all;
+    pagState[grupo].data=all.filter(matchPersona);
+    pagState[grupo].page=0;
+    renderPagina(grupo);
   });
+
   const eB=document.getElementById('badge-personas-eng');
   const cB=document.getElementById('badge-personas-core');
-  if(eB) eB.textContent=`${engCount} personas`;
-  if(cB) cB.textContent=`${coreCount} personas`;
-  // Actualizar paginación con resultados filtrados
-  const engFiltered=[...document.getElementById('tbody-personas-eng').querySelectorAll('tr:not([style*="display: none"])')];
-  // Resetear página al filtrar
-  pagState.eng.page=0;
-  pagState.core.page=0;
+  if(eB) eB.textContent=`${pagState.eng.data.length} personas`;
+  if(cB) cB.textContent=`${pagState.core.data.length} personas`;
 }
 
 function poblarFiltrosPersonas(){

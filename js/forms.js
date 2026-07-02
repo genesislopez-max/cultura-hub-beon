@@ -22,6 +22,7 @@ function buildPersonaCompletaHTML(v={}){
   <datalist id="per-proyectos-list">${proyectos.map(p=>`<option value="${p}">`).join('')}</datalist>
 </div>
 <div class="field-group"><label class="field-label">País</label><input class="field-input" id="f-per-pais" placeholder="Ej: Argentina" value="${v['País']||''}"></div>
+<div class="field-group"><label class="field-label">Ciudad</label><input class="field-input" id="f-per-ciudad" placeholder="Ej: Buenos Aires" value="${v.Ciudad||''}"></div>
 <div class="field-group"><label class="field-label">Manager</label><input class="field-input" id="f-per-manager" placeholder="TEM / Manager a cargo" value="${v.Manager||''}"></div>
 <div class="field-group"><label class="field-label">Fecha de ingreso</label><input class="field-input" id="f-per-ingreso" type="date" value="${v['Fecha de ingreso']||''}"></div>
 <div class="field-group"><label class="field-label">Fecha de cumpleaños</label><input class="field-input" id="f-per-cumple" type="date" value="${v['Fecha de cumpleaños']||''}"></div>
@@ -37,6 +38,7 @@ function leerPersonaCompletaForm(esEdicion){
   setTexto('Mail','f-per-mail');
   setTexto('Proyecto','f-per-proyecto');
   setTexto('País','f-per-pais');
+  setTexto('Ciudad','f-per-ciudad');
   setTexto('Manager','f-per-manager');
   setTexto('Comentarios','f-per-comentarios');
   const setFecha=(campo,id)=>{const val=v(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]=null;};

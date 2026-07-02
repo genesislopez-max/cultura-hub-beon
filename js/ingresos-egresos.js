@@ -85,6 +85,7 @@ function setupDragDrop(boardId){
 }
 function renderCard(r,tipo){
   const f=r.fields,rol=f.Rol||'Otro';
+  cacheChecklistFields[r.id]=f;
   const st=clState[r.id]||[];
   const {comp,total,pct}=contarProgreso(tipo,rol,st);
   const rbc=rol==='Engineer'?'badge-blue':rol==='Core Team'?'badge-purple':rol==='Ambos'?'badge-amber':'badge-gray';
@@ -390,10 +391,28 @@ function openChecklistInline(id,nombre,tipo,rol,fecha,etapa){
   document.getElementById('cl-badge').className=`badge ${tipo==='Ingreso'?'badge-green':'badge-red'}`;
   document.getElementById('cl-badge').textContent=tipo;
   document.getElementById('cl-subtitle').textContent=`${tipo} · ${rol}${fecha?' · '+fmt(fecha):''}`;
+  renderClInfoBar(id);
   const items=getItems(tipo,rol);
   if(!clState[id]) clState[id]=Array(items.length).fill(false);
   clState[id]=items.map((_,i)=>clState[id][i]===true);
   renderChecklistItemsInline(id,tipo,rol,fecha||'');
+}
+
+// Muestra Proyecto/Mail/País/Fecha arriba del checklist, para no tener que
+// volver a la tarjeta del Kanban mientras se van completando los ítems.
+function renderClInfoBar(id){
+  const bar=document.getElementById('cl-info-bar');
+  if(!bar) return;
+  const f=cacheChecklistFields[id]||{};
+  const datos=[
+    f.Proyecto&&`📁 ${f.Proyecto}`,
+    f.Mail&&`✉️ ${f.Mail}`,
+    f['País']&&`🌎 ${f['País']}`,
+    f.Fecha&&`📅 ${fmt(f.Fecha)}`,
+  ].filter(Boolean);
+  if(!datos.length){bar.style.display='none';bar.innerHTML='';return;}
+  bar.style.display='flex';
+  bar.innerHTML=datos.map(d=>`<span>${d}</span>`).join('');
 }
 
 function renderChecklistItemsInline(id,tipo,rol,fecha){
@@ -529,6 +548,7 @@ async function loadChecklist(){
   if(!recs.length){tb.innerHTML='<tr class="empty-row"><td colspan="7">No hay registros</td></tr>';return;}
   tb.innerHTML=recs.map(r=>{
     const f=r.fields,tipo=f.Tipo||'Ingreso',rol=f.Rol||'Otro';
+    cacheChecklistFields[r.id]=f;
     const items=getItems(tipo,rol);
     const saved=f.ItemsCompletados?JSON.parse(f.ItemsCompletados):[];
     clState[r.id]=items.map((_,i)=>saved[i]===true);

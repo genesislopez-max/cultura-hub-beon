@@ -150,8 +150,8 @@ async function loadPersonas(){
 
   const allEng=[...engineers];
 
-  document.getElementById('bc-personas').textContent=recs.length;
-  {const _e=document.getElementById('badge-personas-h');if(_e) _e.textContent=`${recs.length} personas`;}
+  document.getElementById('bc-engineers').textContent=allEng.length;
+  document.getElementById('bc-coreteam').textContent=coreTeam.length;
   document.getElementById('m-personas').textContent=recs.length;
   document.getElementById('m-coreteam').textContent=coreTeam.length;
   document.getElementById('m-engineers').textContent=engineers.length;
@@ -216,11 +216,13 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   const nivelEmojisSlack={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
   await sendSlack(`${nivelEmojisSlack[nuevoNivel]||'⭐'} *Cambio de nivel Loyalty*\n*${nombre}* pasó de *${nivelAnterior}* a *${nuevoNivel}* 💪`);
 
-  // Mostrar banner recordatorio en la sección de personas
-  mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior);
+  // Mostrar banner recordatorio en la pestaña donde vive esta persona
+  // (Engineers & Tech y Core Team son pestañas separadas)
+  const grupo=(pagState.core.all||[]).some(p=>p.id===recordId)?'core':'eng';
+  mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior, grupo);
 }
 
-function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior){
+function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior, grupo){
   // Remover banner anterior si existe
   const existing=document.getElementById('brevo-reminder-banner');
   if(existing) existing.remove();
@@ -238,8 +240,8 @@ function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior){
     </div>
     <button onclick="this.closest('.nivel-pending-banner').remove()" style="background:none;border:none;cursor:pointer;color:#9a6700;font-size:18px;padding:2px;line-height:1;">×</button>`;
 
-  // Insertar arriba de la primera tabla de personas
-  const wrap=document.getElementById('wrap-engineers');
+  // Insertar arriba de la tabla correspondiente
+  const wrap=document.getElementById(grupo==='core'?'wrap-coreteam':'wrap-engineers');
   if(wrap) wrap.parentNode.insertBefore(banner,wrap);
 
   // Auto-ocultar después de 20 segundos
@@ -248,12 +250,14 @@ function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior){
 }
 // Filtra sobre los datos completos (pagState[grupo].all), no sobre las filas
 // ya renderizadas — así busca en TODAS las personas, no solo en la página actual.
-function filtrarPersonas(){
-  const q=(document.getElementById('personas-search')?.value||'').trim().toLowerCase();
-  const rol=document.getElementById('personas-rol')?.value||'';
-  const loyalty=document.getElementById('personas-loyalty')?.value||'';
-  const proyecto=document.getElementById('personas-proyecto')?.value||'';
-  const manager=document.getElementById('personas-manager')?.value||'';
+// Engineers & Tech y Core Team viven en pestañas separadas, cada una con sus
+// propios inputs (sufijo -eng / -core), así que se filtran de forma independiente.
+function filtrarPersonas(grupo){
+  const q=(document.getElementById(`personas-search-${grupo}`)?.value||'').trim().toLowerCase();
+  const rol=document.getElementById(`personas-rol-${grupo}`)?.value||'';
+  const loyalty=document.getElementById(`personas-loyalty-${grupo}`)?.value||'';
+  const proyecto=document.getElementById(`personas-proyecto-${grupo}`)?.value||'';
+  const manager=document.getElementById(`personas-manager-${grupo}`)?.value||'';
 
   const matchPersona=r=>{
     const f=r.fields;
@@ -267,29 +271,28 @@ function filtrarPersonas(){
     return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager;
   };
 
-  ['eng','core'].forEach(grupo=>{
-    const all=pagState[grupo].all||pagState[grupo].data;
-    pagState[grupo].all=all;
-    pagState[grupo].data=all.filter(matchPersona);
-    pagState[grupo].page=0;
-    renderPagina(grupo);
-  });
+  const all=pagState[grupo].all||pagState[grupo].data;
+  pagState[grupo].all=all;
+  pagState[grupo].data=all.filter(matchPersona);
+  pagState[grupo].page=0;
+  renderPagina(grupo);
 
-  const eB=document.getElementById('badge-personas-eng');
-  const cB=document.getElementById('badge-personas-core');
-  if(eB) eB.textContent=`${pagState.eng.data.length} personas`;
-  if(cB) cB.textContent=`${pagState.core.data.length} personas`;
+  const badge=document.getElementById(`badge-personas-${grupo}`);
+  if(badge) badge.textContent=`${pagState[grupo].data.length} personas`;
 }
 
 function poblarFiltrosPersonas(){
-  const proyectos=[...new Set(cachePersonasRaw.map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
-  const managers=[...new Set(cachePersonasRaw.map(p=>p.fields.Manager||'').filter(Boolean))].sort();
-  const selProy=document.getElementById('personas-proyecto');
-  const selMgr=document.getElementById('personas-manager');
-  if(selProy){
-    selProy.innerHTML='<option value="">Todos los proyectos</option>'+proyectos.map(p=>`<option value="${p}">${p}</option>`).join('');
-  }
-  if(selMgr){
-    selMgr.innerHTML='<option value="">Todos los managers</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
-  }
+  ['eng','core'].forEach(grupo=>{
+    const datos=pagState[grupo].all||[];
+    const proyectos=[...new Set(datos.map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+    const managers=[...new Set(datos.map(p=>p.fields.Manager||'').filter(Boolean))].sort();
+    const selProy=document.getElementById(`personas-proyecto-${grupo}`);
+    const selMgr=document.getElementById(`personas-manager-${grupo}`);
+    if(selProy){
+      selProy.innerHTML='<option value="">Todos los proyectos</option>'+proyectos.map(p=>`<option value="${p}">${p}</option>`).join('');
+    }
+    if(selMgr){
+      selMgr.innerHTML='<option value="">Todos los managers</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
+    }
+  });
 }

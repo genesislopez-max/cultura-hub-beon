@@ -34,7 +34,8 @@
     </div>
     <div class="sb-section">Principal</div>
     <button class="sb-item active" onclick="showSection('inicio',this)"><i class="ti ti-layout-dashboard"></i>Inicio</button>
-    <button class="sb-item" onclick="showSection('personas',this)"><i class="ti ti-users"></i>Personas <span class="bc" id="bc-personas">0</span></button>
+    <button class="sb-item" onclick="showSection('engineers',this)"><i class="ti ti-code"></i>Engineers & Tech <span class="bc" id="bc-engineers">0</span></button>
+    <button class="sb-item" onclick="showSection('coreteam',this)"><i class="ti ti-building-skyscraper"></i>Core Team <span class="bc" id="bc-coreteam">0</span></button>
     <div class="sb-section">Eventos</div>
     <button class="sb-item" onclick="showSection('cumpleanos',this)"><i class="ti ti-cake"></i>Cumpleaños</button>
     <button class="sb-item" onclick="showSection('aniversarios',this)"><i class="ti ti-star"></i>Aniversarios</button>
@@ -119,25 +120,14 @@
       </div>
 
       <!-- PERSONAS -->
-      <div class="section-page" id="page-personas">
-        <!-- Barra búsqueda+filtros personas -->
+      <div class="section-page" id="page-engineers">
+        <!-- Barra búsqueda+filtros Engineers & Tech -->
         <div class="search-bar" style="border:1px solid var(--border);border-radius:13px 13px 0 0;margin-bottom:-1px;background:var(--bg2);">
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
-            <input class="search-input" id="personas-search" placeholder="Buscar por nombre, mail, proyecto o ciudad…" oninput="filtrarPersonas()">
+            <input class="search-input" id="personas-search-eng" placeholder="Buscar por nombre, mail, proyecto o ciudad…" oninput="filtrarPersonas('eng')">
           </div>
-          <select class="filter-select" id="personas-rol" onchange="filtrarPersonas()">
-            <option value="">Todos los roles</option>
-            <option value="Engineer">Engineer</option>
-            <option value="Core Team">Core Team</option>
-            <option value="Supervisor">Supervisor</option>
-            <option value="TEM">TEM</option>
-            <option value="Lead">Lead</option>
-            <option value="Manager">Manager</option>
-            <option value="COO">COO</option>
-            <option value="Founder">Founder</option>
-          </select>
-          <select class="filter-select" id="personas-loyalty" onchange="filtrarPersonas()">
+          <select class="filter-select" id="personas-loyalty-eng" onchange="filtrarPersonas('eng')">
             <option value="">Todos los niveles</option>
             <option value="Spark">⚡ Spark</option>
             <option value="Ray">☀️ Ray</option>
@@ -145,14 +135,14 @@
             <option value="Thunder">🌪 Thunder</option>
             <option value="Storm">🌊 Storm</option>
           </select>
-          <select class="filter-select" id="personas-proyecto" onchange="filtrarPersonas()">
+          <select class="filter-select" id="personas-proyecto-eng" onchange="filtrarPersonas('eng')">
             <option value="">Todos los proyectos</option>
           </select>
-          <select class="filter-select" id="personas-manager" onchange="filtrarPersonas()">
+          <select class="filter-select" id="personas-manager-eng" onchange="filtrarPersonas('eng')">
             <option value="">Todos los managers</option>
           </select>
         </div>
-        <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-bottom:16px;margin-top:16px;">
+        <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-top:16px;">
           <div class="table-head" style="background:linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;border-radius:13px 13px 0 0;">
             <span class="table-head-title" style="color:#0026B0">Engineers & Tech</span>
             <span class="badge badge-blue" id="badge-personas-eng">—</span>
@@ -169,7 +159,42 @@
             <button class="pag-btn" id="pag-next-eng" onclick="cambiarPaginaPersonas('eng',1)">Siguiente →</button>
           </div>
         </div>
-        <div class="table-wrap" id="wrap-coreteam" style="border-radius:13px;">
+      </div>
+
+      <!-- CORE TEAM -->
+      <div class="section-page" id="page-coreteam">
+        <!-- Barra búsqueda+filtros Core Team -->
+        <div class="search-bar" style="border:1px solid var(--border);border-radius:13px 13px 0 0;margin-bottom:-1px;background:var(--bg2);">
+          <div class="search-wrap">
+            <i class="ti ti-search search-icon"></i>
+            <input class="search-input" id="personas-search-core" placeholder="Buscar por nombre, mail, proyecto o ciudad…" oninput="filtrarPersonas('core')">
+          </div>
+          <select class="filter-select" id="personas-rol-core" onchange="filtrarPersonas('core')">
+            <option value="">Todos los roles</option>
+            <option value="Core Team">Core Team</option>
+            <option value="Supervisor">Supervisor</option>
+            <option value="TEM">TEM</option>
+            <option value="Lead">Lead</option>
+            <option value="Manager">Manager</option>
+            <option value="COO">COO</option>
+            <option value="Founder">Founder</option>
+          </select>
+          <select class="filter-select" id="personas-loyalty-core" onchange="filtrarPersonas('core')">
+            <option value="">Todos los niveles</option>
+            <option value="Spark">⚡ Spark</option>
+            <option value="Ray">☀️ Ray</option>
+            <option value="Lightning">🌩 Lightning</option>
+            <option value="Thunder">🌪 Thunder</option>
+            <option value="Storm">🌊 Storm</option>
+          </select>
+          <select class="filter-select" id="personas-proyecto-core" onchange="filtrarPersonas('core')">
+            <option value="">Todos los proyectos</option>
+          </select>
+          <select class="filter-select" id="personas-manager-core" onchange="filtrarPersonas('core')">
+            <option value="">Todos los managers</option>
+          </select>
+        </div>
+        <div class="table-wrap" id="wrap-coreteam" style="border-radius:13px;margin-top:16px;">
           <div class="table-head" style="background:linear-gradient(90deg,#F3EEFF 0%,var(--bg2) 100%);border-left:3px solid #7432FF;border-radius:13px 13px 0 0;">
             <span class="table-head-title" style="color:#4A1FAA">Core Team</span>
             <span class="badge badge-purple" id="badge-personas-core">—</span>

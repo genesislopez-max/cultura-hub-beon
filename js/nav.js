@@ -4,6 +4,13 @@ function toggleRol(){
   {const _e=document.getElementById('rem-preview');if(_e) _e.style.display=t==='Egreso'?'none':'block';}
 }
 
+function toggleTipoReminder(){
+  const t=document.getElementById('f-rv-tipo')?.value;
+  const esManual=t==='Manual';
+  {const _fg=document.getElementById('fg-rv-persona');if(_fg) _fg.style.display=esManual?'none':'block';}
+  {const _fg=document.getElementById('fg-rv-evento');if(_fg) _fg.style.display=esManual?'block':'none';}
+}
+
 // ─── NAV ─────────────────────────────────────────────────────────────────────
 function showSection(name,btn){
   document.querySelectorAll('.section-page').forEach(p=>p.classList.remove('active'));
@@ -139,8 +146,9 @@ async function cargarSeccionesIniciales(){
     loadAniversarios(personas),
     loadKanbanIngresos(),
     loadKanbanEgresos(),
+    loadReviews(),
   ]);
-  const nombres=['Cumpleaños','Aniversarios','Ingresos','Egresos'];
+  const nombres=['Cumpleaños','Aniversarios','Ingresos','Egresos','Glassdoor'];
   const fallidas=resultados.map((r,i)=>({nombre:nombres[i],r})).filter(({r})=>r.status==='rejected');
   fallidas.forEach(({nombre,r})=>console.error(`Error cargando "${nombre}":`,r.reason));
   if(fallidas.length) toast(`⚠️ No se pudo cargar: ${fallidas.map(f=>f.nombre).join(', ')}`,true);
@@ -148,8 +156,6 @@ async function cargarSeccionesIniciales(){
 
 // Secciones que recién se piden a Airtable la primera vez que el usuario las visita
 const SECCIONES_LAZY=[
-  ['eventos','Reminders',loadEventos],
-  ['reviews','Glassdoor',loadReviews],
   ['checklist','Checklist',loadChecklist],
   ['beneficios','Beneficios',loadBeneficios],
   ['ambassadors','Ambassador Week',loadAmbassadors],

@@ -30,35 +30,50 @@ function poblarFiltrosReviews(){
   const sel=document.getElementById('reviews-manager');
   if(sel) sel.innerHTML='<option value="">Todos los managers</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
 }
+// Reminders de Glassdoor ("Sincronizar Glassdoor" abajo) y reminders manuales
+// sueltos viven los dos en la tabla Eventos — antes tenían una pestaña propia
+// ("Reminders") que terminaba duplicando esta, así que quedaron acá.
 async function loadReviews(){
   const hoy=new Date();hoy.setHours(0,0,0,0);
-  const año=hoy.getFullYear();
 
-  // Reviews internas
-  const d=await atGet('Reviews');
-  const recs=d.records||[];
-  // Glassdoor desde Eventos
-  const dGD=await atGet('Eventos',`&sort[0][field]=Fecha&sort[0][direction]=asc&filterByFormula={Tipo}="Glassdoor"`);
+  const d=await atGet('Eventos','&sort[0][field]=Fecha&sort[0][direction]=asc');
+  const allRecs=d.records||[];
+
+  // Cumpleaños/Aniversarios tienen su propia sección — acá quedan Glassdoor y manuales
+  const recs=allRecs.filter(r=>!['Cumpleaños','Aniversario'].includes(r.fields.Tipo));
+
+  // Auto-completar si la fecha ya pasó
+  for(const r of recs){
+    if(r.fields.Estado==='Pendiente'&&r.fields.Fecha){
+      if(new Date(r.fields.Fecha+'T12:00:00')<hoy){
+        await atPatch(`Eventos/${r.id}`,{Estado:'Completado'}).catch(()=>{});
+        r.fields.Estado='Completado';
+      }
+    }
+  }
+
   // Solo Engineers — cruzar con cachePersonasRaw
   const engineerNames=new Set(
     cachePersonasRaw.filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>(p.fields.Nombre||'').trim())
   );
-  const gdRecs=(dGD.records||[]).filter(r=>{
-    // Filtrar por Tipo=Glassdoor (más preciso que buscar en texto)
+  const gdRecs=recs.filter(r=>{
     if(r.fields.Tipo!=='Glassdoor') return false;
-    // Solo Engineers — doble verificación
     const nombre=(r.fields.Evento||'').replace(/.*—\s*/,'').trim();
     return !nombre||engineerNames.size===0||engineerNames.has(nombre);
   });
   cacheGDRecs=gdRecs;
+  cacheOtrosReminders=recs.filter(r=>r.fields.Tipo!=='Glassdoor');
 
   // Métricas
   const pendientes=gdRecs.filter(r=>r.fields.Estado!=='Completado'&&r.fields.Estado!=='Solicitada');
   document.getElementById('rv-gd-pend').textContent=pendientes.length;
   document.getElementById('rv-badge-gd').textContent=`${gdRecs.length} engineers`;
+  const badgeOtros=document.getElementById('badge-otros-reminders');
+  if(badgeOtros) badgeOtros.textContent=`${cacheOtrosReminders.length} reminders`;
 
   // Próxima a solicitar
-  const proxima=pendientes.slice().sort((a,b)=>(a.fields.Fecha||'').localeCompare(b.fields.Fecha||''))[0];
+  const proximasOrd=pendientes.slice().sort((a,b)=>(a.fields.Fecha||'').localeCompare(b.fields.Fecha||''));
+  const proxima=proximasOrd[0];
   if(proxima){
     const nombre=(proxima.fields.Evento||'').replace(/.*—\s*/,'').trim();
     const dias=proxima.fields.Fecha?Math.round((new Date(proxima.fields.Fecha+'T12:00:00')-hoy)/86400000):null;
@@ -69,7 +84,163 @@ async function loadReviews(){
     document.getElementById('rv-gd-prox-dias').textContent='al día';
   }
 
+  // Card de Inicio
+  document.getElementById('sc-glassdoor').textContent=pendientes.length;
+  const listEl=document.getElementById('sc-list-glassdoor');
+  const moreEl=document.getElementById('sc-more-glassdoor');
+  listEl.innerHTML=proximasOrd.slice(0,5).map(r=>{
+    const nombre=(r.fields.Evento||'').replace(/.*—\s*/,'').trim()||r.fields.Evento||'—';
+    return `<div class="sc-list-item">• ${nombre}</div>`;
+  }).join('');
+  moreEl.style.display=pendientes.length>5?'block':'none';
+
   filtrarGD();
+  renderOtrosReminders();
+}
+
+// ─── OTROS REMINDERS (manuales, no-Glassdoor) ────────────────────────────────
+function rowReminder(r,idx){
+  const f=r.fields;
+  const completado=f.Estado==='Completado';
+  const bg=idx%2===0?'background:var(--bg2)':'background:var(--bg)';
+  return`<tr style="opacity:${completado?'0.5':'1'};${bg}">
+    <td style="font-weight:500">${f.Evento||'—'}</td>
+    <td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}</td>
+    <td>
+      <button onclick="toggleEventoEstado('${r.id}','${f.Estado||'Pendiente'}')"
+        style="border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;background:${completado?'#D1FAE5':'#FEF3C7'};color:${completado?'#065F46':'#92400E'};">
+        ${completado?'✓ Listo':'Pendiente'}
+      </button>
+    </td>
+  </tr>`;
+}
+
+function renderOtrosReminders(){
+  const container=document.getElementById('eventos-container');
+  if(!container) return;
+  if(!cacheOtrosReminders.length){
+    container.innerHTML='<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">No hay otros reminders. Usá "+Nuevo reminder" para agregar uno manual.</div>';
+    return;
+  }
+  const ord=[...cacheOtrosReminders].sort((a,b)=>(a.fields.Estado==='Completado'?1:0)-(b.fields.Estado==='Completado'?1:0));
+  container.innerHTML=`<table class="data-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Estado</th></tr></thead>
+    <tbody>${ord.map((r,i)=>rowReminder(r,i)).join('')}</tbody></table>`;
+}
+
+async function toggleEventoEstado(id,estadoActual){
+  const nuevo=estadoActual==='Completado'?'Pendiente':'Completado';
+  await atPatch(`Eventos/${id}`,{Estado:nuevo}).catch(()=>{});
+  await loadReviews();
+}
+
+function filtrarReminders(){
+  const q=(document.getElementById('reminders-search')?.value||'').toLowerCase();
+  const estado=document.getElementById('reminders-estado')?.value||'';
+  document.querySelectorAll('#eventos-container tr').forEach(tr=>{
+    if(tr.closest('thead')) return;
+    const texto=tr.textContent.toLowerCase();
+    const esPendiente=texto.includes('pendiente');
+    const esCompletado=texto.includes('listo');
+    const matchQ=!q||texto.includes(q);
+    const matchEst=!estado||(estado==='pendiente'&&esPendiente)||(estado==='completado'&&esCompletado);
+    tr.style.display=matchQ&&matchEst?'':'none';
+  });
+}
+
+// ─── Sincronización / limpieza de reminders de Glassdoor ─────────────────────
+async function sincronizarGlassdoor(){
+  const btn=document.getElementById('btn-sync-reminders');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Sincronizando...';
+
+  const [personasData,eventosData]=await Promise.all([
+    atGet('Personas','&sort[0][field]=Nombre&sort[0][direction]=asc').catch(()=>({records:[]})),
+    atGet('Eventos').catch(()=>({records:[]}))
+  ]);
+
+  const personas=personasData.records||[];
+  const eventosExistentes=eventosData.records||[];
+
+  let creados=0,omitidos=0,sinFecha=0,noAplica=0;
+
+  for(const p of personas){
+    const f=p.fields;
+    const nombre=(f.Nombre||'').trim();
+    if(!nombre){omitidos++;continue;}
+
+    const rol=(f['Rol en empresa']||'').trim();
+    if(rol!=='Engineer'){noAplica++;continue;}
+
+    const fechaIngreso=f['Fecha de ingreso']||'';
+
+    const eventosPer=eventosExistentes.filter(e=>(e.fields.Evento||'').includes(nombre));
+    const tieneGlass=eventosPer.some(e=>(e.fields.Evento||'').toLowerCase().includes('glassdoor'));
+
+    if(fechaIngreso){
+      const ing=new Date(fechaIngreso+'T12:00:00');
+      const hoy=new Date();
+
+      if(!tieneGlass){
+        const gdDate=new Date(ing);gdDate.setMonth(gdDate.getMonth()+4);
+        if(gdDate>=hoy){
+          try{
+            await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Glassdoor',Fecha:gdDate.toISOString().split('T')[0],Estado:'Pendiente'});
+            creados++;
+          }catch(e){console.error('GD error',nombre,e.message);}
+        } else { omitidos++; }
+      } else { omitidos++; }
+    } else { sinFecha++; }
+  }
+
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-refresh"></i> Sincronizar Glassdoor';
+  const msg=`✅ Glassdoor sincronizado: ${creados} reminders creados, ${omitidos} ya existían o ya vencieron${sinFecha?' · '+sinFecha+' sin fecha de ingreso':''}${noAplica?' · '+noAplica+' omitidos (no son Engineers)':''}`;
+  toast(msg);
+  await loadReviews();
+}
+
+async function limpiarGlassdoorCoreTeam(){
+  const btn=document.getElementById('btn-clean-reminders');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader"></i> Limpiando...';
+
+  const [dEventos,dPersonas]=await Promise.all([
+    atGet('Eventos','&filterByFormula=FIND("glassdoor",LOWER({Evento}))').catch(()=>({records:[]})),
+    atGet('Personas').catch(()=>({records:[]}))
+  ]);
+
+  const engineers=new Set(
+    (dPersonas.records||[])
+      .filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer')
+      .map(p=>(p.fields.Nombre||'').trim())
+  );
+
+  const aEliminar=(dEventos.records||[]).filter(r=>{
+    const evento=r.fields.Evento||'';
+    const nombre=evento.replace(/.*—\s*/,'').trim();
+    return nombre&&!engineers.has(nombre);
+  });
+
+  if(!aEliminar.length){
+    toast('✅ No hay reminders de Glassdoor para Core Team — todo limpio.');
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-trash"></i> Limpiar Core Team';
+    return;
+  }
+
+  const confirmado=confirm(`Se van a eliminar ${aEliminar.length} reminder${aEliminar.length!==1?'s':''} de Glassdoor de personas que no son Engineers. ¿Continuar?`);
+  if(!confirmado){
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-trash"></i> Limpiar Core Team';
+    return;
+  }
+
+  let eliminados=0;
+  for(const r of aEliminar){
+    try{
+      await atDelete('Eventos',r.id);
+      eliminados++;
+    }catch(e){console.error('Error eliminando reminder:',r.id,e.message);}
+  }
+
+  btn.disabled=false;btn.innerHTML='<i class="ti ti-trash"></i> Limpiar Core Team';
+  toast(`✅ ${eliminados} reminder${eliminados!==1?'s':''} de Core Team eliminados.`);
+  await loadReviews();
 }
 
 function filtrarGD(){

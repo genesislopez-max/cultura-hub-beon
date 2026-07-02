@@ -1,11 +1,17 @@
 async function sendSlack(text){
-  if(!SLACK_WEBHOOK) return; // si no está configurado, no hace nada
   try{
-    await fetch(SLACK_WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
+    await fetch('/api/slack',{method:'POST',headers:authHeaders(),body:JSON.stringify({text})});
   }catch(e){console.error('Slack error:',e.message);}
 }
 // ─── AIRTABLE ────────────────────────────────────────────────────────────────
-// Wrapper único para todas las llamadas a Airtable: normaliza errores de red
+// Todas las llamadas van a nuestro proxy serverless (/api/airtable/...), que
+// valida la sesión de Google y recién ahí habla con Airtable usando el token
+// que vive solo en el servidor. Ver api/airtable/[...path].js.
+function authHeaders(){
+  return {'Authorization':`Bearer ${getIdToken()}`,'Content-Type':'application/json'};
+}
+
+// Wrapper único para todas las llamadas al proxy: normaliza errores de red
 // (fetch caído) y de la API (respuesta no-ok) en un solo Error con mensaje legible.
 async function atRequest(url,options){
   let r;
@@ -29,7 +35,7 @@ async function atGet(table,qs=''){
   let allRecords=[], offset=null;
   do {
     const offsetParam=offset?`&offset=${offset}`:'';
-    const r=await atRequest(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?pageSize=100${qs}${offsetParam}`,{headers:HDR});
+    const r=await atRequest(`/api/airtable/${encodeURIComponent(table)}?pageSize=100${qs}${offsetParam}`,{headers:authHeaders()});
     const data=await r.json();
     allRecords=[...allRecords,...(data.records||[])];
     offset=data.offset||null;
@@ -37,15 +43,15 @@ async function atGet(table,qs=''){
   return {records:allRecords};
 }
 async function atPost(table,fields){
-  const r=await atRequest(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}`,{method:'POST',headers:HDR,body:JSON.stringify({records:[{fields}]})});
+  const r=await atRequest(`/api/airtable/${encodeURIComponent(table)}`,{method:'POST',headers:authHeaders(),body:JSON.stringify({records:[{fields}]})});
   return r.json();
 }
 async function atPatch(path,fields){
-  const r=await atRequest(`https://api.airtable.com/v0/${BASE}/${path}`,{method:'PATCH',headers:HDR,body:JSON.stringify({fields})});
+  const r=await atRequest(`/api/airtable/${path}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({fields})});
   return r.json();
 }
 async function atDelete(table,id){
-  const r=await atRequest(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}/${id}`,{method:'DELETE',headers:HDR});
+  const r=await atRequest(`/api/airtable/${encodeURIComponent(table)}/${id}`,{method:'DELETE',headers:authHeaders()});
   return r.json();
 }
 // Elimina hasta 10 registros de una vez (límite de Airtable)
@@ -55,6 +61,6 @@ async function atDeleteBatch(table,ids){
   for(let i=0;i<ids.length;i+=10) chunks.push(ids.slice(i,i+10));
   for(const chunk of chunks){
     const qs=chunk.map(id=>`records[]=${id}`).join('&');
-    await atRequest(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(table)}?${qs}`,{method:'DELETE',headers:HDR});
+    await atRequest(`/api/airtable/${encodeURIComponent(table)}?${qs}`,{method:'DELETE',headers:authHeaders()});
   }
 }

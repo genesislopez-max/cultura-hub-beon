@@ -23,6 +23,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .sb-item .bc{margin-left:auto;background:var(--blue);color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;}
 .sb-item.active .bc{background:#fff;color:var(--blue);}
 .sb-bottom{margin-top:auto;padding:14px;border-top:1px solid rgba(255,255,255,0.08);}
+.sb-user{display:flex;align-items:center;gap:9px;margin-bottom:12px;}
+.sb-user-pic{width:32px;height:32px;border-radius:50%;flex-shrink:0;background:rgba(255,255,255,0.12);}
+.sb-user-info{min-width:0;}
+.sb-user-name{font-size:12px;font-weight:600;color:rgba(255,255,255,0.9);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sb-user-logout{background:none;border:none;padding:0;cursor:pointer;font-size:11px;color:rgba(255,255,255,0.4);font-family:'Plus Jakarta Sans',sans-serif;}
+.sb-user-logout:hover{color:rgba(255,255,255,0.8);text-decoration:underline;}
 .sb-status{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,0.4);}
 .dot{width:7px;height:7px;border-radius:50%;background:#9a9a9a;flex-shrink:0;transition:background 0.3s;}
 .dot.ok{background:#98CA3F;animation:pulse 2s infinite;}

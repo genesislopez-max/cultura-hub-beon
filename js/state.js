@@ -1,10 +1,14 @@
 // ─── STATE ───────────────────────────────────────────────────────────────────
 // Estado global compartido entre módulos (mismo scope global que el resto de los <script>).
 
-// El token de Airtable y el webhook de Slack ya no viven en el navegador —
-// quedan como variables de entorno del servidor (ver api/_lib/auth.js y
-// api/airtable/[...path].js). El login de Google (js/auth.js) es lo único
-// que se guarda del lado del cliente.
+// Slack Webhook — se guarda en localStorage, nunca en el código
+let SLACK_WEBHOOK=localStorage.getItem('slack_webhook')||'';
+
+// Token y Base ID — se guardan en localStorage, nunca en el código
+let TOKEN=localStorage.getItem('at_token')||'';
+let BASE=localStorage.getItem('at_base')||'';
+let HDR={'Authorization':`Bearer ${TOKEN}`,'Content-Type':'application/json'};
+function actualizarHDR(){ HDR={'Authorization':`Bearer ${TOKEN}`,'Content-Type':'application/json'}; }
 
 let cachePersonasPorRol={};
 let cacheProyectos=[], cacheProyectosRaw=[];

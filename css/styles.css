@@ -100,6 +100,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .data-table tbody tr{transition:background 0.1s;}
 .data-table tbody tr:hover td{background:var(--bg);}
 .avatar{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;vertical-align:middle;margin-right:9px;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.05);}
+.persona-nombre-link{cursor:pointer;}
+.persona-nombre-link:hover{color:var(--blue);text-decoration:underline;}
 .av-blue{background:#EEF2FF;color:#3A69FF;}
 .av-purple{background:#F3EEFF;color:#7432FF;}
 .av-pink{background:#FEF0FB;color:#c040a8;}

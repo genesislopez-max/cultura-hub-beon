@@ -6,7 +6,7 @@ function renderPagina(grupo){
   const btnPrev=document.getElementById(`pag-prev-${grupo}`);
   const btnNext=document.getElementById(`pag-next-${grupo}`);
   if(!tb) return;
-  const colspan=grupo==='eng'?9:10;
+  const colspan=7;
   if(!data.length){
     tb.innerHTML=`<tr class="empty-row"><td colspan="${colspan}">Sin resultados</td></tr>`;
     if(bar) bar.style.display='none';
@@ -56,38 +56,73 @@ function nivelBadgeHtml(recordId, nivelActual){
   </div>`;
 }
 
+function nombreClickHtml(r){
+  const nombre=r.fields.Nombre||'—';
+  return`${avH(r.fields.Nombre)}<span class="persona-nombre-link" onclick="verFichaPersona('${r.id}')">${nombre}</span>`;
+}
+
 function rowHtmlEng(r){
   const f=r.fields, rol=f['Rol en empresa']||'';
   const nivel=f['Nivel Loyalty']||'Spark';
   return`<tr>
-    <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
+    <td>${nombreClickHtml(r)}</td>
     <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
     <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
     <td>${nivelBadgeHtml(r.id, nivel)}</td>
     <td style="font-size:12px">${f.Proyecto||'—'}</td>
-    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de ingreso'])}</td>
     <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
     <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
-    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de cumpleaños'])}</td>
   </tr>`;
 }
 
 function rowHtml(r){
   const f=r.fields, rol=f['Rol en empresa']||'';
   const nivel=f['Nivel Loyalty']||'Spark';
-  const area=f['Área']||f['Area']||'—';
   return`<tr>
-    <td>${avH(f.Nombre)}${f.Nombre||'—'}</td>
+    <td>${nombreClickHtml(r)}</td>
     <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
     <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
-    <td style="font-size:12px;color:var(--text2)">${area}</td>
     <td>${nivelBadgeHtml(r.id, nivel)}</td>
     <td style="font-size:12px">${f.Proyecto||'—'}</td>
-    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de ingreso'])}</td>
     <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
     <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
-    <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha de cumpleaños'])}</td>
   </tr>`;
+}
+
+// Ficha completa de la persona — se abre al clickear el nombre en la tabla,
+// para no perder la info que se sacó de la vista principal (Mail, Proyecto,
+// Antigüedad y Manager siguen en la tabla; el resto queda acá).
+function verFichaPersona(id){
+  const p=cachePersonasRaw.find(x=>x.id===id);
+  if(!p){toast('No se encontró la persona',true);return;}
+  const f=p.fields;
+  const rol=f['Rol en empresa']||'';
+  const nivel=f['Nivel Loyalty']||'Spark';
+  const area=f['Área']||f['Area']||'';
+
+  document.getElementById('pf-nombre').innerHTML=`${avH(f.Nombre)}<span>${f.Nombre||'—'}</span>`;
+  document.getElementById('pf-subtitle').innerHTML=
+    (rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'')+
+    `<span class="nivel-badge nivel-${nivel}" style="cursor:default">${nivel}</span>`;
+
+  const row=(label,val)=>`<div class="side-panel-row"><span style="color:var(--text2)">${label}</span><span style="font-weight:600;text-align:right">${val||'—'}</span></div>`;
+  document.getElementById('pf-body').innerHTML=
+    row('Correo',f.Mail)+
+    (area?row('Área',area):'')+
+    row('Proyecto',f.Proyecto)+
+    row('Manager',f.Manager)+
+    row('País',f['País'])+
+    row('Ciudad',f.Ciudad)+
+    row('Fecha de ingreso',fmt(f['Fecha de ingreso']))+
+    row('Antigüedad',calcAntiguedad(f['Fecha de ingreso']))+
+    row('Fecha de cumpleaños',fmt(f['Fecha de cumpleaños']))+
+    row('Comentarios',f.Comentarios);
+
+  document.getElementById('pf-overlay').style.display='flex';
+}
+
+function closeFichaPersona(){
+  document.getElementById('pf-overlay').style.display='none';
 }
 
 async function loadPersonas(){

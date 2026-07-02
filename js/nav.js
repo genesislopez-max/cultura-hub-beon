@@ -129,28 +129,6 @@ async function saveRecord(){
   btn.disabled=false;lbl.textContent='Guardar en Airtable';
 }
 
-function guardarConfig(){
-  const token=document.getElementById('cfg-token')?.value.trim();
-  const base=document.getElementById('cfg-base')?.value.trim();
-  const slack=document.getElementById('cfg-slack')?.value.trim();
-  if(!token||!base){alert('Completá el Token y Base ID para continuar.');return;}
-  localStorage.setItem('at_token',token);
-  localStorage.setItem('at_base',base);
-  if(slack) localStorage.setItem('slack_webhook',slack);
-  TOKEN=token; BASE=base; SLACK_WEBHOOK=slack||localStorage.getItem('slack_webhook')||''; actualizarHDR();
-  document.getElementById('config-screen').style.display='none';
-  iniciarHub();
-}
-
-function resetConfig(){
-  localStorage.removeItem('at_token');
-  localStorage.removeItem('at_base');
-  TOKEN=''; BASE='';
-  document.getElementById('cfg-token').value='';
-  document.getElementById('cfg-base').value='';
-  document.getElementById('config-screen').style.display='flex';
-}
-
 // Secciones que necesita el dashboard de Inicio — se cargan siempre al arrancar
 async function cargarSeccionesIniciales(){
   const personas=await loadPersonas();
@@ -214,12 +192,12 @@ async function iniciarHub(){
     document.getElementById('dot').className='dot ok';
     document.getElementById('conn-status').textContent='Conectado a Airtable';
   }catch(e){
-    // Si falla con 401/403, el token es inválido o no tiene permisos
+    // Si falla con 401/403, la sesión de Google venció o no es válida
     if(e.status===401||e.status===403){
-      setBanner('Token inválido — revisá tu configuración','err');
+      setBanner('Tu sesión expiró — iniciá sesión de nuevo','err');
       document.getElementById('dot').className='dot err';
-      document.getElementById('conn-status').textContent='Token inválido';
-      setTimeout(()=>{ document.getElementById('config-screen').style.display='flex'; },2000);
+      document.getElementById('conn-status').textContent='Sesión expirada';
+      setTimeout(()=>{ cerrarSesion(); },2000);
     } else {
       setBanner('Error de conexión: '+e.message,'err');
       document.getElementById('dot').className='dot err';
@@ -230,15 +208,7 @@ async function iniciarHub(){
 }
 
 async function init(){
-  // Cargar webhook de Slack si existe
-  SLACK_WEBHOOK=localStorage.getItem('slack_webhook')||'';
-  if(!TOKEN||!BASE){
-    // Mostrar pantalla de configuración
-    const savedSlack=localStorage.getItem('slack_webhook')||'';
-    if(savedSlack) document.getElementById('cfg-slack').value=savedSlack;
-    document.getElementById('config-screen').style.display='flex';
-    return;
-  }
+  if(!checkSesion()) return; // muestra la pantalla de login; onGoogleSignIn() llama a iniciarHub()
   await iniciarHub();
 }
 init();

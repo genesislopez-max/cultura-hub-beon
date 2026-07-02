@@ -21,6 +21,7 @@ let beneficiosFiltro='Todos';
 // Checklist Ingresos/Egresos (Kanban)
 const clState={};
 const recMeta={};
+const cacheChecklistFields={}; // {checklistId: fields del registro} — para mostrar Proyecto/Mail/País en el panel abierto
 let dragId=null;
 
 // Glassdoor

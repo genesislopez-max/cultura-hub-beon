@@ -197,7 +197,7 @@ const FORMS={
       await atPost('Get Together',fields);return true;
     }},
 
-  personas:{title:'Nueva persona',html:()=>buildPersonaCompletaHTML(),
+  engineers:{title:'Nueva persona',html:()=>buildPersonaCompletaHTML(),
     save:async()=>{
       const fields=leerPersonaCompletaForm(false);
       if(!fields) return false;
@@ -351,3 +351,4 @@ const FORMS={
       await atPost('Off Sites',fields);return true;
     }}
 };
+FORMS.coreteam=FORMS.engineers; // Engineers & Tech y Core Team comparten el mismo alta de persona

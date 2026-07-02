@@ -113,7 +113,7 @@ const AW_RULES={
   Thunder:{asistenciasConVuelo:2, limitadoConVuelo:true},
   Storm:  {asistenciasConVuelo:Infinity, limitadoConVuelo:false},
 };
-const ADD=['ingresos','egresos','personas','eventos','reviews','proyectos','checklist','beneficios','beneficios-asignados','ambassadors','offsites','gettogether'];
+const ADD=['ingresos','egresos','engineers','coreteam','eventos','reviews','proyectos','checklist','beneficios','beneficios-asignados','ambassadors','offsites','gettogether'];
 const ADD_FULL_SECTIONS=['ingresos'];
-const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo egreso',personas:'Nueva persona',eventos:'Nuevo reminder',reviews:'Nueva review',proyectos:'Nuevo proyecto',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together'};
-const TITLES={inicio:'Inicio',personas:'Personas del equipo',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',eventos:'Reminders y eventos',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together'};
+const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo egreso',engineers:'Nueva persona',coreteam:'Nueva persona',eventos:'Nuevo reminder',reviews:'Nueva review',proyectos:'Nuevo proyecto',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together'};
+const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',eventos:'Reminders y eventos',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together'};

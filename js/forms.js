@@ -283,39 +283,44 @@ const FORMS={
       await atPost('Checklist',fields);return true;
     }},
 
-  eventos:{title:'Nuevo reminder',html:()=>`
-<div class="field-group"><label class="field-label">Evento *</label><input class="field-input" id="f-ev-evento" placeholder="Ej: Renovación de visa — Juan Pérez"></div>
-<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-ev-fecha" type="date"></div>
-<div class="field-group"><label class="field-label">Tipo</label>
-  <select class="field-input" id="f-ev-tipo">
-    <option value="Manual">Manual</option>
-    <option value="Glassdoor">Glassdoor</option>
-  </select>
-</div>`,
-    save:async()=>{
-      const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-ev-evento')){toast('El evento es obligatorio',true);return false;}
-      if(!v('f-ev-fecha')){toast('La fecha es obligatoria',true);return false;}
-      await atPost('Eventos',{Evento:v('f-ev-evento'),Fecha:v('f-ev-fecha'),Tipo:v('f-ev-tipo')||'Manual',Estado:'Pendiente'});
-      return true;
-    }},
-
-  reviews:{title:'Nueva review Glassdoor',html:()=>{
+  // Cubre tanto los reminders de Glassdoor (elegís persona, se arma el texto
+  // solo) como reminders manuales sueltos (ej: "Renovación de visa") — antes
+  // eran dos formularios separados en pestañas distintas.
+  reviews:{title:'Nuevo reminder',html:()=>{
     const personas=cachePersonasRaw.filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>p.fields.Nombre||'').filter(Boolean).sort();
     return`
-<div class="field-group"><label class="field-label">Persona *</label>
+<div class="field-group"><label class="field-label">Tipo</label>
+  <select class="field-input" id="f-rv-tipo" onchange="toggleTipoReminder()">
+    <option value="Glassdoor">Glassdoor</option>
+    <option value="Manual">Manual</option>
+  </select>
+</div>
+<div class="field-group" id="fg-rv-persona"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-rv-persona">
     <option value="">Seleccioná una persona…</option>
     ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
   </select>
 </div>
-<div class="field-group"><label class="field-label">Fecha a solicitar *</label><input class="field-input" id="f-rv-fecha" type="date"></div>
+<div class="field-group" id="fg-rv-evento" style="display:none"><label class="field-label">Evento *</label>
+  <input class="field-input" id="f-rv-evento" placeholder="Ej: Renovación de visa — Juan Pérez">
+</div>
+<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-rv-fecha" type="date"></div>
 `;},
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-rv-persona')){toast('Seleccioná una persona',true);return false;}
-      if(!v('f-rv-fecha')){toast('La fecha es obligatoria',true);return false;}
-      await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${v('f-rv-persona')}`,Tipo:'Glassdoor',Fecha:v('f-rv-fecha'),Estado:'Pendiente'});
+      const tipo=v('f-rv-tipo')||'Glassdoor';
+      const fecha=v('f-rv-fecha');
+      if(!fecha){toast('La fecha es obligatoria',true);return false;}
+      let evento;
+      if(tipo==='Manual'){
+        evento=v('f-rv-evento');
+        if(!evento){toast('El evento es obligatorio',true);return false;}
+      } else {
+        const persona=v('f-rv-persona');
+        if(!persona){toast('Seleccioná una persona',true);return false;}
+        evento=`📝 Review Glassdoor — ${persona}`;
+      }
+      await atPost('Eventos',{Evento:evento,Tipo:tipo,Fecha:fecha,Estado:'Pendiente'});
       return true;
     }},
 

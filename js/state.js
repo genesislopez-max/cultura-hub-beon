@@ -22,6 +22,7 @@ let dragId=null;
 
 // Glassdoor
 let cacheGDRecs=[];
+let cacheOtrosReminders=[]; // reminders manuales (Tipo != Glassdoor) — ver js/glassdoor.js
 let gdModalId=null;
 
 // Proyectos / Meet our Teams

@@ -103,12 +103,12 @@
             <button class="sc-more" id="sc-more-aniv" onclick="showSection('aniversarios',document.querySelector('.sb-item[onclick*=aniversarios]'))" style="display:none">Ver todos →</button>
           </div>
           <div class="summary-card">
-            <div class="sc-icon" style="background:#FFF8E1;color:#9a6700"><i class="ti ti-bell"></i></div>
-            <div class="sc-label">Reminders</div>
-            <div class="sc-val" id="sc-reminders" style="color:#9a6700">—</div>
+            <div class="sc-icon" style="background:#FFF8E1;color:#9a6700"><i class="ti ti-brand-google"></i></div>
+            <div class="sc-label">Glassdoor</div>
+            <div class="sc-val" id="sc-glassdoor" style="color:#9a6700">—</div>
             <div class="sc-sub">pendientes</div>
-            <div class="sc-list" id="sc-list-reminders"></div>
-            <button class="sc-more" id="sc-more-reminders" onclick="showSection('eventos',document.querySelector('.sb-item[onclick*=eventos]'))" style="display:none">Ver todos →</button>
+            <div class="sc-list" id="sc-list-glassdoor"></div>
+            <button class="sc-more" id="sc-more-glassdoor" onclick="showSection('reviews',document.querySelector('.sb-item[onclick*=reviews]'))" style="display:none">Ver todos →</button>
           </div>
           <div class="summary-card">
             <div class="sc-icon" style="background:#FCEBEB;color:#A32D2D"><i class="ti ti-user-minus"></i></div>
@@ -255,40 +255,6 @@
         </div>
       </div>
 
-      <!-- REMINDERS -->
-      <div class="section-page" id="page-eventos">
-        <div class="metrics">
-          <div class="metric"><div class="metric-label">Pendientes</div><div class="metric-val" style="color:#9a6700" id="me-pendientes">—</div><div class="metric-sub">sin completar</div></div>
-          <div class="metric"><div class="metric-label">Glassdoor pendientes</div><div class="metric-val" style="color:var(--blue)" id="me-glassdoor">—</div><div class="metric-sub">reviews a pedir</div></div>
-          <div class="metric"><div class="metric-label">Completados</div><div class="metric-val" style="color:#0F6E56" id="me-completados">—</div><div class="metric-sub">este año</div></div>
-          <div class="metric"><div class="metric-label">Total</div><div class="metric-val" id="me-total">—</div><div class="metric-sub">en la tabla</div></div>
-        </div>
-        <div class="table-wrap">
-          <div class="table-head">
-            <span class="table-head-title">Reminders</span>
-            <span class="badge badge-blue" id="badge-eventos-h">—</span>
-            <button onclick="sincronizarGlassdoor()" id="btn-sync-reminders" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
-              <i class="ti ti-refresh"></i> Sincronizar Glassdoor
-            </button>
-            <button onclick="limpiarGlassdoorCoreTeam()" id="btn-clean-reminders" style="background:none;border:1px solid #FECACA;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:#C62828;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
-              <i class="ti ti-trash"></i> Limpiar Core Team
-            </button>
-          </div>
-          <div class="search-bar">
-            <div class="search-wrap">
-              <i class="ti ti-search search-icon"></i>
-              <input class="search-input" id="reminders-search" placeholder="Buscar reminder…" oninput="filtrarReminders()">
-            </div>
-            <select class="filter-select" id="reminders-estado" onchange="filtrarReminders()">
-              <option value="">Todos</option>
-              <option value="pendiente">Solo pendientes</option>
-              <option value="completado">Solo completados</option>
-            </select>
-          </div>
-          <div id="eventos-container" class="table-scroll"></div>
-        </div>
-      </div>
-
       <!-- INGRESOS -->
       <div class="section-page" id="page-ingresos">
         <div class="kanban-board" id="kb-ingresos">
@@ -344,10 +310,16 @@
 
         <!-- GLASSDOOR -->
         <div id="rv-tab-glassdoor">
-          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:16px">
             <div class="table-head">
               <span class="table-head-title">Glassdoor Reviews — Engineers</span>
               <span class="badge badge-blue" id="rv-badge-gd">—</span>
+              <button onclick="sincronizarGlassdoor()" id="btn-sync-reminders" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
+                <i class="ti ti-refresh"></i> Sincronizar Glassdoor
+              </button>
+              <button onclick="limpiarGlassdoorCoreTeam()" id="btn-clean-reminders" style="background:none;border:1px solid #FECACA;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:#C62828;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
+                <i class="ti ti-trash"></i> Limpiar Core Team
+              </button>
             </div>
             <div class="search-bar">
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
@@ -368,6 +340,25 @@
           </div>
         </div>
 
+        <!-- OTROS REMINDERS -->
+        <div class="table-wrap">
+          <div class="table-head">
+            <span class="table-head-title">Otros reminders</span>
+            <span class="badge badge-blue" id="badge-otros-reminders">—</span>
+          </div>
+          <div class="search-bar">
+            <div class="search-wrap">
+              <i class="ti ti-search search-icon"></i>
+              <input class="search-input" id="reminders-search" placeholder="Buscar reminder…" oninput="filtrarReminders()">
+            </div>
+            <select class="filter-select" id="reminders-estado" onchange="filtrarReminders()">
+              <option value="">Todos</option>
+              <option value="pendiente">Solo pendientes</option>
+              <option value="completado">Solo completados</option>
+            </select>
+          </div>
+          <div id="eventos-container" class="table-scroll"></div>
+        </div>
 
       </div>
 
@@ -920,7 +911,6 @@
 <script src="js/personas.js"></script>
 <script src="js/cumpleanos.js"></script>
 <script src="js/aniversarios.js"></script>
-<script src="js/eventos.js"></script>
 <script src="js/glassdoor.js"></script>
 <script src="js/proyectos.js"></script>
 <script src="js/ingresos-egresos.js"></script>

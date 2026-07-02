@@ -83,8 +83,8 @@ function buildIngresoSimpleHTML(){
     <option value="Manager">Manager</option>
   </select>
 </div>
-<div class="field-group"><label class="field-label">Proyecto</label><select class="field-input" id="f-proyecto"></select></div>
 <div class="field-group"><label class="field-label">Fecha de ingreso *</label><input class="field-input" id="f-ingreso" type="date"></div>
+<div class="field-group"><label class="field-label">Comentarios</label><textarea class="field-input" id="f-comentarios" placeholder="Cualquier dato útil para completar el ingreso después"></textarea></div>
 `;
 }
 async function saveIngresoSimple(){
@@ -92,7 +92,7 @@ async function saveIngresoSimple(){
   if(!v('f-nombre')){toast('El nombre es obligatorio',true);return false;}
   if(!v('f-ingreso')){toast('La fecha de ingreso es obligatoria',true);return false;}
   const fields={Nombre:v('f-nombre'),'Rol en empresa':v('f-rol-empresa')||'Engineer','Fecha de ingreso':v('f-ingreso')};
-  if(v('f-proyecto')) fields.Proyecto=v('f-proyecto');
+  if(v('f-comentarios')) fields.Comentarios=v('f-comentarios');
   await atPost('Personas',fields);
   return true;
 }
@@ -101,12 +101,6 @@ function openModalHR(){
   const hrForm={
     title:'Ingreso rápido (HR)',
     html:()=>buildIngresoSimpleHTML(),
-    onMount:async()=>{
-      fillProyectosSelect('f-proyecto');
-      if(!cacheProyectos.length){
-        try{const d=await atGet('Proyectos');cacheProyectos=d.records.map(r=>r.fields.Proyecto||'').filter(Boolean);fillProyectosSelect('f-proyecto');}catch(e){}
-      }
-    },
     save:saveIngresoSimple
   };
   _openFormModal(hrForm);

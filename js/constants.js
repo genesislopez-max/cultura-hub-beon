@@ -10,7 +10,7 @@ const ITEMS_INGRESO_MAP=[
   {t:'Sumar a lista "Todos los BEONers" en Brevo',                                                                                     e:'Pre-ingreso',    r:['todos']},
   {t:'Sumar a lista latam / core team / brasil en Brevo',                                                                              e:'Pre-ingreso',    r:['todos']},
   {t:'Sumar a lista por país en Brevo',                                                                                                e:'Pre-ingreso',    r:['todos']},
-  {t:'Sumar a la lista de mails del sheet accounting',                                                                                 e:'Pre-ingreso',    r:['todos'],         l:'https://docs.google.com/spreadsheets/d/1fjbGd0j52S8JHqB9YNYh2OzChwL3A5TzuK_YPIlFNTY/edit?gid=1841043249#gid=1841043249'},
+  {t:'Sumar a la lista de mails del sheet accounting',                                                                                 e:'Pre-ingreso',    r:['todos'],         l:'https://docs.google.com/spreadsheets/d/1fjbGd0j52S8JHqB9YNYh2OzChwL3A5TzuK_YPIlFNTY/edit?gid=1841043249#gid=1841043249', activo:false},
   {t:'Agregar a planilla de Beneficios — Engineers',                                                                                   e:'Pre-ingreso',    r:['Engineer','Ambos','todos'], l:'https://docs.google.com/spreadsheets/d/1On6cf5i41qnln4DCBbgXjMj23XJhr4xx0X7cnP4LTQ0/edit?gid=2125161103#gid=2125161103'},
   {t:'Agregar a planilla de Beneficios — Core Team',                                                                                   e:'Pre-ingreso',    r:['Core Team','Ambos'],       l:'https://docs.google.com/spreadsheets/d/1jJSbyxWeZ4IlVyxId-cLK39waQfprhQknEJ0HGxSojA/edit?gid=2125161103#gid=2125161103'},
   {t:'Enviar mensaje de presentación y pedido de info al nuevo BEONer (CC Culture Leader)',                                            e:'Primer día',     r:['todos'],         l:'https://www.notion.so/beon-tech/Ingreso-y-presentaci-n-2d8e4b56540b80cf9cfdf10e2af7cb85'},
@@ -52,6 +52,19 @@ function getItemsMap(tipo,rol){
 }
 function getItems(tipo,rol){return getItemsMap(tipo,rol).map(it=>it.t);}
 
+// Posiciones (dentro del array que devuelve getItemsMap) de los ítems vigentes.
+// Los ítems dados de baja (activo:false) se dejan en el array para no correr el
+// índice de los que ya estaban guardados en ItemsCompletados — simplemente se
+// excluyen de lo que se muestra y de lo que cuenta para el progreso.
+function getActiveIndexes(tipo,rol){
+  return getItemsMap(tipo,rol).reduce((a,it,idx)=>{if(it.activo!==false)a.push(idx);return a;},[]);
+}
+function contarProgreso(tipo,rol,chk){
+  const idxs=getActiveIndexes(tipo,rol);
+  const comp=idxs.filter(i=>chk&&chk[i]).length;
+  return {comp,total:idxs.length,pct:idxs.length?Math.round(comp/idxs.length*100):0};
+}
+
 function calcularEtapa(tipo,rol,chk,fechaIngreso){
   const items=getItemsMap(tipo,rol);
   const etapas=tipo==='Egreso'?ETAPAS_EGRESO:ETAPAS_INGRESO;
@@ -60,7 +73,7 @@ function calcularEtapa(tipo,rol,chk,fechaIngreso){
     if(dias>=14) return 'Onboarding completo';
   }
   for(let i=0;i<etapas.length-1;i++){
-    const idxs=items.reduce((a,it,idx)=>{if(it.e===etapas[i])a.push(idx);return a;},[]);
+    const idxs=items.reduce((a,it,idx)=>{if(it.e===etapas[i]&&it.activo!==false)a.push(idx);return a;},[]);
     if(!idxs.length) continue;
     if(!idxs.every(idx=>chk[idx])) return etapas[i];
   }

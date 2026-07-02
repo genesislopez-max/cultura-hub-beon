@@ -132,6 +132,23 @@ async function loadKanbans(){
 }
 
 // FIX PRINCIPAL: sincroniza personas que están en Personas pero no en Checklist
+// Guarda Proyecto/Mail/País en una tarjeta de Checklist sin que una sola columna
+// que no exista en Airtable (ej: "Unknown field name") tire abajo a las demás.
+// Prueba todo junto primero (1 sola llamada); si falla, reintenta de a un campo
+// para salvar los que sí son válidos y avisar puntualmente cuál no lo es.
+async function guardarDatosDenormalizados(checklistId,campos,nombre){
+  if(!Object.keys(campos).length) return;
+  try{
+    await atPatch(`Checklist/${checklistId}`,campos);
+  }catch(e){
+    for(const [campo,valor] of Object.entries(campos)){
+      await atPatch(`Checklist/${checklistId}`,{[campo]:valor}).catch(e2=>{
+        console.error(`La columna "${campo}" no existe (o no coincide el nombre) en la tabla Checklist — agregala en Airtable para que se vea en la tarjeta de "${nombre}". Error: ${e2.message}`);
+      });
+    }
+  }
+}
+
 async function sincronizarPersonasEnKanban(personasRecs){
   const checklistRecs=await atGet('Checklist','&filterByFormula={Tipo}="Ingreso"').then(d=>d.records||[]).catch(()=>[]);
   const checklistPorNombre=new Map(checklistRecs.map(r=>[(r.fields.Persona||'').trim().toLowerCase(),r]));
@@ -152,29 +169,33 @@ async function sincronizarPersonasEnKanban(personasRecs){
       for(const campo of ['Proyecto','Mail','País']){
         if(denormalizados[campo]&&!existente.fields[campo]) faltantes[campo]=denormalizados[campo];
       }
-      if(Object.keys(faltantes).length){
-        await atPatch(`Checklist/${existente.id}`,faltantes).catch(e=>console.error(`Error completando datos del checklist de "${nombre}":`,e));
-      }
+      await guardarDatosDenormalizados(existente.id,faltantes,nombre);
       continue;
     }
 
-    // No tiene checklist todavía → lo creamos, con los datos ya copiados
+    // No tiene checklist todavía → creamos primero lo esencial, así la tarjeta
+    // y el aviso de Slack no dependen de que Proyecto/Mail/País existan como
+    // columnas en Airtable (eso se intenta aparte, es "nice to have").
     const perfilChecklist=rol==='Engineer'?'Engineer':rol==='Core Team'||rol==='Manager'||rol==='Lead'?'Core Team':'Otro';
-    const fields={
+    const camposBase={
       Persona:nombre,
       Tipo:'Ingreso',
       Rol:perfilChecklist,
       Fecha:p.fields['Fecha de ingreso']||undefined,
       EstadoKanban:'Pre-ingreso',
-      ...denormalizados,
     };
-    await atPost('Checklist',fields).then(()=>{
-      const detalle=[rol,p.fields.Proyecto,p.fields['Fecha de ingreso']?`ingresa el ${fmt(p.fields['Fecha de ingreso'])}`:''].filter(Boolean).join(' · ');
-      sendSlack(`🎉 *Nuevo ingreso registrado en el Hub*\n${nombre}${detalle?' — '+detalle:''}`);
-    }).catch(e=>{
+    let nuevo;
+    try{
+      nuevo=await atPost('Checklist',camposBase);
+    }catch(e){
       console.error(`Error creando el checklist de "${nombre}":`,e);
       toast(`⚠️ No se pudo crear el checklist de ${nombre}: ${e.message}`,true);
-    });
+      continue;
+    }
+    const detalle=[rol,p.fields.Proyecto,p.fields['Fecha de ingreso']?`ingresa el ${fmt(p.fields['Fecha de ingreso'])}`:''].filter(Boolean).join(' · ');
+    sendSlack(`🎉 *Nuevo ingreso registrado en el Hub*\n${nombre}${detalle?' — '+detalle:''}`);
+    const idNuevo=nuevo?.records?.[0]?.id;
+    if(idNuevo) await guardarDatosDenormalizados(idNuevo,denormalizados,nombre);
   }
 }
 

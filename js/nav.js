@@ -161,6 +161,7 @@ const SECCIONES_LAZY=[
   ['ambassadors','Ambassador Week',loadAmbassadors],
   ['offsites','Off Sites',loadOffsites],
   ['gettogether','Get Together',loadGetTogether],
+  ['tareas','Tareas',loadTareas],
 ];
 
 // Se llama al entrar a una sección — si ya se cargó antes en esta sesión, no repite el fetch

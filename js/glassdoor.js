@@ -183,8 +183,10 @@ async function sincronizarGlassdoor(){
         const gdDate=new Date(ing);gdDate.setMonth(gdDate.getMonth()+4);
         if(gdDate>=hoy){
           try{
-            await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Glassdoor',Fecha:gdDate.toISOString().split('T')[0],Estado:'Pendiente'});
+            const fechaGd=gdDate.toISOString().split('T')[0];
+            await atPost('Eventos',{Evento:`📝 Review Glassdoor — ${nombre}`,Tipo:'Glassdoor',Fecha:fechaGd,Estado:'Pendiente'});
             creados++;
+            sendSlack(`📝 *Reminder de Glassdoor creado*\n${nombre} — a solicitar el ${fmt(fechaGd)}`);
           }catch(e){console.error('GD error',nombre,e.message);}
         } else { omitidos++; }
       } else { omitidos++; }

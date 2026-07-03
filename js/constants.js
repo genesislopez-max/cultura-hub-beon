@@ -103,6 +103,9 @@ const COL_CNT_EGRESO={
   'Offboarding completo':'kc-Offboarding-completo',
 };
 const rolColor={Engineer:'badge-blue',TEM:'badge-purple',Manager:'badge-amber',Lead:'badge-green','Core Team':'badge-purple',Otro:'badge-gray',Supervisor:'badge-amber',COO:'badge-amber',Founder:'badge-amber'};
+// Roles que pertenecen a Core Team — usado en Personas y Cumpleaños para
+// clasificar a alguien en un grupo u otro.
+const CORE_TEAM_ROLES=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
 const NIVELES=['Spark','Ray','Lightning','Thunder','Storm'];
 const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
 const LOYALTY_ORDER=['Spark','Ray','Lightning','Thunder','Storm'];
@@ -113,7 +116,7 @@ const AW_RULES={
   Thunder:{asistenciasConVuelo:2, limitadoConVuelo:true},
   Storm:  {asistenciasConVuelo:Infinity, limitadoConVuelo:false},
 };
-const ADD=['ingresos','egresos','engineers','coreteam','reviews','proyectos','checklist','beneficios','beneficios-asignados','ambassadors','offsites','gettogether'];
+const ADD=['ingresos','egresos','engineers','coreteam','reviews','proyectos','tareas','checklist','beneficios','beneficios-asignados','ambassadors','offsites','gettogether'];
 const ADD_FULL_SECTIONS=['ingresos'];
-const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo egreso',engineers:'Nueva persona',coreteam:'Nueva persona',reviews:'Nuevo reminder',proyectos:'Nuevo proyecto',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together'};
-const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together'};
+const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo egreso',engineers:'Nueva persona',coreteam:'Nueva persona',reviews:'Nuevo reminder',proyectos:'Nuevo proyecto',tareas:'Nueva tarea',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together'};
+const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',tareas:'Tareas',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together'};

@@ -2,8 +2,11 @@ async function loadCumpleanos(personas){
   const now=new Date();now.setHours(0,0,0,0);
   const mesActual=now.getMonth(),mesProximo=(now.getMonth()+1)%12;
   const rows=(personas||[]).filter(r=>r.fields['Fecha de cumpleaños']).map(r=>{
-    const f=r.fields;return{nombre:f.Nombre,fecha:f['Fecha de cumpleaños'],days:daysTo(f['Fecha de cumpleaños'])};
+    const f=r.fields;
+    const rol=(f['Rol en empresa']||'').trim();
+    return{nombre:f.Nombre,fecha:f['Fecha de cumpleaños'],days:daysTo(f['Fecha de cumpleaños']),grupo:CORE_TEAM_ROLES.has(rol)?'core':'eng'};
   }).sort((a,b)=>a.days-b.days);
+
   const esteM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesActual);
   const proxM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesProximo).length;
   const mesNombre=new Date(now.getFullYear(),mesActual,1).toLocaleString('es-AR',{month:'long'});
@@ -14,7 +17,7 @@ async function loadCumpleanos(personas){
   document.getElementById('mc-proximo-mes-sub').textContent=mesProxNombre;
   document.getElementById('mc-proximos-7').textContent=rows.filter(r=>r.days<=7).length;
   document.getElementById('mc-total').textContent=rows.length;
-  document.getElementById('badge-cumple-h').textContent=`${rows.length} personas`;
+
   // Card inicio con lista
   document.getElementById('sc-cumple').textContent=esteM.length;
   document.getElementById('sc-cumple-sub').textContent=mesNombre;
@@ -22,16 +25,56 @@ async function loadCumpleanos(personas){
   const moreEl=document.getElementById('sc-more-cumple');
   listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">• ${r.nombre} (${fmt(r.fecha)})</div>`).join('');
   moreEl.style.display=esteM.length>5?'block':'none';
-  const tb=document.getElementById('tbody-cumple');
-  tb.innerHTML=rows.length?rows.map(r=>{
-    const dl=r.days===0?'¡Hoy! 🎉':r.days===1?'Mañana':`en ${r.days} días`;
-    const b=r.days<=7?'badge-red':r.days<=30?'badge-amber':'badge-blue';
-    const fechaBase=new Date(r.fecha+'T12:00:00');
-    const proxCumple=new Date(now.getFullYear(),fechaBase.getMonth(),fechaBase.getDate());
-    if(proxCumple<now) proxCumple.setFullYear(now.getFullYear()+1);
-    const proxStr=proxCumple.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
-    const diaMes=fechaBase.toLocaleDateString('es-AR',{day:'2-digit',month:'long'});
-    return`<tr><td>${avH(r.nombre)}${r.nombre}</td><td>${diaMes}</td><td>${proxStr}</td><td><span class="badge ${b}">${dl}</span></td></tr>`;
-  }).join(''):'<tr class="empty-row"><td colspan="4">Sin cumpleaños cargados</td></tr>';
+
+  const engRows=rows.filter(r=>r.grupo==='eng');
+  const coreRows=rows.filter(r=>r.grupo==='core');
+  document.getElementById('badge-cumple-eng').textContent=`${engRows.length} personas`;
+  document.getElementById('badge-cumple-core').textContent=`${coreRows.length} personas`;
+  renderCumpleGrupo('cumple-eng-container',engRows,now);
+  renderCumpleGrupo('cumple-core-container',coreRows,now);
+
   return rows.filter(r=>r.days<=60).map(r=>({nombre:r.nombre,evento:'Cumpleaños 🎂',fecha:r.fecha,days:r.days}));
+}
+
+function filaCumple(r,now){
+  const dl=r.days===0?'¡Hoy! 🎉':r.days===1?'Mañana':`en ${r.days} días`;
+  const b=r.days<=7?'badge-red':r.days<=30?'badge-amber':'badge-blue';
+  const fechaBase=new Date(r.fecha+'T12:00:00');
+  const proxCumple=new Date(now.getFullYear(),fechaBase.getMonth(),fechaBase.getDate());
+  if(proxCumple<now) proxCumple.setFullYear(now.getFullYear()+1);
+  const proxStr=proxCumple.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
+  const diaMes=fechaBase.toLocaleDateString('es-AR',{day:'2-digit',month:'long'});
+  return`<tr><td>${avH(r.nombre)}${r.nombre}</td><td>${diaMes}</td><td>${proxStr}</td><td><span class="badge ${b}">${dl}</span></td></tr>`;
+}
+
+// Agrupa por mes (empezando por el actual) para que se pueda escanear de un
+// vistazo en vez de una lista larga sin cortes — los meses más lejanos quedan
+// colapsados atrás de "Ver más adelante" para que no se sienta interminable.
+function bloqueMesCumple(mes,rows,now){
+  const delMes=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mes)
+    .sort((a,b)=>new Date(a.fecha+'T12:00:00').getDate()-new Date(b.fecha+'T12:00:00').getDate());
+  if(!delMes.length) return '';
+  const nombreMes=new Date(now.getFullYear(),mes,1).toLocaleString('es-AR',{month:'long'});
+  return`<div style="margin-bottom:20px;">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);padding:10px 18px 8px;letter-spacing:0.06em;text-transform:uppercase;">${nombreMes} <span style="font-weight:500">(${delMes.length})</span></div>
+    <table class="data-table"><thead><tr><th>Persona</th><th>Fecha</th><th>Próximo</th><th>Días restantes</th></tr></thead>
+    <tbody>${delMes.map(r=>filaCumple(r,now)).join('')}</tbody></table>
+  </div>`;
+}
+
+function renderCumpleGrupo(containerId,rows,now){
+  const container=document.getElementById(containerId);
+  if(!container) return;
+  if(!rows.length){
+    container.innerHTML='<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">Sin cumpleaños cargados.</div>';
+    return;
+  }
+  const meses=Array.from({length:12},(_,i)=>(now.getMonth()+i)%12);
+  const cercanos=meses.slice(0,3).map(m=>bloqueMesCumple(m,rows,now)).join('');
+  const lejanos=meses.slice(3).map(m=>bloqueMesCumple(m,rows,now)).join('');
+  container.innerHTML=cercanos+(lejanos?`
+    <details style="margin:0 18px 18px;">
+      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--blue);padding:10px 0;">Ver más adelante →</summary>
+      ${lejanos}
+    </details>`:'');
 }

@@ -42,6 +42,10 @@ let cacheAWRaw=[];
 // Panel lateral persona
 let cacheCapacitaciones=[], cacheGetTogetherRaw=[];
 
+// Tareas (Kanban + Calendario)
+let cacheTareasRaw=[];
+let tareasCalMes=null; // Date del primer día del mes mostrado en el calendario; null = mes actual
+
 // Nav / modal de alta de registros
 let currentForm=null;
 let currentFormFull=null;

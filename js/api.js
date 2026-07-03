@@ -18,7 +18,7 @@ async function atRequest(url,options){
   try{
     r=await fetch(url,options);
   }catch(networkErr){
-    throw new Error('Sin conexión con Airtable — revisá tu internet.');
+    throw new Error('Sin conexión — revisá tu internet.');
   }
   if(!r.ok){
     const body=await r.json().catch(()=>null);

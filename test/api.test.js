@@ -9,7 +9,7 @@ test('atRequest: un fallo de red se traduce a un mensaje legible en vez de un Ty
   ctx.fetch=async()=>{throw new TypeError('Failed to fetch');};
   await assert.rejects(
     ctx.atRequest('https://api.airtable.com/v0/x/Personas',{}),
-    /Sin conexión con Airtable/,
+    /Sin conexión/,
   );
 });
 

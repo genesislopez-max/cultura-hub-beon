@@ -1,7 +1,9 @@
 // Form completo de Persona — lo usan "Nueva persona", "Nuevo ingreso" (misma carga,
-// es la forma de no tener que ir a Airtable a completar nada) y la edición desde
-// la tarjeta del Kanban de Ingresos.
-function buildPersonaCompletaHTML(v={}){
+// es la forma de no tener que completar nada aparte) y la edición desde la
+// tarjeta del Kanban de Ingresos/Egresos. mostrarEgreso solo se activa al
+// editar: la fecha de egreso se carga desde la pestaña de Egresos, no al
+// dar de alta a alguien nuevo.
+function buildPersonaCompletaHTML(v={},mostrarEgreso=false){
   const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
   const opt=(val,cur)=>`<option value="${val}"${val===(cur||'')?' selected':''}>${val}</option>`;
   return`
@@ -26,7 +28,7 @@ function buildPersonaCompletaHTML(v={}){
 <div class="field-group"><label class="field-label">Manager</label><input class="field-input" id="f-per-manager" placeholder="TEM / Manager a cargo" value="${v.Manager||''}"></div>
 <div class="field-group"><label class="field-label">Fecha de ingreso</label><input class="field-input" id="f-per-ingreso" type="date" value="${v['Fecha de ingreso']||''}"></div>
 <div class="field-group"><label class="field-label">Fecha de cumpleaños</label><input class="field-input" id="f-per-cumple" type="date" value="${v['Fecha de cumpleaños']||''}"></div>
-<div class="field-group"><label class="field-label">Fecha de egreso (último día)</label><input class="field-input" id="f-per-egreso" type="date" value="${v['Fecha de egreso']||''}"></div>
+${mostrarEgreso?`<div class="field-group"><label class="field-label">Fecha de egreso (último día)</label><input class="field-input" id="f-per-egreso" type="date" value="${v['Fecha de egreso']||''}"></div>`:''}
 <div class="field-group"><label class="field-label">Comentarios</label><textarea class="field-input" id="f-per-comentarios" placeholder="Notas sobre el ingreso">${v.Comentarios||''}</textarea></div>
 `;
 }
@@ -48,14 +50,14 @@ function leerPersonaCompletaForm(esEdicion){
   setFecha('Fecha de egreso','f-per-egreso');
   return fields;
 }
-// Editar una persona ya creada — se abre desde la tarjeta del Kanban de Ingresos,
-// para no tener que ir a Airtable a completar datos que faltaron al principio.
+// Editar una persona ya creada — se abre desde la tarjeta del Kanban de
+// Ingresos/Egresos, para no tener que completar datos aparte.
 function abrirEdicionPersona(nombre){
   const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
   if(!persona){toast(`No encontré a "${nombre}" en Personas`,true);return;}
   _openFormModal({
     title:`Editar — ${nombre}`,
-    html:()=>buildPersonaCompletaHTML(persona.fields),
+    html:()=>buildPersonaCompletaHTML(persona.fields,true),
     save:async()=>{
       const fields=leerPersonaCompletaForm(true);
       if(!fields) return false;

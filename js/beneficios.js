@@ -26,9 +26,18 @@ async function loadBeneficios(){
     }
     return {...r, fields:f};
   });
+  poblarFiltroBeneficioNombre();
   renderBenefCatalogo();
   renderBenefPersonas();
   renderBenefMetricas();
+}
+
+function poblarFiltroBeneficioNombre(){
+  const sel=document.getElementById('benef-nombre');
+  if(!sel) return;
+  const actual=sel.value;
+  const nombres=[...new Set(cacheBeneficiosRaw.map(b=>b.fields.Beneficio).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">Todos los beneficios</option>'+nombres.map(n=>`<option value="${n}"${n===actual?' selected':''}>${n}</option>`).join('');
 }
 
 function switchBenefTab(tab, btn){
@@ -79,6 +88,7 @@ function filtrarBeneficios(){
 
 function renderBenefCatalogo(){
   const q=(document.getElementById('benef-search')?.value||'').toLowerCase();
+  const nombreFil=document.getElementById('benef-nombre')?.value||'';
   const grupo=document.getElementById('benef-grupo')?.value||'';
   const cat=document.getElementById('benef-cat')?.value||'';
   const loyalty=document.getElementById('benef-loyalty')?.value||'';
@@ -88,12 +98,13 @@ function renderBenefCatalogo(){
     const f=r.fields;
     const g=f.Grupo||'Ambos';
     const matchQ=!q||(f.Beneficio||'').toLowerCase().includes(q)||(f.Descripción||'').toLowerCase().includes(q);
+    const matchNombre=!nombreFil||f.Beneficio===nombreFil;
     const matchG=!grupo||g===grupo||g==='Ambos';
     const matchC=!cat||(f.Categoría||'')=== cat;
     // Filtro loyalty: mostrar beneficios accesibles desde ese nivel o superiores
     const matchL=!loyalty||tieneAccesoBeneficio(loyalty, f['Nivel Loyalty']||'Todos');
     const matchE=!estado||(f.Estado||'Activo')===estado;
-    return matchQ&&matchG&&matchC&&matchL&&matchE;
+    return matchQ&&matchNombre&&matchG&&matchC&&matchL&&matchE;
   });
 
   document.getElementById('badge-beneficios-h').textContent=`${recs.length} beneficios`;
@@ -109,7 +120,7 @@ function renderBenefCatalogo(){
     const g=f.Grupo||'Ambos';
     const nivel=f['Nivel Loyalty']||'';
     const valor=f.Valor?`$${Number(f.Valor).toLocaleString('es-AR')}/mes`:'—';
-    return`<tr>
+    const fila=`<tr class="tr-clickable" onclick="toggleBenefDetalle('${r.id}')">
       <td><strong>${f.Beneficio||'—'}</strong><div style="font-size:11px;color:var(--text3);margin-top:2px">${f.Descripción||''}</div></td>
       <td><span class="badge ${grupoBadge[g]||'badge-gray'}">${g}</span></td>
       <td><span class="badge badge-blue">${f.Categoría||'—'}</span></td>
@@ -117,6 +128,7 @@ function renderBenefCatalogo(){
       <td style="font-size:13px;font-weight:500">${valor}</td>
       <td><span class="badge ${(f.Estado||'Activo')==='Activo'?'badge-green':'badge-amber'}">${f.Estado||'Activo'}</span></td>
     </tr>`;
+    return benefExpandido===r.id?fila+filaDetalleBeneficio(r):fila;
   }
 
   const container=document.getElementById('benef-catalogo-container');
@@ -145,6 +157,31 @@ function renderBenefCatalogo(){
     html+=tableHead+coreTeam.map(benefRow).join('')+'</tbody></table>';
   }
   container.innerHTML=html;
+}
+
+// Click en una fila del catálogo despliega/oculta debajo la lista de
+// personas que tienen ese beneficio activo (Beneficios Asignados).
+function toggleBenefDetalle(id){
+  benefExpandido=benefExpandido===id?null:id;
+  renderBenefCatalogo();
+}
+function personasActivasBeneficio(nombreBeneficio){
+  return cacheBenefAsignados.filter(a=>{
+    const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
+    return bNombre===nombreBeneficio&&(a.fields.Estado||'Activo')==='Activo';
+  });
+}
+function filaDetalleBeneficio(r){
+  const activos=personasActivasBeneficio(r.fields.Beneficio);
+  if(!activos.length){
+    return `<tr class="benef-detalle-row"><td colspan="6"><div style="padding:14px 18px;color:var(--text3);font-size:12px;">Nadie tiene este beneficio activo en este momento.</div></td></tr>`;
+  }
+  const items=activos.map(a=>{
+    const nombre=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'—');
+    const monto=a.fields.Monto?`$${Number(a.fields.Monto).toLocaleString('es-AR')}`:'';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">${avH(nombre)}<span style="font-size:13px">${nombre}</span>${monto?`<span style="margin-left:auto;font-size:12px;color:var(--text3)">${monto}</span>`:''}</div>`;
+  }).join('');
+  return `<tr class="benef-detalle-row" onclick="event.stopPropagation()"><td colspan="6"><div style="padding:12px 18px;background:var(--bg2);border-radius:8px;margin:4px 0;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">${activos.length} persona${activos.length!==1?'s':''} usando este beneficio</div>${items}</div></td></tr>`;
 }
 
 function actualizarMontoBenef(){

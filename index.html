@@ -494,6 +494,9 @@
                 <i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="benef-search" placeholder="Buscar beneficio…" oninput="filtrarBeneficios()">
               </div>
+              <select class="filter-select" id="benef-nombre" onchange="filtrarBeneficios()">
+                <option value="">Todos los beneficios</option>
+              </select>
               <select class="filter-select" id="benef-grupo" onchange="filtrarBeneficios()">
                 <option value="">Todos los grupos</option>
                 <option value="Engineers">Engineers</option>

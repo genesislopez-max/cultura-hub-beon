@@ -31,6 +31,7 @@ let meetProyectoActual=null; // {id: recordId, nombre: string}
 
 // Beneficios
 let cacheBenefAsignados=[], cachePresupuestoLoyalty=[];
+let benefExpandido=null; // id del beneficio con la card de personas activas desplegada
 
 // Off Sites
 let cacheOSRaw=[];

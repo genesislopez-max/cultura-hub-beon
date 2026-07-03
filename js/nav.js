@@ -131,9 +131,9 @@ async function saveRecord(){
   btn.disabled=true;lbl.textContent='Guardando...';
   try{
     const ok=await form.save();
-    if(ok!==false){closeModal();toast('Guardado en Airtable ✓');await loadAll();}
+    if(ok!==false){closeModal();toast('Guardado ✓');await loadAll();}
   }catch(e){toast('Error: '+e.message,true);}
-  btn.disabled=false;lbl.textContent='Guardar en Airtable';
+  btn.disabled=false;lbl.textContent='Guardar';
 }
 
 // Secciones que necesita el dashboard de Inicio — se cargan siempre al arrancar
@@ -194,9 +194,9 @@ async function iniciarHub(){
   document.getElementById('page-date').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   try{
     await cargarSeccionesIniciales();
-    setBanner('Hub conectado a Airtable ✓','ok');
+    setBanner('Hub conectado ✓','ok');
     document.getElementById('dot').className='dot ok';
-    document.getElementById('conn-status').textContent='Conectado a Airtable';
+    document.getElementById('conn-status').textContent='Conectado';
   }catch(e){
     // Si falla con 401/403, la sesión de Google venció o no es válida
     if(e.status===401||e.status===403){

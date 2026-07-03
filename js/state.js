@@ -3,8 +3,8 @@
 
 // El token de Airtable y el webhook de Slack ya no viven en el navegador —
 // quedan como variables de entorno del servidor (ver api/_lib/auth.js y
-// api/airtable/[...path].js). El login de Google (js/auth.js) es lo único
-// que se guarda del lado del cliente.
+// api/airtable.js). El login de Google (js/auth.js) es lo único que se
+// guarda del lado del cliente.
 
 let cachePersonasPorRol={};
 let cacheProyectos=[], cacheProyectosRaw=[];

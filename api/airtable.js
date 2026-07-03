@@ -1,7 +1,14 @@
 // Proxy hacia Airtable: valida la sesión de Google del navegador y recién ahí
 // reenvía el pedido a Airtable usando el token que vive solo acá (variables de
 // entorno de Vercel) — el token nunca se manda al cliente.
-const {verifyGoogleIdToken}=require('../_lib/auth');
+//
+// La tabla/registro de Airtable viaja como query param ?path=... en vez de
+// como parte de la URL (ej. antes /api/airtable/Tabla/recXXX, con una función
+// catch-all anidada) porque ese ruteo dinámico no terminó de resolver bien en
+// este proyecto — Vercel devolvía 404 propio (sin llegar a ejecutar la
+// función) para cualquier pedido con más de un segmento de path. Con un
+// endpoint fijo + query param no depende de esa resolución de rutas.
+const {verifyGoogleIdToken}=require('./_lib/auth');
 
 module.exports=async(req,res)=>{
   const idToken=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
@@ -18,10 +25,19 @@ module.exports=async(req,res)=>{
     return;
   }
 
-  const prefix='/api/airtable/';
-  const idx=req.url.indexOf(prefix);
-  const resto=idx>=0?req.url.slice(idx+prefix.length):'';
-  const airtableUrl=`https://api.airtable.com/v0/${base}/${resto}`;
+  const {path,...resto}=req.query;
+  if(!path){
+    res.status(400).json({error:{message:'Falta indicar la tabla de Airtable.'}});
+    return;
+  }
+
+  const qs=new URLSearchParams();
+  for(const [key,val] of Object.entries(resto)){
+    if(Array.isArray(val)) val.forEach(v=>qs.append(key,v));
+    else qs.append(key,val);
+  }
+  const qsStr=qs.toString();
+  const airtableUrl=`https://api.airtable.com/v0/${base}/${path}${qsStr?`?${qsStr}`:''}`;
 
   let airtableRes;
   try{

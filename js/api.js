@@ -4,11 +4,19 @@ async function sendSlack(text){
   }catch(e){console.error('Slack error:',e.message);}
 }
 // ─── AIRTABLE ────────────────────────────────────────────────────────────────
-// Todas las llamadas van a nuestro proxy serverless (/api/airtable/...), que
+// Todas las llamadas van a nuestro proxy serverless (/api/airtable), que
 // valida la sesión de Google y recién ahí habla con Airtable usando el token
-// que vive solo en el servidor. Ver api/airtable/[...path].js.
+// que vive solo en el servidor. Ver api/airtable.js.
+//
+// La tabla/registro va como query param (?path=Tabla/recXXX) en vez de como
+// parte de la URL — un endpoint fijo + query param no depende del ruteo
+// dinámico de Vercel para sub-rutas anidadas, que no resultó confiable acá.
 function authHeaders(){
   return {'Authorization':`Bearer ${getIdToken()}`,'Content-Type':'application/json'};
+}
+
+function apiUrl(path,qs=''){
+  return `/api/airtable?path=${encodeURIComponent(path)}${qs}`;
 }
 
 // Wrapper único para todas las llamadas al proxy: normaliza errores de red
@@ -35,7 +43,7 @@ async function atGet(table,qs=''){
   let allRecords=[], offset=null;
   do {
     const offsetParam=offset?`&offset=${offset}`:'';
-    const r=await atRequest(`/api/airtable/${encodeURIComponent(table)}?pageSize=100${qs}${offsetParam}`,{headers:authHeaders()});
+    const r=await atRequest(apiUrl(table,`&pageSize=100${qs}${offsetParam}`),{headers:authHeaders()});
     const data=await r.json();
     allRecords=[...allRecords,...(data.records||[])];
     offset=data.offset||null;
@@ -43,15 +51,15 @@ async function atGet(table,qs=''){
   return {records:allRecords};
 }
 async function atPost(table,fields){
-  const r=await atRequest(`/api/airtable/${encodeURIComponent(table)}`,{method:'POST',headers:authHeaders(),body:JSON.stringify({records:[{fields}]})});
+  const r=await atRequest(apiUrl(table),{method:'POST',headers:authHeaders(),body:JSON.stringify({records:[{fields}]})});
   return r.json();
 }
 async function atPatch(path,fields){
-  const r=await atRequest(`/api/airtable/${path}`,{method:'PATCH',headers:authHeaders(),body:JSON.stringify({fields})});
+  const r=await atRequest(apiUrl(path),{method:'PATCH',headers:authHeaders(),body:JSON.stringify({fields})});
   return r.json();
 }
 async function atDelete(table,id){
-  const r=await atRequest(`/api/airtable/${encodeURIComponent(table)}/${id}`,{method:'DELETE',headers:authHeaders()});
+  const r=await atRequest(apiUrl(`${table}/${id}`),{method:'DELETE',headers:authHeaders()});
   return r.json();
 }
 // Elimina hasta 10 registros de una vez (límite de Airtable)
@@ -60,7 +68,7 @@ async function atDeleteBatch(table,ids){
   const chunks=[];
   for(let i=0;i<ids.length;i+=10) chunks.push(ids.slice(i,i+10));
   for(const chunk of chunks){
-    const qs=chunk.map(id=>`records[]=${id}`).join('&');
-    await atRequest(`/api/airtable/${encodeURIComponent(table)}?${qs}`,{method:'DELETE',headers:authHeaders()});
+    const recordsQs=chunk.map(id=>`&records[]=${id}`).join('');
+    await atRequest(apiUrl(table,recordsQs),{method:'DELETE',headers:authHeaders()});
   }
 }

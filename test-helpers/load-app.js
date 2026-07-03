@@ -51,10 +51,12 @@ function documentStub(){
 function loadApp(files){
   const sandbox={console};
   sandbox.localStorage=localStorageStub();
+  sandbox.sessionStorage=localStorageStub();
   sandbox.document=documentStub();
   sandbox.window={addEventListener(){}};
   sandbox.navigator={};
   sandbox.fetch=async()=>{throw new Error('fetch no disponible en tests unitarios');};
+  sandbox.atob=globalThis.atob;
   const context=vm.createContext(sandbox);
   for(const file of files){
     const code=fs.readFileSync(path.join(JS_DIR,file),'utf8');

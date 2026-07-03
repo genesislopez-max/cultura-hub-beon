@@ -116,6 +116,7 @@ function verFichaPersona(id){
     row('Fecha de ingreso',fmt(f['Fecha de ingreso']))+
     row('Antigüedad',calcAntiguedad(f['Fecha de ingreso']))+
     row('Fecha de cumpleaños',fmt(f['Fecha de cumpleaños']))+
+    (f['Fecha de egreso']?row('Fecha de egreso',fmt(f['Fecha de egreso'])):'')+
     row('Comentarios',f.Comentarios);
 
   document.getElementById('pf-overlay').style.display='flex';
@@ -123,6 +124,15 @@ function verFichaPersona(id){
 
 function closeFichaPersona(){
   document.getElementById('pf-overlay').style.display='none';
+}
+
+// Ya cumplió su último día de trabajo (Fecha de egreso vencida) — deja de
+// contar como activo en Personas, aunque el registro se mantiene en Airtable.
+function yaEgreso(r){
+  const fe=r.fields['Fecha de egreso'];
+  if(!fe) return false;
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  return new Date(fe+'T00:00:00')<=hoy;
 }
 
 async function loadPersonas(){
@@ -133,12 +143,11 @@ async function loadPersonas(){
 
   // Roles que pertenecen a Core Team
   const CORE_ROLES=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
-  // Roles que pertenecen a Engineers & Tech
-  const ENG_ROLES=new Set(['Engineer']);
 
+  const activos=recs.filter(r=>!yaEgreso(r));
   const engineers=[], coreTeam=[];
 
-  recs.forEach(r=>{
+  activos.forEach(r=>{
     const rol=(r.fields['Rol en empresa']||'').trim(),nom=r.fields.Nombre||'';
     if(!nom)return;
     if(rol==='TEM') cachePersonasPorRol.TEM.push(nom);
@@ -152,7 +161,7 @@ async function loadPersonas(){
 
   document.getElementById('bc-engineers').textContent=allEng.length;
   document.getElementById('bc-coreteam').textContent=coreTeam.length;
-  document.getElementById('m-personas').textContent=recs.length;
+  document.getElementById('m-personas').textContent=activos.length;
   document.getElementById('m-coreteam').textContent=coreTeam.length;
   document.getElementById('m-engineers').textContent=engineers.length;
 

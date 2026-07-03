@@ -26,6 +26,7 @@ function buildPersonaCompletaHTML(v={}){
 <div class="field-group"><label class="field-label">Manager</label><input class="field-input" id="f-per-manager" placeholder="TEM / Manager a cargo" value="${v.Manager||''}"></div>
 <div class="field-group"><label class="field-label">Fecha de ingreso</label><input class="field-input" id="f-per-ingreso" type="date" value="${v['Fecha de ingreso']||''}"></div>
 <div class="field-group"><label class="field-label">Fecha de cumpleaños</label><input class="field-input" id="f-per-cumple" type="date" value="${v['Fecha de cumpleaños']||''}"></div>
+<div class="field-group"><label class="field-label">Fecha de egreso (último día)</label><input class="field-input" id="f-per-egreso" type="date" value="${v['Fecha de egreso']||''}"></div>
 <div class="field-group"><label class="field-label">Comentarios</label><textarea class="field-input" id="f-per-comentarios" placeholder="Notas sobre el ingreso">${v.Comentarios||''}</textarea></div>
 `;
 }
@@ -44,6 +45,7 @@ function leerPersonaCompletaForm(esEdicion){
   const setFecha=(campo,id)=>{const val=v(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]=null;};
   setFecha('Fecha de ingreso','f-per-ingreso');
   setFecha('Fecha de cumpleaños','f-per-cumple');
+  setFecha('Fecha de egreso','f-per-egreso');
   return fields;
 }
 // Editar una persona ya creada — se abre desde la tarjeta del Kanban de Ingresos,
@@ -241,12 +243,18 @@ const FORMS={
   </select>
 </div>
 <div class="field-group"><label class="field-label">Fecha de aviso *</label><input class="field-input" id="f-egr-fecha" type="date"></div>
+<div class="field-group"><label class="field-label">Fecha del último día *</label><input class="field-input" id="f-egr-ultimo-dia" type="date"></div>
+<div class="field-hint">A partir de esa fecha, la persona deja de contar como activa en Personas.</div>
 `;},
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-egr-persona')){toast('La persona es obligatoria',true);return false;}
-      if(!v('f-egr-fecha')){toast('La fecha es obligatoria',true);return false;}
-      await atPost('Checklist',{Persona:v('f-egr-persona'),Tipo:'Egreso',Fecha:v('f-egr-fecha'),EstadoKanban:'Aviso dado'});
+      const nombre=v('f-egr-persona');
+      if(!nombre){toast('La persona es obligatoria',true);return false;}
+      if(!v('f-egr-fecha')){toast('La fecha de aviso es obligatoria',true);return false;}
+      if(!v('f-egr-ultimo-dia')){toast('La fecha del último día es obligatoria',true);return false;}
+      await atPost('Checklist',{Persona:nombre,Tipo:'Egreso',Fecha:v('f-egr-fecha'),EstadoKanban:'Aviso dado'});
+      const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+      if(persona) await atPatch(`Personas/${persona.id}`,{'Fecha de egreso':v('f-egr-ultimo-dia')});
       return true;
     }},
 

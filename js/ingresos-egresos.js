@@ -106,9 +106,9 @@ function renderCard(r,tipo){
       <span class="kc-pct">${comp}/${total}</span>
     </div>
     <div class="kc-actions">
-      ${tipo==='Ingreso'?`<button class="kc-btn-edit" title="Editar persona" onclick="event.stopPropagation();abrirEdicionPersona('${nombre.replace(/'/g,"\\'")}')">
+      <button class="kc-btn-edit" title="Editar persona" onclick="event.stopPropagation();abrirEdicionPersona('${nombre.replace(/'/g,"\\'")}')">
         <i class="ti ti-pencil"></i>
-      </button>`:''}
+      </button>
       <button class="kc-btn-del" title="Eliminar ingreso" onclick="event.stopPropagation();confirmarEliminar('${r.id}','${nombre.replace(/'/g,"\\'")}')">
         <i class="ti ti-trash"></i>
       </button>

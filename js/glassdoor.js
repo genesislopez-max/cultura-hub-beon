@@ -325,7 +325,7 @@ async function guardarFechaGD(){
   const fecha=document.getElementById('gd-modal-fecha')?.value;
   if(!fecha||!gdModalId){ toast('Ingresá una fecha',true); return; }
   try{
-    await atPatch(`Eventos/${gdModalId}`,{Estado:'Completado'});
+    await atPatch(`Eventos/${gdModalId}`,{Estado:'Completado','Fecha solicitada':fecha});
   }catch(e){
     toast(`⚠️ Error: ${e.message}`,true);
     return;
@@ -342,7 +342,7 @@ async function marcarGDSolicitada(id){
   const hoy=new Date().toISOString().split('T')[0];
   try{
     // Marcar como Completado en Airtable (es el estado válido para "ya gestionada")
-    await atPatch(`Eventos/${id}`,{Estado:'Completado'});
+    await atPatch(`Eventos/${id}`,{Estado:'Completado','Fecha solicitada':hoy});
   }catch(e){
     toast(`⚠️ Error: ${e.message}`,true);
     return;

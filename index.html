@@ -6,23 +6,18 @@
 <title>Cultura Hub · BEON.tech</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <link rel="stylesheet" href="css/styles.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <div class="app">
-  <!-- PANTALLA CONFIGURACIÓN -->
-<div class="config-screen" id="config-screen" style="display:none">
+  <!-- PANTALLA DE LOGIN -->
+<div class="config-screen" id="login-screen" style="display:none">
   <div class="config-card">
-    <div style="font-size:28px;margin-bottom:12px">⚙️</div>
-    <div class="config-title">Configurar acceso a Airtable</div>
-    <div class="config-sub">Ingresá tus credenciales de Airtable. Se guardan solo en este navegador y nunca se comparten.</div>
-    <label class="config-label">Personal Access Token</label>
-    <input class="config-input" id="cfg-token" type="password" placeholder="patXXXXXX...">
-    <label class="config-label">Base ID</label>
-    <input class="config-input" id="cfg-base" placeholder="appXXXXXX...">
-    <label class="config-label">Slack Webhook URL <span style="font-weight:400;color:var(--text3)">(opcional)</span></label>
-    <input class="config-input" id="cfg-slack" type="password" placeholder="https://hooks.slack.com/services/...">
-    <button class="config-btn" onclick="guardarConfig()">Conectar al Hub →</button>
-    <div class="config-hint">Podés encontrar el Token y Base ID en tu cuenta de Airtable.<br>El Slack Webhook es opcional — activa las notificaciones automáticas.<br>Una vez configurado, no tenés que volver a ingresarlos.</div>
+    <div style="font-size:28px;margin-bottom:12px">🔒</div>
+    <div class="config-title">Cultura Hub · BEON.tech</div>
+    <div class="config-sub">Iniciá sesión con tu cuenta de Google de BEON.tech para entrar al Hub.</div>
+    <div id="google-signin-btn" style="display:flex;justify-content:center;margin-top:6px"></div>
+    <div class="config-hint" id="login-error" style="display:none;color:#C62828"></div>
   </div>
 </div>
 
@@ -50,6 +45,13 @@
     <button class="sb-item" onclick="showSection('offsites',this)"><i class="ti ti-map-pin"></i>Off Sites</button>
     <button class="sb-item" onclick="showSection('gettogether',this)"><i class="ti ti-users-group"></i>Get Together</button>
     <div class="sb-bottom">
+      <div class="sb-user" id="sb-user" style="display:none">
+        <img class="sb-user-pic" id="sb-user-pic" src="" alt="">
+        <div class="sb-user-info">
+          <div class="sb-user-name" id="sb-user-name"></div>
+          <button class="sb-user-logout" onclick="cerrarSesion()">Cerrar sesión</button>
+        </div>
+      </div>
       <div class="sb-status"><span class="dot" id="dot"></span><span id="conn-status">Conectando...</span></div>
     </div>
   </div>
@@ -901,6 +903,7 @@
 <div class="toast" id="toast"></div>
 
 <script src="js/state.js"></script>
+<script src="js/auth.js"></script>
 <script src="js/constants.js"></script>
 <script src="js/api.js"></script>
 <script src="js/utils.js"></script>

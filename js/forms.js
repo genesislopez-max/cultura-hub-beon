@@ -284,6 +284,7 @@ const FORMS={
       await atPost('Checklist',{Persona:nombre,Tipo:'Egreso',Fecha:v('f-egr-fecha'),EstadoKanban:'Aviso dado'});
       const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
       if(persona) await atPatch(`Personas/${persona.id}`,{'Fecha de egreso':v('f-egr-ultimo-dia')});
+      sendSlack(`👋 *Egreso registrado en el Hub*\n${nombre} — último día: ${fmt(v('f-egr-ultimo-dia'))}`);
       return true;
     }},
 
@@ -358,6 +359,7 @@ const FORMS={
         evento=`📝 Review Glassdoor — ${persona}`;
       }
       await atPost('Eventos',{Evento:evento,Tipo:tipo,Fecha:fecha,Estado:'Pendiente'});
+      if(tipo==='Glassdoor') sendSlack(`📝 *Reminder de Glassdoor creado*\n${evento.replace(/.*—\s*/,'')} — a solicitar el ${fmt(fecha)}`);
       return true;
     }},
 

@@ -6,12 +6,18 @@
 function buildPersonaCompletaHTML(v={},mostrarEgreso=false){
   const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
   const opt=(val,cur)=>`<option value="${val}"${val===(cur||'')?' selected':''}>${val}</option>`;
+  // COO/Founder ya no se pueden asignar al dar de alta — son roles fijos de
+  // 1 persona. Si ya estaba cargado así (edición), se deja la opción para
+  // no perderlo sin querer al guardar.
+  const rolActual=v['Rol en empresa'];
+  const rolesBase=['Engineer','Core Team','Supervisor','TEM','Lead','Manager'];
+  const roles=(rolActual==='COO'||rolActual==='Founder')?[...rolesBase,rolActual]:rolesBase;
   return`
 <div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-per-nombre" placeholder="Nombre y apellido" value="${v.Nombre||''}"></div>
-<div class="field-group"><label class="field-label">Mail</label><input class="field-input" id="f-per-mail" type="email" placeholder="nombre@beon.tech" value="${v.Mail||''}"></div>
+<div class="field-group"><label class="field-label">BEON mail</label><input class="field-input" id="f-per-mail" type="email" placeholder="nombre@beon.tech" value="${v.Mail||''}"></div>
 <div class="field-group"><label class="field-label">Rol en empresa *</label>
-  <select class="field-input" id="f-per-rol">
-    ${['Engineer','Core Team','Supervisor','TEM','Lead','Manager','COO','Founder'].map(r=>opt(r,v['Rol en empresa'])).join('')}
+  <select class="field-input" id="f-per-rol" onchange="actualizarManagerOptions()">
+    ${roles.map(r=>opt(r,rolActual)).join('')}
   </select>
 </div>
 <div class="field-group"><label class="field-label">Nivel Loyalty</label>
@@ -25,13 +31,31 @@ function buildPersonaCompletaHTML(v={},mostrarEgreso=false){
 </div>
 <div class="field-group"><label class="field-label">País</label><input class="field-input" id="f-per-pais" placeholder="Ej: Argentina" value="${v['País']||''}"></div>
 <div class="field-group"><label class="field-label">Ciudad</label><input class="field-input" id="f-per-ciudad" placeholder="Ej: Buenos Aires" value="${v.Ciudad||''}"></div>
-<div class="field-group"><label class="field-label">Manager</label><input class="field-input" id="f-per-manager" placeholder="TEM / Manager a cargo" value="${v.Manager||''}"></div>
+<div class="field-group"><label class="field-label">Manager</label>
+  <input class="field-input" id="f-per-manager" list="per-managers-list" placeholder="TEM / Manager a cargo" value="${v.Manager||''}">
+  <datalist id="per-managers-list"></datalist>
+</div>
 <div class="field-group"><label class="field-label">Fecha de ingreso</label><input class="field-input" id="f-per-ingreso" type="date" value="${v['Fecha de ingreso']||''}"></div>
 <div class="field-group"><label class="field-label">Fecha de cumpleaños</label><input class="field-input" id="f-per-cumple" type="date" value="${v['Fecha de cumpleaños']||''}"></div>
 ${mostrarEgreso?`<div class="field-group"><label class="field-label">Fecha de egreso (último día)</label><input class="field-input" id="f-per-egreso" type="date" value="${v['Fecha de egreso']||''}"></div>`:''}
 <div class="field-group"><label class="field-label">Comentarios</label><textarea class="field-input" id="f-per-comentarios" placeholder="Notas sobre el ingreso">${v.Comentarios||''}</textarea></div>
 `;
 }
+// Sugerencias de Manager según el Rol en empresa elegido: Engineers ven a
+// los TEM, Core Team ve a Supervisor/Lead/Manager/Founder/COO. Queda como
+// datalist (no select estricto) para poder tipear un nombre que no esté
+// cargado todavía en Personas.
+function actualizarManagerOptions(){
+  const rol=document.getElementById('f-per-rol')?.value;
+  const ROLES_MANAGER_ENGINEER=new Set(['TEM']);
+  const ROLES_MANAGER_CORE=new Set(['Supervisor','Lead','Manager','Founder','COO']);
+  const rolesValidos=rol==='Engineer'?ROLES_MANAGER_ENGINEER:rol==='Core Team'?ROLES_MANAGER_CORE:null;
+  const candidatos=rolesValidos?(cachePersonasRaw||[]).filter(p=>rolesValidos.has((p.fields['Rol en empresa']||'').trim())):[];
+  const nombres=[...new Set(candidatos.map(p=>p.fields.Nombre).filter(Boolean))].sort();
+  const dl=document.getElementById('per-managers-list');
+  if(dl) dl.innerHTML=nombres.map(n=>`<option value="${n}">`).join('');
+}
+
 // esEdicion=true permite vaciar un campo para borrarlo; en alta simplemente se omite
 function leerPersonaCompletaForm(esEdicion){
   const v=id=>document.getElementById(id)?.value||'';
@@ -58,6 +82,7 @@ function abrirEdicionPersona(nombre){
   _openFormModal({
     title:`Editar — ${nombre}`,
     html:()=>buildPersonaCompletaHTML(persona.fields,true),
+    onMount:actualizarManagerOptions,
     save:async()=>{
       const fields=leerPersonaCompletaForm(true);
       if(!fields) return false;
@@ -202,6 +227,7 @@ const FORMS={
     }},
 
   engineers:{title:'Nueva persona',html:()=>buildPersonaCompletaHTML(),
+    onMount:actualizarManagerOptions,
     save:async()=>{
       const fields=leerPersonaCompletaForm(false);
       if(!fields) return false;
@@ -229,6 +255,7 @@ const FORMS={
   // El checklist en el Kanban se crea solo al recargar (sincronizarPersonasEnKanban),
   // ya con el proyecto/mail/país copiados para que se vean en la tarjeta.
   ingresos:{title:'Nuevo ingreso',html:()=>buildPersonaCompletaHTML(),
+    onMount:actualizarManagerOptions,
     save:async()=>{
       const fields=leerPersonaCompletaForm(false);
       if(!fields) return false;

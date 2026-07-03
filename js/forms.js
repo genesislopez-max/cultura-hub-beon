@@ -174,7 +174,7 @@ const FORMS={
   </select>
 </div>
 <div class="field-group"><label class="field-label">Beneficio *</label>
-  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef()">
+  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef();toggleCamposTerapia();">
     <option value="">Seleccioná un beneficio…</option>
     ${beneficios.map(b=>`<option value="${b}">${b}</option>`).join('')}
   </select>
@@ -183,15 +183,36 @@ const FORMS={
   <input class="field-input" id="f-ba-monto" type="number" min="0" placeholder="Se autocompleta si el beneficio tiene valor fijo">
 </div>
 <div class="field-group"><label class="field-label">Fecha activación</label><input class="field-input" id="f-ba-fecha" type="date"></div>
+<div id="fg-ba-terapia" style="display:none">
+  <div class="field-group"><label class="field-label">Frecuencia</label>
+    <select class="field-input" id="f-ba-frecuencia">
+      <option value="">Seleccioná…</option>
+      <option value="Semanal">Semanal</option>
+      <option value="Quincenal">Quincenal</option>
+      <option value="Mensual">Mensual</option>
+      <option value="Otro">Otro</option>
+    </select>
+  </div>
+  <div class="field-group"><label class="field-label">Profesional asignado</label><input class="field-input" id="f-ba-profesional" placeholder="Nombre del/de la profesional"></div>
+</div>
 <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">Si el beneficio tiene valor fijo en el catálogo, se autocompleta. Podés modificarlo.</div>
 `;},
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
-      if(!v('f-ba-persona')){toast('La persona es obligatoria',true);return false;}
-      if(!v('f-ba-beneficio')){toast('El beneficio es obligatorio',true);return false;}
-      const fields={Persona:v('f-ba-persona'),Beneficio:v('f-ba-beneficio'),Estado:'Activo'};
+      const nombrePersona=v('f-ba-persona'), nombreBeneficio=v('f-ba-beneficio');
+      if(!nombrePersona){toast('La persona es obligatoria',true);return false;}
+      if(!nombreBeneficio){toast('El beneficio es obligatorio',true);return false;}
+      const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombrePersona.trim());
+      const beneficio=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===nombreBeneficio);
+      if(!persona||!beneficio){toast('No se encontró la persona o el beneficio seleccionado',true);return false;}
+      // Persona y Beneficio son linked records en Airtable — van como array de IDs, no como texto.
+      const fields={Persona:[persona.id],Beneficio:[beneficio.id],Estado:'Activo'};
       if(v('f-ba-fecha')) fields['Fecha activación']=v('f-ba-fecha');
       if(v('f-ba-monto')) fields.Monto=Number(v('f-ba-monto'));
+      if(esBeneficioTerapia(nombreBeneficio)){
+        if(v('f-ba-frecuencia')) fields.Frecuencia=v('f-ba-frecuencia');
+        if(v('f-ba-profesional')) fields['Profesional Asignado']=v('f-ba-profesional');
+      }
       await atPost('Beneficios Asignados',fields);return true;
     }},
 

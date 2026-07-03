@@ -141,9 +141,6 @@ async function loadPersonas(){
   cachePersonasRaw=recs;
   cachePersonasPorRol={TEM:[],Manager:[],Lead:[]};
 
-  // Roles que pertenecen a Core Team
-  const CORE_ROLES=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
-
   const activos=recs.filter(r=>!yaEgreso(r));
   const engineers=[], coreTeam=[];
 
@@ -153,7 +150,7 @@ async function loadPersonas(){
     if(rol==='TEM') cachePersonasPorRol.TEM.push(nom);
     if(rol==='Manager') cachePersonasPorRol.Manager.push(nom);
     if(rol==='Lead') cachePersonasPorRol.Lead.push(nom);
-    if(CORE_ROLES.has(rol)) coreTeam.push(r);
+    if(CORE_TEAM_ROLES.has(rol)) coreTeam.push(r);
     else engineers.push(r); // Engineer y cualquier rol no clasificado va a Engineers
   });
 

@@ -103,6 +103,9 @@ const COL_CNT_EGRESO={
   'Offboarding completo':'kc-Offboarding-completo',
 };
 const rolColor={Engineer:'badge-blue',TEM:'badge-purple',Manager:'badge-amber',Lead:'badge-green','Core Team':'badge-purple',Otro:'badge-gray',Supervisor:'badge-amber',COO:'badge-amber',Founder:'badge-amber'};
+// Roles que pertenecen a Core Team — usado en Personas y Cumpleaños para
+// clasificar a alguien en un grupo u otro.
+const CORE_TEAM_ROLES=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
 const NIVELES=['Spark','Ray','Lightning','Thunder','Storm'];
 const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
 const LOYALTY_ORDER=['Spark','Ray','Lightning','Thunder','Storm'];

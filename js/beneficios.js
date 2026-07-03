@@ -40,11 +40,19 @@ function poblarFiltroBeneficioNombre(){
   sel.innerHTML='<option value="">Todos los beneficios</option>'+nombres.map(n=>`<option value="${n}"${n===actual?' selected':''}>${n}</option>`).join('');
 }
 
+// El botón "+" de arriba abre un form distinto según el tab activo: alta de
+// beneficio al catálogo en "Catálogo", o asignación de un beneficio a una
+// persona puntual en "Por persona" (FORMS['beneficios-asignados'] ya existía
+// pero no estaba conectado a ningún botón).
 function switchBenefTab(tab, btn){
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   document.getElementById('benef-tab-catalogo').style.display=tab==='catalogo'?'':'none';
   document.getElementById('benef-tab-personas').style.display=tab==='personas'?'':'none';
+  const formKey=tab==='personas'?'beneficios-asignados':'beneficios';
+  currentForm=FORMS[formKey];
+  const lbl=document.getElementById('btn-label');
+  if(lbl) lbl.textContent=LABELS[formKey];
 }
 
 function renderBenefMetricas(){

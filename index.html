@@ -402,6 +402,12 @@
           <button class="tab-btn" onclick="switchTareasTab('calendario',this)">Calendario</button>
         </div>
 
+        <div style="display:flex;align-items:center;gap:8px;margin:14px 0 0;">
+          <select class="filter-select" id="tareas-filtro-asignado" onchange="filtrarTareas()">
+            <option value="">Todos los asignados</option>
+          </select>
+        </div>
+
         <div id="tareas-tab-kanban" style="margin-top:16px">
           <div class="kanban-board" id="kb-tareas">
             <div class="kanban-col col-tarea-porhacer" data-col="Por hacer">
@@ -488,6 +494,9 @@
                 <i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="benef-search" placeholder="Buscar beneficio…" oninput="filtrarBeneficios()">
               </div>
+              <select class="filter-select" id="benef-nombre" onchange="filtrarBeneficios()">
+                <option value="">Todos los beneficios</option>
+              </select>
               <select class="filter-select" id="benef-grupo" onchange="filtrarBeneficios()">
                 <option value="">Todos los grupos</option>
                 <option value="Engineers">Engineers</option>

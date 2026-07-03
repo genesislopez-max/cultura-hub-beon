@@ -403,7 +403,7 @@ const FORMS={
     }},
 
   tareas:{title:'Nueva tarea',html:()=>{
-    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    const personas=personasAreaPeople();
     return`
 <div class="field-group"><label class="field-label">Título *</label><input class="field-input" id="f-tar-titulo" placeholder="Ej: Preparar presentación AW"></div>
 <div class="field-group"><label class="field-label">Asignado a *</label>
@@ -411,6 +411,7 @@ const FORMS={
     <option value="">Seleccioná una persona…</option>
     ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
   </select>
+  ${!personas.length?'<div class="field-hint" style="color:#C62828">No hay nadie con Área = "People" cargado en Airtable todavía — completá ese campo en Personas para poder asignar tareas.</div>':''}
 </div>
 <div class="field-group"><label class="field-label">Fecha límite *</label><input class="field-input" id="f-tar-fecha" type="date"></div>
 <div class="field-group"><label class="field-label">Descripción</label><textarea class="field-input" id="f-tar-desc" placeholder="Detalles de la tarea"></textarea></div>

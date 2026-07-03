@@ -1,13 +1,40 @@
 // ─── TAREAS (tipo Asana) — Kanban + Calendario ────────────────────────────────
 const COL_SUF_TAREA={'Por hacer':'Por-hacer','En progreso':'En-progreso','Hecho':'Hecho'};
 
+// Personas del área de People — son las únicas asignables en el formulario de
+// Tareas. El campo Área se carga a mano en Airtable (no tiene form propio en
+// el Hub todavía), así que si el dropdown aparece vacío hay que revisar que
+// esté completo ahí.
+function personasAreaPeople(){
+  return (cachePersonasRaw||[]).filter(p=>(p.fields['Área']||p.fields['Area']||'').trim()==='People').map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+}
+
 async function loadTareas(){
   const d=await atGet('Tareas','&sort[0][field]=Fecha&sort[0][direction]=asc');
   cacheTareasRaw=d.records||[];
+  poblarFiltroTareas();
   renderTareasKanban();
   renderTareasCalendario();
   actualizarMetricasTareas();
   document.getElementById('bc-tareas').textContent=cacheTareasRaw.filter(r=>r.fields.Estado!=='Hecho').length;
+}
+
+function poblarFiltroTareas(){
+  const sel=document.getElementById('tareas-filtro-asignado');
+  if(!sel) return;
+  const actual=sel.value;
+  const nombres=[...new Set(cacheTareasRaw.map(r=>r.fields.Asignado).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">Todos los asignados</option>'+nombres.map(n=>`<option value="${n}"${n===actual?' selected':''}>${n}</option>`).join('');
+}
+
+function filtrarTareas(){
+  renderTareasKanban();
+  renderTareasCalendario();
+}
+
+function tareasFiltradas(){
+  const asignado=document.getElementById('tareas-filtro-asignado')?.value||'';
+  return asignado?cacheTareasRaw.filter(r=>r.fields.Asignado===asignado):cacheTareasRaw;
 }
 
 function actualizarMetricasTareas(){
@@ -45,11 +72,12 @@ function tarjetaTarea(r){
 function renderTareasKanban(){
   const board=document.getElementById('kb-tareas');
   if(!board) return;
+  const rows=tareasFiltradas();
   Object.entries(COL_SUF_TAREA).forEach(([estado,suf])=>{
     const cont=document.getElementById(`cardst-${suf}`);
     const cnt=document.getElementById(`kct-${suf}`);
     if(!cont||!cnt) return;
-    const delEstado=cacheTareasRaw.filter(r=>(r.fields.Estado||'Por hacer')===estado);
+    const delEstado=rows.filter(r=>(r.fields.Estado||'Por hacer')===estado);
     cnt.textContent=delEstado.length;
     cont.innerHTML='';
     if(!delEstado.length){cont.innerHTML='<div class="kanban-empty">Sin tareas</div>';return;}
@@ -111,7 +139,7 @@ function renderTareasCalendario(){
   const totalCeldas=Math.ceil((diaSemanaInicio+ultimoDia.getDate())/7)*7;
 
   const porFecha={};
-  cacheTareasRaw.forEach(r=>{
+  tareasFiltradas().forEach(r=>{
     if(!r.fields.Fecha) return;
     (porFecha[r.fields.Fecha]=porFecha[r.fields.Fecha]||[]).push(r);
   });
@@ -126,14 +154,14 @@ function renderTareasCalendario(){
     const esHoy=fecha.getTime()===hoy.getTime();
     const fechaStr=`${fecha.getFullYear()}-${String(fecha.getMonth()+1).padStart(2,'0')}-${String(fecha.getDate()).padStart(2,'0')}`;
     const tareasDia=porFecha[fechaStr]||[];
-    html+=`<div class="tareas-cal-cell${esOtroMes?' otro-mes':''}${esHoy?' hoy':''}">
+    html+=`<div class="tareas-cal-cell${esOtroMes?' otro-mes':''}${esHoy?' hoy':''}" title="Agregar tarea el ${fechaStr}" onclick="abrirNuevaTareaConFecha('${fechaStr}')">
       <div class="tareas-cal-daynum">${fecha.getDate()}</div>
       ${tareasDia.map(r=>{
         const estado=r.fields.Estado||'Por hacer';
         const bg=estado==='Hecho'?'#D1FAE5':estado==='En progreso'?'#DBEAFE':'#FEF3C7';
         const fg=estado==='Hecho'?'#065F46':estado==='En progreso'?'#1E40AF':'#92400E';
         const titulo=(r.fields.Título||'—').replace(/"/g,'&quot;');
-        return`<div class="tareas-cal-chip" style="background:${bg};color:${fg}" title="${titulo} — ${r.fields.Asignado||''}" onclick="abrirEdicionTarea('${r.id}')">${r.fields.Título||'—'}</div>`;
+        return`<div class="tareas-cal-chip" style="background:${bg};color:${fg}" title="${titulo} — ${r.fields.Asignado||''}" onclick="event.stopPropagation();abrirEdicionTarea('${r.id}')">${r.fields.Título||'—'}</div>`;
       }).join('')}
     </div>`;
   }
@@ -141,18 +169,32 @@ function renderTareasCalendario(){
   grid.innerHTML=html;
 }
 
+// Crea una tarea nueva con la Fecha límite pre-cargada — se abre al hacer
+// click en un día vacío del Calendario, para no tener que ir al botón
+// "+Nueva tarea" de arriba y volver a tipear la fecha.
+function abrirNuevaTareaConFecha(fechaStr){
+  _openFormModal({
+    ...FORMS.tareas,
+    onMount:()=>{const el=document.getElementById('f-tar-fecha');if(el)el.value=fechaStr;},
+  });
+}
+
 function abrirEdicionTarea(id){
   const tarea=cacheTareasRaw.find(r=>r.id===id);
   if(!tarea) return;
   const f=tarea.fields;
-  const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+  // Si la tarea ya estaba asignada a alguien que ya no es de People (o que
+  // se cargó antes de este filtro), se conserva la opción para no perder el
+  // dato al editar otro campo sin querer.
+  const personas=personasAreaPeople();
+  const opciones=(f.Asignado&&!personas.includes(f.Asignado))?[...personas,f.Asignado]:personas;
   _openFormModal({
     title:'Editar tarea',
     html:()=>`
 <div class="field-group"><label class="field-label">Título *</label><input class="field-input" id="f-tar-titulo" value="${f.Título||''}"></div>
 <div class="field-group"><label class="field-label">Asignado a *</label>
   <select class="field-input" id="f-tar-asignado">
-    ${personas.map(n=>`<option value="${n}"${n===f.Asignado?' selected':''}>${n}</option>`).join('')}
+    ${opciones.map(n=>`<option value="${n}"${n===f.Asignado?' selected':''}>${n}</option>`).join('')}
   </select>
 </div>
 <div class="field-group"><label class="field-label">Fecha límite *</label><input class="field-input" id="f-tar-fecha" type="date" value="${f.Fecha||''}"></div>

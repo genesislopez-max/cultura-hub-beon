@@ -39,6 +39,7 @@
     <button class="sb-item" onclick="showSection('egresos',this)"><i class="ti ti-user-minus"></i>Egresos <span class="bc" id="bc-egresos">0</span></button>
     <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-brand-google"></i>Glassdoor</button>
     <button class="sb-item" onclick="showSection('proyectos',this)"><i class="ti ti-folder"></i>Proyectos</button>
+    <button class="sb-item" onclick="showSection('tareas',this)"><i class="ti ti-checklist"></i>Tareas <span class="bc" id="bc-tareas">0</span></button>
     <div class="sb-section">Beneficios</div>
     <button class="sb-item" onclick="showSection('beneficios',this)"><i class="ti ti-gift"></i>Beneficios</button>
     <button class="sb-item" onclick="showSection('ambassadors',this)"><i class="ti ti-plane"></i>Ambassador Week</button>
@@ -384,6 +385,48 @@
             <thead><tr><th>Proyecto</th><th>Inicio</th><th>Devs</th><th>Publicaciones</th><th>Último Meet</th><th>Promedio entre pubs.</th><th></th></tr></thead>
             <tbody id="tbody-proyectos"></tbody>
           </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAREAS -->
+      <div class="section-page" id="page-tareas">
+        <div class="metrics-3">
+          <div class="metric"><div class="metric-label">Por hacer</div><div class="metric-val" style="color:#9a6700" id="mt-porhacer">—</div><div class="metric-sub">pendientes</div></div>
+          <div class="metric"><div class="metric-label">Vencidas</div><div class="metric-val" style="color:#C62828" id="mt-vencidas">—</div><div class="metric-sub">sin completar</div></div>
+          <div class="metric"><div class="metric-label">Hechas</div><div class="metric-val" style="color:#0F6E56" id="mt-hechas">—</div><div class="metric-sub">completadas</div></div>
+        </div>
+
+        <div class="tab-bar" style="margin-bottom:0">
+          <button class="tab-btn active" onclick="switchTareasTab('kanban',this)">Kanban</button>
+          <button class="tab-btn" onclick="switchTareasTab('calendario',this)">Calendario</button>
+        </div>
+
+        <div id="tareas-tab-kanban" style="margin-top:16px">
+          <div class="kanban-board" id="kb-tareas">
+            <div class="kanban-col col-tarea-porhacer" data-col="Por hacer">
+              <div class="kanban-col-head"><span class="kanban-col-title">Por hacer</span><span class="kanban-col-count" id="kct-Por-hacer">0</span></div>
+              <div class="kanban-cards" id="cardst-Por-hacer"><div class="kanban-empty">Sin tareas</div></div>
+            </div>
+            <div class="kanban-col col-tarea-enproceso" data-col="En progreso">
+              <div class="kanban-col-head"><span class="kanban-col-title">En progreso</span><span class="kanban-col-count" id="kct-En-progreso">0</span></div>
+              <div class="kanban-cards" id="cardst-En-progreso"><div class="kanban-empty">Sin tareas</div></div>
+            </div>
+            <div class="kanban-col col-tarea-hecho" data-col="Hecho">
+              <div class="kanban-col-head"><span class="kanban-col-title">Hecho</span><span class="kanban-col-count" id="kct-Hecho">0</span></div>
+              <div class="kanban-cards" id="cardst-Hecho"><div class="kanban-empty">Sin tareas</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tareas-tab-calendario" style="display:none;margin-top:16px">
+          <div class="table-wrap" style="border-radius:13px;">
+            <div class="table-head">
+              <button class="pag-btn" onclick="cambiarMesTareas(-1)">← Anterior</button>
+              <span class="table-head-title" id="tareas-cal-mes">—</span>
+              <button class="pag-btn" onclick="cambiarMesTareas(1)">Siguiente →</button>
+            </div>
+            <div id="tareas-calendario-grid" style="padding:14px;"></div>
           </div>
         </div>
       </div>
@@ -920,6 +963,7 @@
 <script src="js/aniversarios.js"></script>
 <script src="js/glassdoor.js"></script>
 <script src="js/proyectos.js"></script>
+<script src="js/tareas.js"></script>
 <script src="js/ingresos-egresos.js"></script>
 <script src="js/beneficios.js"></script>
 <script src="js/offsites.js"></script>

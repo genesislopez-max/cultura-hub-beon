@@ -363,6 +363,30 @@ const FORMS={
       return true;
     }},
 
+  tareas:{title:'Nueva tarea',html:()=>{
+    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+    return`
+<div class="field-group"><label class="field-label">Título *</label><input class="field-input" id="f-tar-titulo" placeholder="Ej: Preparar presentación AW"></div>
+<div class="field-group"><label class="field-label">Asignado a *</label>
+  <select class="field-input" id="f-tar-asignado">
+    <option value="">Seleccioná una persona…</option>
+    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Fecha límite *</label><input class="field-input" id="f-tar-fecha" type="date"></div>
+<div class="field-group"><label class="field-label">Descripción</label><textarea class="field-input" id="f-tar-desc" placeholder="Detalles de la tarea"></textarea></div>
+`;},
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      const titulo=v('f-tar-titulo'),asignado=v('f-tar-asignado'),fecha=v('f-tar-fecha');
+      if(!titulo){toast('El título es obligatorio',true);return false;}
+      if(!asignado){toast('Asigná la tarea a alguien',true);return false;}
+      if(!fecha){toast('La fecha límite es obligatoria',true);return false;}
+      await atPost('Tareas',{Título:titulo,Asignado:asignado,Fecha:fecha,Descripción:v('f-tar-desc'),Estado:'Por hacer'});
+      sendSlack(`✅ *Nueva tarea asignada*\n*${titulo}* — ${asignado} (vence el ${fmt(fecha)})`);
+      return true;
+    }},
+
   offsites:{title:'Registrar Off Site',html:()=>{
     const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
     const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();

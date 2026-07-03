@@ -1,3 +1,34 @@
+// Combobox unificado — un <select> nativo (mismo look que el resto de los
+// dropdowns del Hub: checkmark y resaltado del navegador) con una opción
+// final "Otro (escribir a mano)" que revela un input de texto libre para
+// cargar un valor que todavía no está en la lista. Reemplaza los inputs con
+// <datalist>, que el navegador dibuja como una lista plana sin ese estilo.
+function buildSelectConOtro(id,opciones,valorActual,placeholderOtro,placeholderSelect){
+  const enLista=!!valorActual&&opciones.includes(valorActual);
+  const esOtro=!!valorActual&&!enLista;
+  return`<select class="field-input" id="${id}" onchange="toggleOtroSelect('${id}')">
+    <option value="">${placeholderSelect||'Seleccioná…'}</option>
+    ${opciones.map(o=>`<option value="${o}"${o===valorActual?' selected':''}>${o}</option>`).join('')}
+    <option value="__otro__"${esOtro?' selected':''}>Otro (escribir a mano)</option>
+  </select>
+  <input class="field-input" id="${id}-otro" placeholder="${placeholderOtro}" value="${esOtro?valorActual:''}" style="margin-top:8px;display:${esOtro?'block':'none'}">`;
+}
+function toggleOtroSelect(id){
+  const sel=document.getElementById(id);
+  const otro=document.getElementById(id+'-otro');
+  if(!sel||!otro) return;
+  otro.style.display=sel.value==='__otro__'?'block':'none';
+}
+function valorSelectOtro(id){
+  const sel=document.getElementById(id);
+  if(!sel) return '';
+  if(sel.value==='__otro__'){
+    const otro=document.getElementById(id+'-otro');
+    return otro?otro.value.trim():'';
+  }
+  return sel.value;
+}
+
 // Form completo de Persona — lo usan "Nueva persona", "Nuevo ingreso" (misma carga,
 // es la forma de no tener que completar nada aparte) y la edición desde la
 // tarjeta del Kanban de Ingresos/Egresos. mostrarEgreso solo se activa al
@@ -26,14 +57,12 @@ function buildPersonaCompletaHTML(v={},mostrarEgreso=false){
   </select>
 </div>
 <div class="field-group"><label class="field-label">Proyecto</label>
-  <input class="field-input" id="f-per-proyecto" list="per-proyectos-list" placeholder="Ej: Atlas" value="${v.Proyecto||''}">
-  <datalist id="per-proyectos-list">${proyectos.map(p=>`<option value="${p}">`).join('')}</datalist>
+  ${buildSelectConOtro('f-per-proyecto',proyectos,v.Proyecto||'','Ej: Atlas')}
 </div>
 <div class="field-group"><label class="field-label">País</label><input class="field-input" id="f-per-pais" placeholder="Ej: Argentina" value="${v['País']||''}"></div>
 <div class="field-group"><label class="field-label">Ciudad</label><input class="field-input" id="f-per-ciudad" placeholder="Ej: Buenos Aires" value="${v.Ciudad||''}"></div>
 <div class="field-group"><label class="field-label">Manager</label>
-  <input class="field-input" id="f-per-manager" list="per-managers-list" placeholder="TEM / Manager a cargo" value="${v.Manager||''}">
-  <datalist id="per-managers-list"></datalist>
+  ${buildSelectConOtro('f-per-manager',[],v.Manager||'','TEM / Manager a cargo')}
 </div>
 <div class="field-group"><label class="field-label">Fecha de ingreso</label><input class="field-input" id="f-per-ingreso" type="date" value="${v['Fecha de ingreso']||''}"></div>
 <div class="field-group"><label class="field-label">Fecha de cumpleaños</label><input class="field-input" id="f-per-cumple" type="date" value="${v['Fecha de cumpleaños']||''}"></div>
@@ -42,18 +71,27 @@ ${mostrarEgreso?`<div class="field-group"><label class="field-label">Fecha de eg
 `;
 }
 // Sugerencias de Manager según el Rol en empresa elegido: Engineers ven a
-// los TEM, Core Team ve a Supervisor/Lead/Manager/Founder/COO. Queda como
-// datalist (no select estricto) para poder tipear un nombre que no esté
-// cargado todavía en Personas.
+// los TEM, Core Team ve a Supervisor/Lead/Manager/Founder/COO. Reconstruye
+// las opciones del <select> preservando lo que ya estaba elegido/tipeado —
+// si ese valor no entra en la nueva lista de candidatos, cae en "Otro" con
+// el texto conservado en vez de perderse.
 function actualizarManagerOptions(){
+  const sel=document.getElementById('f-per-manager');
+  if(!sel) return;
+  const valorPrevio=valorSelectOtro('f-per-manager');
   const rol=document.getElementById('f-per-rol')?.value;
   const ROLES_MANAGER_ENGINEER=new Set(['TEM']);
   const ROLES_MANAGER_CORE=new Set(['Supervisor','Lead','Manager','Founder','COO']);
   const rolesValidos=rol==='Engineer'?ROLES_MANAGER_ENGINEER:rol==='Core Team'?ROLES_MANAGER_CORE:null;
   const candidatos=rolesValidos?(cachePersonasRaw||[]).filter(p=>rolesValidos.has((p.fields['Rol en empresa']||'').trim())):[];
   const nombres=[...new Set(candidatos.map(p=>p.fields.Nombre).filter(Boolean))].sort();
-  const dl=document.getElementById('per-managers-list');
-  if(dl) dl.innerHTML=nombres.map(n=>`<option value="${n}">`).join('');
+  const enLista=!!valorPrevio&&nombres.includes(valorPrevio);
+  sel.innerHTML=`<option value="">Seleccioná…</option>${nombres.map(n=>`<option value="${n}"${n===valorPrevio?' selected':''}>${n}</option>`).join('')}<option value="__otro__"${valorPrevio&&!enLista?' selected':''}>Otro (escribir a mano)</option>`;
+  const otro=document.getElementById('f-per-manager-otro');
+  if(otro){
+    otro.style.display=valorPrevio&&!enLista?'block':'none';
+    if(valorPrevio&&!enLista) otro.value=valorPrevio;
+  }
 }
 
 // esEdicion=true permite vaciar un campo para borrarlo; en alta simplemente se omite
@@ -62,11 +100,12 @@ function leerPersonaCompletaForm(esEdicion){
   if(!v('f-per-nombre')){toast('El nombre es obligatorio',true);return null;}
   const fields={Nombre:v('f-per-nombre'),'Rol en empresa':v('f-per-rol')||'Engineer','Nivel Loyalty':v('f-per-nivel')||'Spark'};
   const setTexto=(campo,id)=>{const val=v(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]='';};
+  const setTextoSelectOtro=(campo,id)=>{const val=valorSelectOtro(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]='';};
   setTexto('Mail','f-per-mail');
-  setTexto('Proyecto','f-per-proyecto');
+  setTextoSelectOtro('Proyecto','f-per-proyecto');
   setTexto('País','f-per-pais');
   setTexto('Ciudad','f-per-ciudad');
-  setTexto('Manager','f-per-manager');
+  setTextoSelectOtro('Manager','f-per-manager');
   setTexto('Comentarios','f-per-comentarios');
   const setFecha=(campo,id)=>{const val=v(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]=null;};
   setFecha('Fecha de ingreso','f-per-ingreso');
@@ -104,8 +143,7 @@ const FORMS={
   </select>
 </div>
 <div class="field-group"><label class="field-label">Edición AW *</label>
-  <input class="field-input" id="f-aw-edicion" list="aw-ediciones-list" placeholder="Ej: diciembre 2021">
-  <datalist id="aw-ediciones-list">${ediciones.map(e=>`<option value="${e}">`).join('')}</datalist>
+  ${buildSelectConOtro('f-aw-edicion',ediciones,'','Ej: diciembre 2021')}
 </div>
 <div class="field-group"><label class="field-label">Acompañantes</label>
   <input class="field-input" id="f-aw-acomp" type="number" min="0" placeholder="0 si fue solo/a">
@@ -115,11 +153,12 @@ const FORMS={
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       if(!v('f-aw-persona')){toast('Seleccioná una persona',true);return false;}
-      if(!v('f-aw-edicion')){toast('La edición AW es obligatoria',true);return false;}
+      const edicion=valorSelectOtro('f-aw-edicion');
+      if(!edicion){toast('La edición AW es obligatoria',true);return false;}
       const persona=cachePersonasRaw.find(p=>p.fields.Nombre===v('f-aw-persona'));
       const nivel=persona?.fields['Nivel Loyalty']||'Spark';
       const pctCalculado=calcPctVuelo(v('f-aw-persona'),nivel,cacheAWRaw);
-      const fields={Persona:v('f-aw-persona'),'Edición AW':v('f-aw-edicion'),'Porcentaje cubierto':pctCalculado};
+      const fields={Persona:v('f-aw-persona'),'Edición AW':edicion,'Porcentaje cubierto':pctCalculado};
       if(v('f-aw-acomp')) fields['Acompañantes']=Number(v('f-aw-acomp'));
       await atPost('Ambassador Week',fields);return true;
     }},
@@ -203,8 +242,7 @@ const FORMS={
   </select>
 </div>
 <div class="field-group"><label class="field-label">País *</label>
-  <input class="field-input" id="f-gt-pais" list="gt-paises-list" placeholder="Ej: Argentina">
-  <datalist id="gt-paises-list">${paises.map(p=>`<option value="${p}">`).join('')}</datalist>
+  ${buildSelectConOtro('f-gt-pais',paises,'','Ej: Argentina')}
 </div>
 <div class="field-group"><label class="field-label">Ciudad *</label><input class="field-input" id="f-gt-ciudad" placeholder="Ej: Buenos Aires"></div>
 <div class="field-group"><label class="field-label">Proyecto</label>
@@ -218,10 +256,11 @@ const FORMS={
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       if(!v('f-gt-persona')){toast('Seleccioná una persona',true);return false;}
-      if(!v('f-gt-pais')){toast('El país es obligatorio',true);return false;}
+      const pais=valorSelectOtro('f-gt-pais');
+      if(!pais){toast('El país es obligatorio',true);return false;}
       if(!v('f-gt-ciudad')){toast('La ciudad es obligatoria',true);return false;}
       if(!v('f-gt-fecha')){toast('La fecha es obligatoria',true);return false;}
-      const fields={BEONer:v('f-gt-persona'),'País':v('f-gt-pais'),Ciudad:v('f-gt-ciudad'),Fecha:v('f-gt-fecha')};
+      const fields={BEONer:v('f-gt-persona'),'País':pais,Ciudad:v('f-gt-ciudad'),Fecha:v('f-gt-fecha')};
       if(v('f-gt-proyecto')) fields.Proyecto=v('f-gt-proyecto');
       await atPost('Get Together',fields);return true;
     }},
@@ -298,8 +337,7 @@ const FORMS={
   </select>
 </div>
 <div class="field-group"><label class="field-label">Persona *</label>
-  <input class="field-input" id="f-cl-persona" list="cl-personas-list" placeholder="Nombre de la persona">
-  <datalist id="cl-personas-list">${personas.map(n=>`<option value="${n}">`).join('')}</datalist>
+  ${buildSelectConOtro('f-cl-persona',personas,'','Nombre de la persona')}
 </div>
 <div class="field-group" id="fg-rol"><label class="field-label">Rol</label>
   <select class="field-input" id="f-cl-rol">
@@ -314,9 +352,10 @@ const FORMS={
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       const tipo=v('f-tipo')||'Ingreso';
-      if(!v('f-cl-persona')){toast('La persona es obligatoria',true);return false;}
+      const persona=valorSelectOtro('f-cl-persona');
+      if(!persona){toast('La persona es obligatoria',true);return false;}
       if(!v('f-cl-fecha')){toast('La fecha es obligatoria',true);return false;}
-      const fields={Persona:v('f-cl-persona'),Tipo:tipo,Fecha:v('f-cl-fecha'),EstadoKanban:tipo==='Egreso'?'Aviso dado':'Pre-ingreso'};
+      const fields={Persona:persona,Tipo:tipo,Fecha:v('f-cl-fecha'),EstadoKanban:tipo==='Egreso'?'Aviso dado':'Pre-ingreso'};
       if(tipo==='Ingreso') fields.Rol=v('f-cl-rol')||'Engineer';
       await atPost('Checklist',fields);return true;
     }},

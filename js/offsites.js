@@ -31,6 +31,69 @@ function switchOSTab(tab,btn){
   if(btn) btn.classList.add('active');
   document.getElementById('os-tab-persona').style.display=tab==='persona'?'':'none';
   document.getElementById('os-tab-proyecto').style.display=tab==='proyecto'?'':'none';
+  const tabMetricas=document.getElementById('os-tab-metricas');
+  if(tabMetricas) tabMetricas.style.display=tab==='metricas'?'':'none';
+  if(tab==='metricas'){
+    poblarSelectorAnio('osq-anio',cacheOSRaw.map(r=>r.fields['Fecha inicio']).filter(Boolean).map(f=>new Date(f+'T12:00:00').getFullYear()));
+    if(!osqInicializado){
+      const hoy=new Date();
+      document.getElementById('osq-anio').value=String(hoy.getFullYear());
+      document.getElementById('osq-trimestre').value=String(Math.floor(hoy.getMonth()/3)+1);
+      osqInicializado=true;
+    }
+    renderOSMetricasQ();
+  }
+}
+
+// "Alta" = un off site cuya Fecha inicio cae dentro del trimestre elegido.
+function renderOSMetricasQ(){
+  const anio=Number(document.getElementById('osq-anio')?.value)||new Date().getFullYear();
+  const q=Number(document.getElementById('osq-trimestre')?.value)||1;
+  const {inicio,fin}=rangoTrimestre(anio,q);
+
+  const enQ=cacheOSRaw.filter(r=>{
+    const f=r.fields['Fecha inicio'];
+    if(!f) return false;
+    const d=new Date(f+'T12:00:00');
+    return d>=inicio&&d<=fin;
+  });
+  document.getElementById('osq-total').textContent=enQ.length;
+  document.getElementById('osq-total-sub').textContent=`Q${q} ${anio}`;
+
+  const personas=new Set(enQ.map(r=>r.fields.Persona).filter(Boolean));
+  document.getElementById('osq-personas').textContent=personas.size;
+
+  document.getElementById('osq-dias').textContent=enQ.reduce((s,r)=>s+calcDiasOS(r.fields),0);
+
+  const conteo={};
+  enQ.forEach(r=>{
+    const dest=r.fields.Destino;
+    if(!dest) return;
+    conteo[dest]=(conteo[dest]||0)+1;
+  });
+  const ranking=Object.entries(conteo).sort((a,b)=>b[1]-a[1]);
+  const top=ranking[0];
+  document.getElementById('osq-top').textContent=top?top[0]:'—';
+  document.getElementById('osq-top-sub').textContent=top?`${top[1]} viaje${top[1]!==1?'s':''} en el Q`:'Sin off sites en este período';
+
+  const cont=document.getElementById('osq-ranking-container');
+  if(!cont) return;
+  if(!ranking.length){
+    cont.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Sin off sites registrados en este trimestre.</div>';
+    return;
+  }
+  const total=enQ.length;
+  cont.innerHTML=`<table class="data-table"><thead><tr><th>Destino</th><th>Off sites en el Q</th><th>% del total</th></tr></thead><tbody>
+    ${ranking.map(([dest,cant])=>{
+      const pct=total?Math.round(cant/total*100):0;
+      return`<tr><td>📍 ${dest}</td><td style="font-weight:600">${cant}</td><td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;max-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
+          <span style="font-size:12px;color:var(--text2)">${pct}%</span>
+        </div>
+      </td></tr>`;
+    }).join('')}
+  </tbody></table>`;
 }
 
 function renderOSMetricas(){

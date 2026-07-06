@@ -86,6 +86,69 @@ function switchGTTab(tab,btn){
   document.getElementById('gt-tab-persona').style.display=tab==='persona'?'':'none';
   document.getElementById('gt-tab-ciudad').style.display=tab==='ciudad'?'':'none';
   document.getElementById('gt-tab-historial').style.display=tab==='historial'?'':'none';
+  const tabMetricas=document.getElementById('gt-tab-metricas');
+  if(tabMetricas) tabMetricas.style.display=tab==='metricas'?'':'none';
+  if(tab==='metricas'){
+    poblarSelectorAnio('gtq-anio',cacheGetTogetherRaw.map(r=>r.fields.Fecha).filter(Boolean).map(f=>new Date(f+'T12:00:00').getFullYear()));
+    if(!gtqInicializado){
+      const hoy=new Date();
+      document.getElementById('gtq-anio').value=String(hoy.getFullYear());
+      document.getElementById('gtq-trimestre').value=String(Math.floor(hoy.getMonth()/3)+1);
+      gtqInicializado=true;
+    }
+    renderGTMetricasQ();
+  }
+}
+
+// "Alta" = un encuentro cuya Fecha cae dentro del trimestre elegido.
+function renderGTMetricasQ(){
+  const anio=Number(document.getElementById('gtq-anio')?.value)||new Date().getFullYear();
+  const q=Number(document.getElementById('gtq-trimestre')?.value)||1;
+  const {inicio,fin}=rangoTrimestre(anio,q);
+
+  const conFecha=cacheGetTogetherRaw.filter(r=>r.fields.Fecha);
+  document.getElementById('gtq-sinfecha').textContent=cacheGetTogetherRaw.length-conFecha.length;
+
+  const enQ=conFecha.filter(r=>{
+    const d=new Date(r.fields.Fecha+'T12:00:00');
+    return d>=inicio&&d<=fin;
+  });
+  document.getElementById('gtq-total').textContent=enQ.length;
+  document.getElementById('gtq-total-sub').textContent=`Q${q} ${anio}`;
+
+  const personas=new Set(enQ.map(r=>r.fields.BEONer).filter(Boolean));
+  document.getElementById('gtq-personas').textContent=personas.size;
+
+  const conteo={};
+  enQ.forEach(r=>{
+    const ciudad=r.fields.Ciudad;
+    if(!ciudad) return;
+    const label=r.fields['País']?`${ciudad} (${r.fields['País']})`:ciudad;
+    conteo[label]=(conteo[label]||0)+1;
+  });
+  const ranking=Object.entries(conteo).sort((a,b)=>b[1]-a[1]);
+  const top=ranking[0];
+  document.getElementById('gtq-top').textContent=top?top[0]:'—';
+  document.getElementById('gtq-top-sub').textContent=top?`${top[1]} encuentro${top[1]!==1?'s':''} en el Q`:'Sin encuentros en este período';
+
+  const cont=document.getElementById('gtq-ranking-container');
+  if(!cont) return;
+  if(!ranking.length){
+    cont.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Sin encuentros registrados en este trimestre.</div>';
+    return;
+  }
+  const total=enQ.length;
+  cont.innerHTML=`<table class="data-table"><thead><tr><th>Ciudad</th><th>Encuentros en el Q</th><th>% del total</th></tr></thead><tbody>
+    ${ranking.map(([ciudad,cant])=>{
+      const pct=total?Math.round(cant/total*100):0;
+      return`<tr><td>${ciudad}</td><td style="font-weight:600">${cant}</td><td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;max-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
+          <span style="font-size:12px;color:var(--text2)">${pct}%</span>
+        </div>
+      </td></tr>`;
+    }).join('')}
+  </tbody></table>`;
 }
 
 function renderGTMetricas(){

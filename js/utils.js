@@ -23,6 +23,38 @@ function safeStr(n){return Array.isArray(n)?n[0]||'':typeof n==='string'?n:Strin
 function av(n){const s=safeStr(n);return AVS[s.split('').reduce((a,c)=>a+c.charCodeAt(0),0)%AVS.length];}
 function ini(n){const s=safeStr(n)||'?';return s.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
 function avH(n){const s=safeStr(n);return`<div class="avatar ${av(s)}">${ini(s)}</div>`;}
+
+// ─── MÉTRICAS POR TRIMESTRE (Beneficios / Off Sites / Get Together / AW) ──────
+const MESES_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+// Puebla un <select> de años con el año actual + los años detectados en los
+// datos, preservando la selección vigente si sigue siendo una opción válida.
+function poblarSelectorAnio(selectId,anios){
+  const sel=document.getElementById(selectId);
+  if(!sel) return;
+  const actual=sel.value;
+  const todos=new Set([new Date().getFullYear(),...anios]);
+  sel.innerHTML=[...todos].sort((a,b)=>b-a).map(a=>`<option value="${a}"${String(a)===actual?' selected':''}>${a}</option>`).join('');
+}
+
+// Rango [inicio,fin] del trimestre calendario q (1-4) del año dado.
+function rangoTrimestre(anio,q){
+  const mesInicio=(q-1)*3;
+  return {inicio:new Date(anio,mesInicio,1),fin:new Date(anio,mesInicio+3,0)};
+}
+
+// Ambassador Week no tiene un campo de fecha real, solo "Edición AW" a mano
+// (ej. "diciembre 2021") — intenta interpretarlo como fecha para poder
+// agruparlo por trimestre. Devuelve 'YYYY-MM-01' o null si no lo reconoce.
+function parsearEdicionAW(texto){
+  if(!texto) return null;
+  const m=String(texto).toLowerCase().match(/([a-záéíóúñ]+)\D{0,3}(\d{4})/i);
+  if(!m) return null;
+  const palabra=m[1];
+  const mesIdx=MESES_ES.findIndex(mes=>mes.startsWith(palabra)||palabra.startsWith(mes));
+  if(mesIdx===-1) return null;
+  return `${m[2]}-${String(mesIdx+1).padStart(2,'0')}-01`;
+}
 // ─── CONFIRM DIALOG ──────────────────────────────────────────────────────────
 function showConfirm(title, msg, onOk){
   document.getElementById('confirm-title').textContent=title;

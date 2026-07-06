@@ -480,6 +480,7 @@
         <div class="tab-bar" style="margin-bottom:0">
           <button class="tab-btn active" onclick="switchBenefTab('catalogo',this)">Catálogo</button>
           <button class="tab-btn" onclick="switchBenefTab('personas',this)">Por persona</button>
+          <button class="tab-btn" onclick="switchBenefTab('metricas',this)">Métricas</button>
         </div>
 
         <!-- CATÁLOGO -->
@@ -561,6 +562,31 @@
               <tbody id="tbody-benef-personas"></tbody>
             </table>
           </div>
+          </div>
+        </div>
+
+        <!-- MÉTRICAS -->
+        <div id="benef-tab-metricas" style="display:none">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head" style="flex-wrap:wrap;gap:8px;">
+              <span class="table-head-title">Métricas del trimestre</span>
+              <div style="display:flex;gap:8px;margin-left:auto;">
+                <select class="filter-select" id="benefq-anio" onchange="renderBenefMetricasQ()"></select>
+                <select class="filter-select" id="benefq-trimestre" onchange="renderBenefMetricasQ()">
+                  <option value="1">Q1 · Ene-Mar</option>
+                  <option value="2">Q2 · Abr-Jun</option>
+                  <option value="3">Q3 · Jul-Sep</option>
+                  <option value="4">Q4 · Oct-Dic</option>
+                </select>
+              </div>
+            </div>
+            <div class="metrics" style="padding:16px 18px 4px;">
+              <div class="metric"><div class="metric-label">Altas en el Q</div><div class="metric-val" style="color:var(--blue)" id="bq-altas">—</div><div class="metric-sub" id="bq-altas-sub"></div></div>
+              <div class="metric"><div class="metric-label">Personas con alta nueva</div><div class="metric-val" style="color:#0F6E56" id="bq-personas">—</div><div class="metric-sub">distintas en el período</div></div>
+              <div class="metric"><div class="metric-label">Beneficio más usado</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="bq-top">—</div><div class="metric-sub" id="bq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">Sin fecha de activación</div><div class="metric-val" id="bq-sinfecha">—</div><div class="metric-sub">no se cuentan en ningún Q</div></div>
+            </div>
+            <div id="benefq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
           </div>
         </div>
 

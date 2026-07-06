@@ -32,6 +32,7 @@ let meetProyectoActual=null; // {id: recordId, nombre: string}
 // Beneficios
 let cacheBenefAsignados=[], cachePresupuestoLoyalty=[];
 let benefExpandido=null; // id del beneficio con la card de personas activas desplegada
+let benefMetricasInicializado=false; // si ya se seteó el Q/año actual por defecto en la pestaña Métricas
 
 // Off Sites
 let cacheOSRaw=[];
@@ -42,6 +43,7 @@ let cacheAWRaw=[];
 
 // Panel lateral persona
 let cacheCapacitaciones=[], cacheGetTogetherRaw=[];
+let spBenefAsigActual=[]; // Beneficios Asignados de la persona con el panel abierto — para editar/eliminar sin recargar
 
 // Tareas (Kanban + Calendario)
 let cacheTareasRaw=[];

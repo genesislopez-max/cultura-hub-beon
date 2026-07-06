@@ -37,9 +37,14 @@ let benefMetricasInicializado=false; // si ya se seteó el Q/año actual por def
 // Off Sites
 let cacheOSRaw=[];
 let cacheOSProyMap = {};
+let osqInicializado=false;
 
 // Ambassador Week
 let cacheAWRaw=[];
+let awqInicializado=false;
+
+// Get Together
+let gtqInicializado=false;
 
 // Panel lateral persona
 let cacheCapacitaciones=[], cacheGetTogetherRaw=[];

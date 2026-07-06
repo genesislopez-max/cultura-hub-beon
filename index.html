@@ -605,6 +605,7 @@
         <div class="tab-bar" style="margin-bottom:0">
           <button class="tab-btn active" onclick="switchAWTab('resumen',this)">Por persona</button>
           <button class="tab-btn" onclick="switchAWTab('historial',this)">Historial completo</button>
+          <button class="tab-btn" onclick="switchAWTab('metricas',this)">Métricas</button>
         </div>
 
         <!-- POR PERSONA -->
@@ -659,6 +660,32 @@
           </div>
         </div>
 
+        <!-- MÉTRICAS -->
+        <div id="aw-tab-metricas" style="display:none">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head" style="flex-wrap:wrap;gap:8px;">
+              <span class="table-head-title">Métricas del trimestre</span>
+              <div style="display:flex;gap:8px;margin-left:auto;">
+                <select class="filter-select" id="awq-anio" onchange="renderAWMetricasQ()"></select>
+                <select class="filter-select" id="awq-trimestre" onchange="renderAWMetricasQ()">
+                  <option value="1">Q1 · Ene-Mar</option>
+                  <option value="2">Q2 · Abr-Jun</option>
+                  <option value="3">Q3 · Jul-Sep</option>
+                  <option value="4">Q4 · Oct-Dic</option>
+                </select>
+              </div>
+            </div>
+            <div class="field-hint" style="padding:8px 18px 0;font-size:11px;color:var(--text3)">Ambassador Week no tiene un campo de fecha propio — el trimestre se infiere del texto de "Edición AW" (ej. "diciembre 2021"). Si no sigue ese formato, la asistencia no se puede ubicar en ningún Q.</div>
+            <div class="metrics" style="padding:12px 18px 4px;">
+              <div class="metric"><div class="metric-label">Asistencias en el Q</div><div class="metric-val" style="color:var(--blue)" id="awq-total">—</div><div class="metric-sub" id="awq-total-sub"></div></div>
+              <div class="metric"><div class="metric-label">Personas distintas</div><div class="metric-val" style="color:#0F6E56" id="awq-personas">—</div><div class="metric-sub">en el período</div></div>
+              <div class="metric"><div class="metric-label">Edición más frecuente</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="awq-top">—</div><div class="metric-sub" id="awq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">Sin edición reconocida</div><div class="metric-val" id="awq-sinfecha">—</div><div class="metric-sub">no se pueden ubicar en ningún Q</div></div>
+            </div>
+            <div id="awq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
+          </div>
+        </div>
+
       </div>
 
     <!-- OFF SITES -->
@@ -674,6 +701,7 @@
         <div class="tab-bar" style="margin-bottom:0">
           <button class="tab-btn active" onclick="switchOSTab('persona',this)">Por persona</button>
           <button class="tab-btn" onclick="switchOSTab('proyecto',this)">Por proyecto</button>
+          <button class="tab-btn" onclick="switchOSTab('metricas',this)">Métricas</button>
         </div>
 
         <!-- POR PERSONA -->
@@ -720,6 +748,30 @@
           </div>
         </div>
 
+        <!-- MÉTRICAS -->
+        <div id="os-tab-metricas" style="display:none">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head" style="flex-wrap:wrap;gap:8px;">
+              <span class="table-head-title">Métricas del trimestre</span>
+              <div style="display:flex;gap:8px;margin-left:auto;">
+                <select class="filter-select" id="osq-anio" onchange="renderOSMetricasQ()"></select>
+                <select class="filter-select" id="osq-trimestre" onchange="renderOSMetricasQ()">
+                  <option value="1">Q1 · Ene-Mar</option>
+                  <option value="2">Q2 · Abr-Jun</option>
+                  <option value="3">Q3 · Jul-Sep</option>
+                  <option value="4">Q4 · Oct-Dic</option>
+                </select>
+              </div>
+            </div>
+            <div class="metrics" style="padding:16px 18px 4px;">
+              <div class="metric"><div class="metric-label">Off sites en el Q</div><div class="metric-val" style="color:var(--blue)" id="osq-total">—</div><div class="metric-sub" id="osq-total-sub"></div></div>
+              <div class="metric"><div class="metric-label">Personas que viajaron</div><div class="metric-val" style="color:#0F6E56" id="osq-personas">—</div><div class="metric-sub">distintas en el período</div></div>
+              <div class="metric"><div class="metric-label">Destino más visitado</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="osq-top">—</div><div class="metric-sub" id="osq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">Días totales</div><div class="metric-val" id="osq-dias">—</div><div class="metric-sub">suma de duraciones en el Q</div></div>
+            </div>
+            <div id="osq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
+          </div>
+        </div>
 
       </div>
 
@@ -735,6 +787,7 @@
           <button class="tab-btn active" onclick="switchGTTab('persona',this)">Por persona</button>
           <button class="tab-btn" onclick="switchGTTab('ciudad',this)">Por ciudad</button>
           <button class="tab-btn" onclick="switchGTTab('historial',this)">Historial completo</button>
+          <button class="tab-btn" onclick="switchGTTab('metricas',this)">Métricas</button>
         </div>
 
         <!-- POR PERSONA -->
@@ -800,6 +853,31 @@
               <tbody id="gt-tbody-hist"></tbody>
             </table>
           </div>
+          </div>
+        </div>
+
+        <!-- MÉTRICAS -->
+        <div id="gt-tab-metricas" style="display:none">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head" style="flex-wrap:wrap;gap:8px;">
+              <span class="table-head-title">Métricas del trimestre</span>
+              <div style="display:flex;gap:8px;margin-left:auto;">
+                <select class="filter-select" id="gtq-anio" onchange="renderGTMetricasQ()"></select>
+                <select class="filter-select" id="gtq-trimestre" onchange="renderGTMetricasQ()">
+                  <option value="1">Q1 · Ene-Mar</option>
+                  <option value="2">Q2 · Abr-Jun</option>
+                  <option value="3">Q3 · Jul-Sep</option>
+                  <option value="4">Q4 · Oct-Dic</option>
+                </select>
+              </div>
+            </div>
+            <div class="metrics" style="padding:16px 18px 4px;">
+              <div class="metric"><div class="metric-label">Encuentros en el Q</div><div class="metric-val" style="color:var(--blue)" id="gtq-total">—</div><div class="metric-sub" id="gtq-total-sub"></div></div>
+              <div class="metric"><div class="metric-label">BEONers distintos</div><div class="metric-val" style="color:#0F6E56" id="gtq-personas">—</div><div class="metric-sub">en el período</div></div>
+              <div class="metric"><div class="metric-label">Ciudad más visitada</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="gtq-top">—</div><div class="metric-sub" id="gtq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">Sin fecha</div><div class="metric-val" id="gtq-sinfecha">—</div><div class="metric-sub">no se cuentan en ningún Q</div></div>
+            </div>
+            <div id="gtq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
           </div>
         </div>
       </div>

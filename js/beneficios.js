@@ -193,6 +193,38 @@ function filaDetalleBeneficio(r){
   return `<tr class="benef-detalle-row" onclick="event.stopPropagation()"><td colspan="6"><div style="padding:12px 18px;background:var(--bg2);border-radius:8px;margin:4px 0;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">${activos.length} persona${activos.length!==1?'s':''} usando este beneficio</div>${items}</div></td></tr>`;
 }
 
+// Filtra en vivo el select de Persona del form de asignación a medida que se
+// tipea en el buscador — evita tener que scrollear una lista larga.
+function filtrarPersonaAsignacion(){
+  const q=(document.getElementById('f-ba-persona-buscar')?.value||'').toLowerCase();
+  const sel=document.getElementById('f-ba-persona');
+  if(!sel) return;
+  const actual=sel.value;
+  const nombres=[...new Set((cachePersonasRaw||[]).map(p=>p.fields.Nombre||'').filter(Boolean))].sort();
+  const filtrados=q?nombres.filter(n=>n.toLowerCase().includes(q)):nombres;
+  sel.innerHTML='<option value="">Seleccioná una persona…</option>'+filtrados.map(n=>`<option value="${n}"${n===actual?' selected':''}>${n}</option>`).join('');
+  if(!filtrados.includes(actual)) actualizarBeneficiosPorPersona();
+}
+
+// Filtra el select de Beneficio según el grupo (Engineers/Core Team) de la
+// persona elegida en el form de asignación — así no se ofrecen beneficios
+// que no le corresponden a su grupo.
+function actualizarBeneficiosPorPersona(){
+  const nombrePersona=document.getElementById('f-ba-persona')?.value||'';
+  const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombrePersona.trim());
+  const grupo=persona?getRolGroup(persona.fields['Rol en empresa']||''):null;
+  const activos=cacheBeneficiosRaw.filter(b=>(b.fields.Estado||'Activo')==='Activo');
+  const filtrados=grupo?activos.filter(b=>{const g=b.fields.Grupo||'Ambos';return g==='Ambos'||g===grupo;}):activos;
+  const nombres=filtrados.map(b=>b.fields.Beneficio||'').filter(Boolean).sort();
+  const sel=document.getElementById('f-ba-beneficio');
+  if(!sel) return;
+  const actual=sel.value;
+  sel.innerHTML='<option value="">Seleccioná un beneficio…</option>'+nombres.map(n=>`<option value="${n}"${n===actual?' selected':''}>${n}</option>`).join('');
+  const hint=document.getElementById('f-ba-beneficio-hint');
+  if(hint) hint.textContent=grupo?`Mostrando beneficios de ${grupo}`:'Elegí una persona para filtrar por su grupo';
+  if(!nombres.includes(actual)){ actualizarMontoBenef(); toggleCamposTerapia(); }
+}
+
 // Terapia es el único beneficio que hoy necesita datos extra al asignarlo
 // (Frecuencia y Profesional asignado) — se identifica por nombre en vez de
 // por un campo aparte en el catálogo, ya que es un caso puntual.

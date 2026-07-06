@@ -251,6 +251,21 @@ function actualizarMontoBenef(){
   }
 }
 
+// Atajo desde la tabla "Por persona" — abre el mismo form de "Asignar
+// beneficio" pero con la persona ya elegida (y el select de Beneficio ya
+// filtrado por su grupo), para no tener que volver a buscarla ahí.
+function abrirAsignarBeneficioPara(nombre){
+  _openFormModal({
+    ...FORMS['beneficios-asignados'],
+    onMount:()=>{
+      filtrarPersonaAsignacion();
+      const sel=document.getElementById('f-ba-persona');
+      if(sel) sel.value=nombre;
+      actualizarBeneficiosPorPersona();
+    },
+  });
+}
+
 function filtrarBenefPersonas(){ renderBenefPersonas(); }
 
 function renderBenefPersonas(){
@@ -342,7 +357,10 @@ function renderBenefPersonas(){
           <span style="font-size:12px;color:${pct>=90?'#C62828':pct>=70?'#E65100':'var(--text2)'};font-weight:${pct>=70?'600':'400'};white-space:nowrap">${usadoStr} / ${topeStr}</span>
         </div>
       </td>
-      <td><button onclick="verBenefPersona('${nombre.replace(/'/g,"\'")}','${grupo}','${nivel}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button></td>
+      <td style="white-space:nowrap">
+        <button onclick="verBenefPersona('${nombre.replace(/'/g,"\'")}','${grupo}','${nivel}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button>
+        <button onclick="event.stopPropagation();abrirAsignarBeneficioPara('${nombre.replace(/'/g,"\'")}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-left:6px;">+ Asignar</button>
+      </td>
     </tr>`;
   }).join('');
 }

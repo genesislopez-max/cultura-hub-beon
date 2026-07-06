@@ -409,17 +409,22 @@ function openChecklistInline(id,nombre,tipo,rol,fecha,etapa){
   renderChecklistItemsInline(id,tipo,rol,fecha||'');
 }
 
-// Muestra Proyecto/Mail/País/Fecha arriba del checklist, para no tener que
-// volver a la tarjeta del Kanban mientras se van completando los ítems.
+// Muestra Proyecto/Mail/País/Fecha/Cumpleaños arriba del checklist, para no
+// tener que volver a la tarjeta del Kanban mientras se van completando los
+// ítems. Proyecto/Mail/País se leen en vivo desde Personas (mismo criterio
+// que renderCard) para no mostrar un dato viejo si se editó después.
 function renderClInfoBar(id){
   const bar=document.getElementById('cl-info-bar');
   if(!bar) return;
   const f=cacheChecklistFields[id]||{};
+  const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===(f.Persona||'').trim());
+  const pf=persona?.fields||{};
   const datos=[
-    f.Proyecto&&`📁 ${f.Proyecto}`,
-    f.Mail&&`✉️ ${f.Mail}`,
-    f['País']&&`🌎 ${f['País']}`,
+    (pf.Proyecto||f.Proyecto)&&`📁 ${pf.Proyecto||f.Proyecto}`,
+    (pf.Mail||f.Mail)&&`✉️ ${pf.Mail||f.Mail}`,
+    (pf['País']||f['País'])&&`🌎 ${pf['País']||f['País']}`,
     f.Fecha&&`📅 ${fmt(f.Fecha)}`,
+    pf['Fecha de cumpleaños']&&`🎂 ${fmt(pf['Fecha de cumpleaños'])}`,
   ].filter(Boolean);
   if(!datos.length){bar.style.display='none';bar.innerHTML='';return;}
   bar.style.display='flex';

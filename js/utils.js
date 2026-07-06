@@ -43,6 +43,14 @@ function rangoTrimestre(anio,q){
   return {inicio:new Date(anio,mesInicio,1),fin:new Date(anio,mesInicio+3,0)};
 }
 
+// 'YYYY-MM-DD' -> 'Q1 2023' — usado donde se necesita mostrar/guardar el
+// trimestre de una fecha en el mismo formato que se maneja fuera del Hub.
+function quarterLabel(fechaStr){
+  if(!fechaStr) return '';
+  const d=new Date(fechaStr+'T12:00:00');
+  return `Q${Math.floor(d.getMonth()/3)+1} ${d.getFullYear()}`;
+}
+
 // Ambassador Week no tiene un campo de fecha real, solo "Edición AW" a mano
 // (ej. "diciembre 2021") — intenta interpretarlo como fecha para poder
 // agruparlo por trimestre. Devuelve 'YYYY-MM-01' o null si no lo reconoce.

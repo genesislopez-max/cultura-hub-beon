@@ -270,7 +270,7 @@ function filaDetalleBeneficio(r){
   const items=activos.map(a=>{
     const nombre=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'—');
     const monto=a.fields.Monto?`$${Number(a.fields.Monto).toLocaleString('es-AR')}`:'';
-    const extra=[a.fields.Frecuencia,a.fields['Profesional Asignado']].filter(Boolean).join(' · ');
+    const extra=[a.fields.Frecuencia,a.fields['Profesional Asignado'],a.fields.Curso,a.fields.Quarter].filter(Boolean).join(' · ');
     return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">${avH(nombre)}<span style="font-size:13px">${nombre}</span>${extra?`<span style="font-size:11px;color:var(--text3)">(${extra})</span>`:''}${monto?`<span style="margin-left:auto;font-size:12px;color:var(--text3)">${monto}</span>`:''}</div>`;
   }).join('');
   return `<tr class="benef-detalle-row" onclick="event.stopPropagation()"><td colspan="6"><div style="padding:12px 18px;background:var(--bg2);border-radius:8px;margin:4px 0;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">${activos.length} persona${activos.length!==1?'s':''} usando este beneficio</div>${items}</div></td></tr>`;
@@ -318,6 +318,16 @@ function toggleCamposTerapia(){
   const nombre=document.getElementById('f-ba-beneficio')?.value||'';
   const fg=document.getElementById('fg-ba-terapia');
   if(fg) fg.style.display=esBeneficioTerapia(nombre)?'block':'none';
+}
+// Udemy necesita Curso y Link al asignarlo — el Quarter no se tipea, se
+// calcula solo a partir de la Fecha activación (ver quarterLabel en utils.js).
+function esBeneficioUdemy(nombreBeneficio){
+  return (nombreBeneficio||'').trim().toLowerCase()==='udemy';
+}
+function toggleCamposUdemy(){
+  const nombre=document.getElementById('f-ba-beneficio')?.value||'';
+  const fg=document.getElementById('fg-ba-udemy');
+  if(fg) fg.style.display=esBeneficioUdemy(nombre)?'block':'none';
 }
 function actualizarMontoBenef(){
   const sel=document.getElementById('f-ba-beneficio');

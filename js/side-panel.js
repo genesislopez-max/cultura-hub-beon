@@ -155,6 +155,7 @@ function editarBenefAsignado(id,nombre,grupo,nivel){
   const bId=Array.isArray(f.Beneficio)?f.Beneficio[0]:f.Beneficio;
   const benef=cacheBeneficiosRaw.find(b=>b.id===bId||b.fields.Beneficio===bId);
   const bNombre=benef?.fields.Beneficio||bId||'—';
+  const esTerapia=esBeneficioTerapia(bNombre),esUdemy=esBeneficioUdemy(bNombre);
   _openFormModal({
     title:`Editar — ${bNombre}`,
     html:()=>`
@@ -166,14 +167,38 @@ function editarBenefAsignado(id,nombre,grupo,nivel){
     <option value="Activo"${(f.Estado||'Activo')==='Activo'?' selected':''}>Activo</option>
     <option value="Inactivo"${f.Estado==='Inactivo'?' selected':''}>Inactivo</option>
   </select>
-</div>`,
+</div>
+${esTerapia?`
+<div class="field-group"><label class="field-label">Frecuencia</label>
+  <select class="field-input" id="f-eba-frecuencia">
+    <option value="">Seleccioná…</option>
+    ${['Semanal','Quincenal','Mensual','Otro'].map(o=>`<option value="${o}"${f.Frecuencia===o?' selected':''}>${o}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Profesional asignado</label><input class="field-input" id="f-eba-profesional" value="${f['Profesional Asignado']||''}"></div>
+`:''}
+${esUdemy?`
+<div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-eba-curso" value="${f.Curso||''}"></div>
+<div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-eba-link" type="url" value="${f.Link||''}"></div>
+<div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">El Quarter se recalcula solo si cambiás la Fecha activación.</div>
+`:''}`,
     save:async()=>{
       const v=id2=>document.getElementById(id2)?.value||'';
+      const fecha=v('f-eba-fecha');
       const fields={
         Estado:v('f-eba-estado')||'Activo',
-        'Fecha activación':v('f-eba-fecha')||null,
+        'Fecha activación':fecha||null,
         Monto:v('f-eba-monto')?Number(v('f-eba-monto')):null,
       };
+      if(esTerapia){
+        fields.Frecuencia=v('f-eba-frecuencia')||null;
+        fields['Profesional Asignado']=v('f-eba-profesional')||null;
+      }
+      if(esUdemy){
+        fields.Curso=v('f-eba-curso')||null;
+        fields.Link=v('f-eba-link')||null;
+        fields.Quarter=fecha?quarterLabel(fecha):null;
+      }
       await atPatch(`Beneficios Asignados/${id}`,fields);
       await verBenefPersona(nombre,grupo,nivel);
       return true;

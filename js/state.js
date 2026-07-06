@@ -42,6 +42,7 @@ let cacheAWRaw=[];
 
 // Panel lateral persona
 let cacheCapacitaciones=[], cacheGetTogetherRaw=[];
+let spBenefAsigActual=[]; // Beneficios Asignados de la persona con el panel abierto — para editar/eliminar sin recargar
 
 // Tareas (Kanban + Calendario)
 let cacheTareasRaw=[];

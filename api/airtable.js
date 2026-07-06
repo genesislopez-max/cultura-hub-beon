@@ -1,6 +1,9 @@
-// Proxy hacia Airtable: valida la sesión de Google del navegador y recién ahí
-// reenvía el pedido a Airtable usando el token que vive solo acá (variables de
+// Proxy hacia Airtable: valida la sesión del navegador y recién ahí reenvía
+// el pedido a Airtable usando el token que vive solo acá (variables de
 // entorno de Vercel) — el token nunca se manda al cliente.
+//
+// La sesión que llega acá es el token propio que emite api/session.js (no el
+// ID token de Google directamente) — ver api/_lib/session.js para el porqué.
 //
 // La tabla/registro de Airtable viaja como query param ?path=... en vez de
 // como parte de la URL (ej. antes /api/airtable/Tabla/recXXX, con una función
@@ -8,11 +11,11 @@
 // este proyecto — Vercel devolvía 404 propio (sin llegar a ejecutar la
 // función) para cualquier pedido con más de un segmento de path. Con un
 // endpoint fijo + query param no depende de esa resolución de rutas.
-const {verifyGoogleIdToken}=require('./_lib/auth');
+const {verifySession}=require('./_lib/session');
 
 module.exports=async(req,res)=>{
   const idToken=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
-  const verificado=await verifyGoogleIdToken(idToken);
+  const verificado=verifySession(idToken);
   if(!verificado.ok){
     res.status(401).json({error:{message:verificado.error}});
     return;

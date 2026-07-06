@@ -90,15 +90,26 @@ function renderCard(r,tipo){
   const {comp,total,pct}=contarProgreso(tipo,rol,st);
   const rbc=rol==='Engineer'?'badge-blue':rol==='Core Team'?'badge-purple':rol==='Ambos'?'badge-amber':'badge-gray';
   const nombre=f.Persona||'—';
+  // Datos en vivo desde Personas (con fallback al denormalizado en Checklist)
+  // — así la tarjeta refleja ediciones posteriores sin quedar pegada al dato
+  // que había cuando se creó el checklist.
+  const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+  const pf=persona?.fields||{};
+  const proyecto=pf.Proyecto||f.Proyecto;
+  const mail=pf.Mail||f.Mail;
+  const pais=pf['País']||f['País'];
+  const fechaMostrar=tipo==='Ingreso'?(pf['Fecha de ingreso']||f.Fecha):f.Fecha;
+  const cumple=pf['Fecha de cumpleaños'];
   const div=document.createElement('div');
   div.className='kanban-card';
   div.innerHTML=`
     <div class="kc-name">${avH(nombre)}${nombre}</div>
     <div class="kc-meta">
-      ${f.Proyecto?`📁 ${f.Proyecto}<br>`:''}
-      ${f.Mail?`✉️ ${f.Mail}<br>`:''}
-      ${f['País']?`🌎 ${f['País']}<br>`:''}
-      ${f.Fecha?`📅 ${fmt(f.Fecha)}<br>`:''}
+      ${proyecto?`📁 ${proyecto}<br>`:''}
+      ${mail?`✉️ ${mail}<br>`:''}
+      ${pais?`🌎 ${pais}<br>`:''}
+      ${fechaMostrar?`📅 ${fmt(fechaMostrar)}<br>`:''}
+      ${cumple?`🎂 ${fmt(cumple)}<br>`:''}
       <span class="badge ${rbc}" style="margin-top:3px">${rol}</span>
     </div>
     <div class="kc-progress">

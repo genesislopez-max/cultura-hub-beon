@@ -4,9 +4,12 @@ const assert=require('node:assert/strict');
 
 process.env.AIRTABLE_TOKEN='tok123';
 process.env.AIRTABLE_BASE='appXXX';
+process.env.SESSION_SECRET='test-secret';
 
-const {GOOGLE_CLIENT_ID}=require('../api/_lib/auth');
+const {signSession}=require('../api/_lib/session');
 const handler=require('../api/airtable');
+
+const TOKEN=signSession({email:'gustavo@beon.tech',name:'Gustavo'});
 
 function fakeRes(){
   const res={statusCode:200,headers:{},body:null};
@@ -17,24 +20,21 @@ function fakeRes(){
   return res;
 }
 
-function fakeGoogleThenAirtable(airtableRespuesta){
+function fakeAirtable(airtableRespuesta){
   const calls=[];
   const fetchImpl=async(url,opts)=>{
     calls.push({url,opts});
-    if(String(url).includes('tokeninfo')){
-      return {ok:true,json:async()=>({aud:GOOGLE_CLIENT_ID,email_verified:'true',email:'gustavo@beon.tech',hd:'beon.tech'})};
-    }
     return airtableRespuesta;
   };
   return {calls,fetchImpl};
 }
 
 test('api/airtable: reconstruye la URL de Airtable a partir del query param path (con record ID)', async()=>{
-  const {calls,fetchImpl}=fakeGoogleThenAirtable({ok:true,status:200,text:async()=>JSON.stringify({ok:true})});
+  const {calls,fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({ok:true})});
   const original=global.fetch;
   global.fetch=fetchImpl;
   try{
-    const req={headers:{authorization:'Bearer faketoken'},method:'PATCH',query:{path:'Personas/rec123'},body:{fields:{Mail:'x@beon.tech'}}};
+    const req={headers:{authorization:`Bearer ${TOKEN}`},method:'PATCH',query:{path:'Personas/rec123'},body:{fields:{Mail:'x@beon.tech'}}};
     const res=fakeRes();
     await handler(req,res);
     assert.equal(res.statusCode,200);
@@ -47,11 +47,11 @@ test('api/airtable: reconstruye la URL de Airtable a partir del query param path
 });
 
 test('api/airtable: reconstruye query params extra (ej. sort[0][field]) preservando corchetes', async()=>{
-  const {calls,fetchImpl}=fakeGoogleThenAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[]})});
+  const {calls,fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[]})});
   const original=global.fetch;
   global.fetch=fetchImpl;
   try{
-    const req={headers:{authorization:'Bearer faketoken'},method:'GET',query:{path:'Personas',pageSize:'100','sort[0][field]':'Nombre','sort[0][direction]':'asc'}};
+    const req={headers:{authorization:`Bearer ${TOKEN}`},method:'GET',query:{path:'Personas',pageSize:'100','sort[0][field]':'Nombre','sort[0][direction]':'asc'}};
     const res=fakeRes();
     await handler(req,res);
     const airtableCall=calls.find(c=>String(c.url).includes('api.airtable.com'));
@@ -64,7 +64,7 @@ test('api/airtable: reconstruye query params extra (ej. sort[0][field]) preserva
   }
 });
 
-test('api/airtable: sin sesión válida de Google devuelve 401 sin llamar a Airtable', async()=>{
+test('api/airtable: sin sesión válida devuelve 401 sin llamar a Airtable', async()=>{
   const calls=[];
   const original=global.fetch;
   global.fetch=async(url)=>{calls.push(String(url));return {ok:false};};
@@ -77,4 +77,12 @@ test('api/airtable: sin sesión válida de Google devuelve 401 sin llamar a Airt
   }finally{
     global.fetch=original;
   }
+});
+
+test('api/airtable: un token de sesión vencido devuelve 401', async()=>{
+  const vencido=signSession({email:'gustavo@beon.tech',name:'Gustavo'},-1000);
+  const req={headers:{authorization:`Bearer ${vencido}`},method:'GET',query:{path:'Personas'}};
+  const res=fakeRes();
+  await handler(req,res);
+  assert.equal(res.statusCode,401);
 });

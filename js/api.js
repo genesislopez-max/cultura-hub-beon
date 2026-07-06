@@ -50,12 +50,16 @@ async function atGet(table,qs=''){
   } while(offset);
   return {records:allRecords};
 }
+// typecast:true le pide a Airtable que autocomplete lo que pueda en vez de
+// rechazar el pedido — por ejemplo, agregar sola una opción nueva a un campo
+// Single Select que todavía no la tenía cargada (causa típica de 422 acá,
+// ya que el Hub no conoce de antemano qué opciones existen en cada campo).
 async function atPost(table,fields){
-  const r=await atRequest(apiUrl(table),{method:'POST',headers:authHeaders(),body:JSON.stringify({records:[{fields}]})});
+  const r=await atRequest(apiUrl(table),{method:'POST',headers:authHeaders(),body:JSON.stringify({records:[{fields}],typecast:true})});
   return r.json();
 }
 async function atPatch(path,fields){
-  const r=await atRequest(apiUrl(path),{method:'PATCH',headers:authHeaders(),body:JSON.stringify({fields})});
+  const r=await atRequest(apiUrl(path),{method:'PATCH',headers:authHeaders(),body:JSON.stringify({fields,typecast:true})});
   return r.json();
 }
 async function atDelete(table,id){

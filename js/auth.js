@@ -2,6 +2,11 @@
 // Reemplaza la vieja pantalla de "pegá tu token de Airtable": ahora se entra
 // con la cuenta de Google de la empresa y el token de Airtable vive solo en
 // el servidor (ver api/_lib/auth.js) — nunca llega al navegador.
+//
+// El ID token que devuelve Google dura solo ~1 hora y no sirve como sesión
+// larga, así que se intercambia una vez por un token de sesión propio emitido
+// por /api/session (ver api/_lib/session.js), que dura ~36hs y se guarda en
+// localStorage (sobrevive a cerrar el navegador, a diferencia de sessionStorage).
 
 const GOOGLE_CLIENT_ID='451797243389-ot89q4kunoj43a9p4186iqsar8mi5nrj.apps.googleusercontent.com';
 const ALLOWED_DOMAIN='beon.tech';
@@ -12,7 +17,28 @@ function decodeJwt(token){
   return JSON.parse(json);
 }
 
-function getIdToken(){ return sessionStorage.getItem('hub_id_token')||''; }
+function getIdToken(){ return localStorage.getItem('hub_session_token')||''; }
+
+// El token de sesión propio es "payload.firma" (no un JWT de 3 partes como el
+// de Google) — decodeJwt no sirve acá porque toma la parte [1] asumiendo
+// header.payload.firma.
+function decodeSessionPayload(token){
+  const payloadB64=token.split('.')[0];
+  const json=decodeURIComponent(atob(payloadB64.replace(/-/g,'+').replace(/_/g,'/')).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+  return JSON.parse(json);
+}
+
+// Solo mira el campo "exp" del payload (no valida la firma — eso lo hace
+// siempre el servidor) para poder avisar y limpiar la sesión vieja sin
+// esperar a que un pedido a la API falle con 401.
+function sesionExpirada(){
+  const token=getIdToken();
+  if(!token||!token.includes('.')) return true;
+  try{
+    const payload=decodeSessionPayload(token);
+    return !payload.exp||Date.now()>payload.exp;
+  }catch(e){ return true; }
+}
 
 function mostrarErrorLogin(msg){
   const el=document.getElementById('login-error');
@@ -22,7 +48,7 @@ function mostrarErrorLogin(msg){
 }
 
 // Callback que dispara Google Identity Services al elegir una cuenta
-function onGoogleSignIn(response){
+async function onGoogleSignIn(response){
   let payload;
   try{ payload=decodeJwt(response.credential); }
   catch(e){ mostrarErrorLogin('No se pudo leer la respuesta de Google. Probá de nuevo.'); return; }
@@ -35,8 +61,19 @@ function onGoogleSignIn(response){
     return;
   }
 
-  sessionStorage.setItem('hub_id_token',response.credential);
-  sessionStorage.setItem('hub_user',JSON.stringify({email,nombre:payload.name||email,foto:payload.picture||''}));
+  // Cambia el ID token de Google (corto) por un token de sesión propio (largo)
+  let sesion;
+  try{
+    const r=await fetch('/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({idToken:response.credential})});
+    sesion=await r.json();
+    if(!r.ok) throw new Error(sesion?.error?.message||'No se pudo iniciar sesión.');
+  }catch(e){
+    mostrarErrorLogin('No se pudo iniciar sesión: '+e.message);
+    return;
+  }
+
+  localStorage.setItem('hub_session_token',sesion.token);
+  localStorage.setItem('hub_user',JSON.stringify({email,nombre:payload.name||email,foto:payload.picture||''}));
   const err=document.getElementById('login-error');
   if(err) err.style.display='none';
   mostrarSesionActiva();
@@ -45,7 +82,7 @@ function onGoogleSignIn(response){
 }
 
 function mostrarSesionActiva(){
-  const raw=sessionStorage.getItem('hub_user');
+  const raw=localStorage.getItem('hub_user');
   if(!raw) return;
   const u=JSON.parse(raw);
   const box=document.getElementById('sb-user');
@@ -56,6 +93,9 @@ function mostrarSesionActiva(){
 }
 
 function cerrarSesion(){
+  localStorage.removeItem('hub_session_token');
+  localStorage.removeItem('hub_user');
+  // Limpieza de sesiones guardadas antes de este cambio (sessionStorage)
   sessionStorage.removeItem('hub_id_token');
   sessionStorage.removeItem('hub_user');
   if(window.google&&google.accounts&&google.accounts.id) google.accounts.id.disableAutoSelect();
@@ -73,10 +113,12 @@ function initGoogleSignIn(){
   if(btn) google.accounts.id.renderButton(btn,{theme:'outline',size:'large',text:'signin_with',shape:'rectangular'});
 }
 
-// Se llama al arrancar — si ya hay sesión guardada, no vuelve a pedir login.
-// Devuelve true si hay sesión activa (y el caller puede seguir con iniciarHub()).
+// Se llama al arrancar — si ya hay sesión guardada (y no venció), no vuelve a
+// pedir login. Devuelve true si hay sesión activa (y el caller puede seguir
+// con iniciarHub()).
 function checkSesion(){
-  if(!getIdToken()){
+  if(!getIdToken()||sesionExpirada()){
+    localStorage.removeItem('hub_session_token');
     document.getElementById('login-screen').style.display='flex';
     initGoogleSignIn();
     return false;

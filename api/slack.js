@@ -1,6 +1,6 @@
-// Proxy hacia el webhook de Slack: valida la sesión de Google antes de mandar
-// el mensaje. El webhook (secreto) vive solo acá, como variable de entorno.
-const {verifyGoogleIdToken}=require('./_lib/auth');
+// Proxy hacia el webhook de Slack: valida la sesión antes de mandar el
+// mensaje. El webhook (secreto) vive solo acá, como variable de entorno.
+const {verifySession}=require('./_lib/session');
 
 module.exports=async(req,res)=>{
   if(req.method!=='POST'){
@@ -9,7 +9,7 @@ module.exports=async(req,res)=>{
   }
 
   const idToken=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
-  const verificado=await verifyGoogleIdToken(idToken);
+  const verificado=verifySession(idToken);
   if(!verificado.ok){
     res.status(401).json({error:{message:verificado.error}});
     return;

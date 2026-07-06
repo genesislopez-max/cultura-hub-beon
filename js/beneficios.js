@@ -49,10 +49,93 @@ function switchBenefTab(tab, btn){
   if(btn) btn.classList.add('active');
   document.getElementById('benef-tab-catalogo').style.display=tab==='catalogo'?'':'none';
   document.getElementById('benef-tab-personas').style.display=tab==='personas'?'':'none';
+  const tabMetricas=document.getElementById('benef-tab-metricas');
+  if(tabMetricas) tabMetricas.style.display=tab==='metricas'?'':'none';
+  const ab=document.getElementById('btn-add');
+  if(ab) ab.style.display=tab==='metricas'?'none':'flex';
+  if(tab==='metricas'){
+    poblarAnioBenefQ();
+    if(!benefMetricasInicializado){
+      const hoy=new Date();
+      const selAnio=document.getElementById('benefq-anio');
+      if(selAnio) selAnio.value=String(hoy.getFullYear());
+      document.getElementById('benefq-trimestre').value=String(Math.floor(hoy.getMonth()/3)+1);
+      benefMetricasInicializado=true;
+    }
+    renderBenefMetricasQ();
+    return;
+  }
   const formKey=tab==='personas'?'beneficios-asignados':'beneficios';
   currentForm=FORMS[formKey];
   const lbl=document.getElementById('btn-label');
   if(lbl) lbl.textContent=LABELS[formKey];
+}
+
+// ─── MÉTRICAS POR TRIMESTRE ───────────────────────────────────────────────────
+// "Alta" = una asignación (Beneficios Asignados) cuya Fecha de activación cae
+// dentro del trimestre elegido — mide cuánto se usó cada beneficio en ese
+// período, más allá de si sigue activo hoy.
+function poblarAnioBenefQ(){
+  const sel=document.getElementById('benefq-anio');
+  if(!sel) return;
+  const anios=new Set([new Date().getFullYear()]);
+  cacheBenefAsignados.forEach(r=>{
+    const f=r.fields['Fecha activación'];
+    if(f) anios.add(new Date(f+'T12:00:00').getFullYear());
+  });
+  const actual=sel.value;
+  sel.innerHTML=[...anios].sort((a,b)=>b-a).map(a=>`<option value="${a}"${String(a)===actual?' selected':''}>${a}</option>`).join('');
+}
+
+function renderBenefMetricasQ(){
+  const anio=Number(document.getElementById('benefq-anio')?.value)||new Date().getFullYear();
+  const q=Number(document.getElementById('benefq-trimestre')?.value)||1;
+  const mesInicio=(q-1)*3;
+  const inicio=new Date(anio,mesInicio,1);
+  const fin=new Date(anio,mesInicio+3,0); // último día del 3er mes del trimestre
+
+  const conFecha=cacheBenefAsignados.filter(r=>r.fields['Fecha activación']);
+  document.getElementById('bq-sinfecha').textContent=cacheBenefAsignados.length-conFecha.length;
+
+  const altasQ=conFecha.filter(r=>{
+    const f=new Date(r.fields['Fecha activación']+'T12:00:00');
+    return f>=inicio&&f<=fin;
+  });
+  document.getElementById('bq-altas').textContent=altasQ.length;
+  document.getElementById('bq-altas-sub').textContent=`Q${q} ${anio}`;
+
+  const personasUnicas=new Set(altasQ.map(r=>typeof r.fields.Persona==='string'?r.fields.Persona:(Array.isArray(r.fields.Persona)?r.fields.Persona[0]:'')).filter(Boolean));
+  document.getElementById('bq-personas').textContent=personasUnicas.size;
+
+  const conteo={};
+  altasQ.forEach(r=>{
+    const bNombre=typeof r.fields.Beneficio==='string'?r.fields.Beneficio:(Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:'');
+    if(!bNombre) return;
+    conteo[bNombre]=(conteo[bNombre]||0)+1;
+  });
+  const ranking=Object.entries(conteo).sort((a,b)=>b[1]-a[1]);
+  const top=ranking[0];
+  document.getElementById('bq-top').textContent=top?top[0]:'—';
+  document.getElementById('bq-top-sub').textContent=top?`${top[1]} alta${top[1]!==1?'s':''} en el Q`:'Sin altas en este período';
+
+  const cont=document.getElementById('benefq-ranking-container');
+  if(!cont) return;
+  if(!ranking.length){
+    cont.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Sin altas registradas en este trimestre.</div>';
+    return;
+  }
+  const totalAltas=altasQ.length;
+  cont.innerHTML=`<table class="data-table"><thead><tr><th>Beneficio</th><th>Altas en el Q</th><th>% del total</th></tr></thead><tbody>
+    ${ranking.map(([bNombre,cant])=>{
+      const pct=totalAltas?Math.round(cant/totalAltas*100):0;
+      return`<tr><td>${bNombre}</td><td style="font-weight:600">${cant}</td><td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;max-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
+          <span style="font-size:12px;color:var(--text2)">${pct}%</span>
+        </div>
+      </td></tr>`;
+    }).join('')}
+  </tbody></table>`;
 }
 
 function renderBenefMetricas(){

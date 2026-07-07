@@ -63,6 +63,47 @@ function parsearEdicionAW(texto){
   if(mesIdx===-1) return null;
   return `${m[2]}-${String(mesIdx+1).padStart(2,'0')}-01`;
 }
+// ─── REPETICIÓN DE TAREAS ──────────────────────────────────────────────────────
+// L M M J V S D → valores de Date.getDay() (0=domingo)
+const DIAS_SEMANA_ES=['L','M','M','J','V','S','D'];
+const DIAS_SEMANA_VALORES=[1,2,3,4,5,6,0];
+
+// Ocurrencias ADICIONALES (sin incluir fechaInicioStr) para una tarea que se
+// repite, acotadas a un horizonte fijo por frecuencia para no crear tareas
+// indefinidamente hacia el futuro. diasSemana es un array de valores de
+// Date.getDay() (solo se usa si frecuencia==='semanal'); si viene vacío se usa
+// el día de la semana de la fecha de inicio.
+function generarFechasRecurrentes(fechaInicioStr,frecuencia,diasSemana){
+  const inicio=new Date(fechaInicioStr+'T12:00:00');
+  const toStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const fechas=[];
+  if(frecuencia==='diaria'){
+    for(let i=1;i<=30;i++){
+      const d=new Date(inicio);d.setDate(d.getDate()+i);
+      fechas.push(toStr(d));
+    }
+  }else if(frecuencia==='semanal'){
+    const dias=(diasSemana&&diasSemana.length)?diasSemana:[inicio.getDay()];
+    const fin=new Date(inicio);fin.setDate(fin.getDate()+7*8);
+    const cursor=new Date(inicio);cursor.setDate(cursor.getDate()+1);
+    while(cursor<=fin){
+      if(dias.includes(cursor.getDay())) fechas.push(toStr(cursor));
+      cursor.setDate(cursor.getDate()+1);
+    }
+  }else if(frecuencia==='mensual'){
+    for(let i=1;i<=12;i++){
+      const d=new Date(inicio);d.setMonth(d.getMonth()+i);
+      fechas.push(toStr(d));
+    }
+  }else if(frecuencia==='anual'){
+    for(let i=1;i<=5;i++){
+      const d=new Date(inicio);d.setFullYear(d.getFullYear()+i);
+      fechas.push(toStr(d));
+    }
+  }
+  return fechas;
+}
+
 // ─── CONFIRM DIALOG ──────────────────────────────────────────────────────────
 function showConfirm(title, msg, onOk){
   document.getElementById('confirm-title').textContent=title;

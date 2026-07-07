@@ -57,7 +57,7 @@ function tarjetaTarea(r){
     <div class="kc-name">${f.Título||'—'}</div>
     <div class="kc-meta">
       ${f.Asignado?`${avH(f.Asignado)}${f.Asignado}<br>`:''}
-      ${f.Fecha?`<span style="${vencida?'color:#C62828;font-weight:700':''}">📅 ${fmt(f.Fecha)}${vencida?' · vencida':''}</span>`:''}
+      ${f.Fecha?`<span style="${vencida?'color:#C62828;font-weight:700':''}">📅 ${fmt(f.Fecha)}${f.Hora?` · ${f.Hora}`:''}${vencida?' · vencida':''}</span>`:''}
     </div>
     <div class="kc-actions">
       <button class="kc-btn-edit" title="Editar tarea" onclick="event.stopPropagation();abrirEdicionTarea('${r.id}')"><i class="ti ti-pencil"></i></button>
@@ -161,7 +161,7 @@ function renderTareasCalendario(){
         const bg=estado==='Hecho'?'#D1FAE5':estado==='En progreso'?'#DBEAFE':'#FEF3C7';
         const fg=estado==='Hecho'?'#065F46':estado==='En progreso'?'#1E40AF':'#92400E';
         const titulo=(r.fields.Título||'—').replace(/"/g,'&quot;');
-        return`<div class="tareas-cal-chip" style="background:${bg};color:${fg}" title="${titulo} — ${r.fields.Asignado||''}" onclick="event.stopPropagation();abrirEdicionTarea('${r.id}')">${r.fields.Título||'—'}</div>`;
+        return`<div class="tareas-cal-chip" style="background:${bg};color:${fg}" title="${titulo} — ${r.fields.Asignado||''}${r.fields.Hora?' · '+r.fields.Hora:''}" onclick="event.stopPropagation();abrirEdicionTarea('${r.id}')">${r.fields.Hora?r.fields.Hora+' · ':''}${r.fields.Título||'—'}</div>`;
       }).join('')}
     </div>`;
   }
@@ -197,7 +197,13 @@ function abrirEdicionTarea(id){
     ${opciones.map(n=>`<option value="${n}"${n===f.Asignado?' selected':''}>${n}</option>`).join('')}
   </select>
 </div>
-<div class="field-group"><label class="field-label">Fecha límite *</label><input class="field-input" id="f-tar-fecha" type="date" value="${f.Fecha||''}"></div>
+<div class="field-group">
+  <label class="field-label">Fecha límite *</label>
+  <div style="display:flex;gap:8px;">
+    <input class="field-input" id="f-tar-fecha" type="date" style="flex:1" value="${f.Fecha||''}">
+    <input class="field-input" id="f-tar-hora" type="time" style="flex:0 0 110px" title="Horario (opcional)" value="${f.Hora||''}">
+  </div>
+</div>
 <div class="field-group"><label class="field-label">Estado</label>
   <select class="field-input" id="f-tar-estado">
     ${['Por hacer','En progreso','Hecho'].map(e=>`<option value="${e}"${e===(f.Estado||'Por hacer')?' selected':''}>${e}</option>`).join('')}
@@ -210,10 +216,56 @@ function abrirEdicionTarea(id){
       if(!v('f-tar-titulo')){toast('El título es obligatorio',true);return false;}
       if(!v('f-tar-asignado')){toast('Asigná la tarea a alguien',true);return false;}
       if(!v('f-tar-fecha')){toast('La fecha límite es obligatoria',true);return false;}
-      await atPatch(`Tareas/${id}`,{Título:v('f-tar-titulo'),Asignado:v('f-tar-asignado'),Fecha:v('f-tar-fecha'),Estado:v('f-tar-estado')||'Por hacer',Descripción:v('f-tar-desc')});
+      await atPatch(`Tareas/${id}`,{Título:v('f-tar-titulo'),Asignado:v('f-tar-asignado'),Fecha:v('f-tar-fecha'),Hora:v('f-tar-hora'),Estado:v('f-tar-estado')||'Por hacer',Descripción:v('f-tar-desc')});
       return true;
     },
   });
+}
+
+// ─── Repetición (panel del formulario "Nueva tarea") ──────────────────────────
+function toggleRepeticionTarea(){
+  const panel=document.getElementById('f-tar-repeat-panel');
+  if(!panel) return;
+  const abierto=panel.style.display!=='none';
+  panel.style.display=abierto?'none':'';
+  document.getElementById('f-tar-repetir-btn')?.classList.toggle('active',!abierto);
+}
+
+function onFrecuenciaTareaChange(){
+  const frecuencia=document.getElementById('f-tar-frecuencia')?.value||'';
+  const filaDias=document.getElementById('f-tar-dias-row');
+  if(filaDias){
+    filaDias.style.display=frecuencia==='semanal'?'':'none';
+    if(frecuencia==='semanal'&&!filaDias.querySelector('.dia-chip.active')){
+      const fecha=document.getElementById('f-tar-fecha')?.value;
+      if(fecha){
+        const dow=new Date(fecha+'T12:00:00').getDay();
+        filaDias.querySelector(`.dia-chip[data-dia="${dow}"]`)?.classList.add('active');
+      }
+    }
+  }
+  actualizarHintRepeticionTarea();
+}
+
+function toggleDiaTarea(btn){
+  btn.classList.toggle('active');
+  actualizarHintRepeticionTarea();
+}
+
+function diasSemanaSeleccionados(){
+  return[...document.querySelectorAll('#f-tar-dias-row .dia-chip.active')].map(b=>Number(b.dataset.dia));
+}
+
+function actualizarHintRepeticionTarea(){
+  const hint=document.getElementById('f-tar-repeat-hint');
+  if(!hint) return;
+  const frecuencia=document.getElementById('f-tar-frecuencia')?.value||'';
+  const fecha=document.getElementById('f-tar-fecha')?.value||'';
+  if(!frecuencia){hint.textContent='';return;}
+  if(!fecha){hint.textContent='Elegí primero la fecha límite para calcular las repeticiones.';return;}
+  const extras=generarFechasRecurrentes(fecha,frecuencia,diasSemanaSeleccionados());
+  const horizonte={diaria:'los próximos 30 días',semanal:'las próximas 8 semanas',mensual:'los próximos 12 meses',anual:'los próximos 5 años'}[frecuencia];
+  hint.textContent=extras.length?`Se van a crear ${extras.length} tarea${extras.length===1?'':'s'} más durante ${horizonte}.`:`No hay más ocurrencias durante ${horizonte} — probá elegir al menos un día.`;
 }
 
 function eliminarTarea(id){

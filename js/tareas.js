@@ -233,18 +233,34 @@ function toggleRepeticionTarea(){
 
 function onFrecuenciaTareaChange(){
   const frecuencia=document.getElementById('f-tar-frecuencia')?.value||'';
+  document.getElementById('f-tar-personalizado-row')?.style.setProperty('display',frecuencia==='personalizada'?'flex':'none');
+  document.getElementById('f-tar-cantidad-row')?.style.setProperty('display',frecuencia==='personalizada'?'flex':'none');
+  actualizarDiasRowVisible();
+  actualizarHintRepeticionTarea();
+}
+
+function onUnidadPersonalizadaChange(){
+  actualizarDiasRowVisible();
+  actualizarHintRepeticionTarea();
+}
+
+// Muestra los chips de día de la semana si la frecuencia es "semanal" o si es
+// "personalizada" con unidad "semana" — y precarga el día de la fecha elegida
+// la primera vez que se muestran, para no obligar a tocarlos si alcanza con uno.
+function actualizarDiasRowVisible(){
+  const frecuencia=document.getElementById('f-tar-frecuencia')?.value||'';
+  const unidad=document.getElementById('f-tar-unidad')?.value||'';
+  const mostrar=frecuencia==='semanal'||(frecuencia==='personalizada'&&unidad==='semana');
   const filaDias=document.getElementById('f-tar-dias-row');
-  if(filaDias){
-    filaDias.style.display=frecuencia==='semanal'?'':'none';
-    if(frecuencia==='semanal'&&!filaDias.querySelector('.dia-chip.active')){
-      const fecha=document.getElementById('f-tar-fecha')?.value;
-      if(fecha){
-        const dow=new Date(fecha+'T12:00:00').getDay();
-        filaDias.querySelector(`.dia-chip[data-dia="${dow}"]`)?.classList.add('active');
-      }
+  if(!filaDias) return;
+  filaDias.style.display=mostrar?'':'none';
+  if(mostrar&&!filaDias.querySelector('.dia-chip.active')){
+    const fecha=document.getElementById('f-tar-fecha')?.value;
+    if(fecha){
+      const dow=new Date(fecha+'T12:00:00').getDay();
+      filaDias.querySelector(`.dia-chip[data-dia="${dow}"]`)?.classList.add('active');
     }
   }
-  actualizarHintRepeticionTarea();
 }
 
 function toggleDiaTarea(btn){
@@ -263,9 +279,20 @@ function actualizarHintRepeticionTarea(){
   const fecha=document.getElementById('f-tar-fecha')?.value||'';
   if(!frecuencia){hint.textContent='';return;}
   if(!fecha){hint.textContent='Elegí primero la fecha límite para calcular las repeticiones.';return;}
-  const extras=generarFechasRecurrentes(fecha,frecuencia,diasSemanaSeleccionados());
-  const horizonte={diaria:'los próximos 30 días',semanal:'las próximas 8 semanas',mensual:'los próximos 12 meses',anual:'los próximos 5 años'}[frecuencia];
-  hint.textContent=extras.length?`Se van a crear ${extras.length} tarea${extras.length===1?'':'s'} más durante ${horizonte}.`:`No hay más ocurrencias durante ${horizonte} — probá elegir al menos un día.`;
+  let extras,detalle;
+  if(frecuencia==='personalizada'){
+    const intervalo=Math.max(1,Number(document.getElementById('f-tar-intervalo')?.value)||1);
+    const unidad=document.getElementById('f-tar-unidad')?.value||'dia';
+    const cantidad=Math.max(1,Math.min(104,Number(document.getElementById('f-tar-cantidad')?.value)||10));
+    extras=generarFechasPersonalizadas(fecha,intervalo,unidad,diasSemanaSeleccionados(),cantidad);
+    const nombres={dia:['día','días'],semana:['semana','semanas'],mes:['mes','meses'],anio:['año','años']}[unidad];
+    detalle=`cada ${intervalo} ${intervalo===1?nombres[0]:nombres[1]}`;
+  }else{
+    extras=generarFechasRecurrentes(fecha,frecuencia,diasSemanaSeleccionados());
+    const horizonte={diaria:'los próximos 30 días',semanal:'las próximas 8 semanas',mensual:'los próximos 12 meses',anual:'los próximos 5 años'}[frecuencia];
+    detalle=`durante ${horizonte}`;
+  }
+  hint.textContent=extras.length?`Se van a crear ${extras.length} tarea${extras.length===1?'':'s'} más (${detalle}).`:`No hay ocurrencias — probá elegir al menos un día.`;
 }
 
 function eliminarTarea(id){

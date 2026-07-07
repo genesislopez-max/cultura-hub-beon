@@ -104,6 +104,43 @@ function generarFechasRecurrentes(fechaInicioStr,frecuencia,diasSemana){
   return fechas;
 }
 
+// Ocurrencias ADICIONALES para la repetición "Personalizado": cada `intervalo`
+// unidades (día/semana/mes/año), hasta `cantidad` ocurrencias. Para
+// unidad==='semana' respeta los días elegidos (diasSemana) en lugar de
+// repetir siempre el mismo día de la semana de inicio.
+function generarFechasPersonalizadas(fechaInicioStr,intervalo,unidad,diasSemana,cantidad){
+  const inicio=new Date(fechaInicioStr+'T12:00:00');
+  const toStr=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const n=Math.max(1,Math.min(cantidad||1,104));
+  const paso=Math.max(1,intervalo||1);
+  const fechas=[];
+  if(unidad==='semana'){
+    const dias=[...(diasSemana&&diasSemana.length?diasSemana:[inicio.getDay()])].sort((a,b)=>((a+6)%7)-((b+6)%7));
+    const dowLunes=(inicio.getDay()+6)%7;
+    const lunesBase=new Date(inicio);lunesBase.setDate(lunesBase.getDate()-dowLunes);
+    let semana=0,tope=0;
+    while(fechas.length<n&&tope<1000){
+      if(semana%paso===0){
+        for(const dv of dias){
+          const offset=(dv+6)%7;
+          const d=new Date(lunesBase);d.setDate(d.getDate()+semana*7+offset);
+          if(d>inicio&&fechas.length<n) fechas.push(toStr(d));
+        }
+      }
+      semana++;tope++;
+    }
+  }else{
+    for(let i=1;i<=n;i++){
+      const d=new Date(inicio);
+      if(unidad==='dia') d.setDate(d.getDate()+paso*i);
+      else if(unidad==='mes') d.setMonth(d.getMonth()+paso*i);
+      else if(unidad==='anio') d.setFullYear(d.getFullYear()+paso*i);
+      fechas.push(toStr(d));
+    }
+  }
+  return fechas.sort();
+}
+
 // ─── CONFIRM DIALOG ──────────────────────────────────────────────────────────
 function showConfirm(title, msg, onOk){
   document.getElementById('confirm-title').textContent=title;

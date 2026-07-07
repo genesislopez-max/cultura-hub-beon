@@ -462,9 +462,25 @@ const FORMS={
       <option value="semanal">Semanalmente</option>
       <option value="mensual">Mensualmente</option>
       <option value="anual">Anualmente</option>
+      <option value="personalizada">Personalizado…</option>
     </select>
+    <div id="f-tar-personalizado-row" class="personalizado-row" style="display:none">
+      <span>Repetir cada</span>
+      <input class="field-input" id="f-tar-intervalo" type="number" min="1" value="1" style="width:60px" oninput="actualizarHintRepeticionTarea()">
+      <select class="field-input" id="f-tar-unidad" style="width:auto" onchange="onUnidadPersonalizadaChange()">
+        <option value="dia">día(s)</option>
+        <option value="semana">semana(s)</option>
+        <option value="mes">mes(es)</option>
+        <option value="anio">año(s)</option>
+      </select>
+    </div>
     <div id="f-tar-dias-row" class="dias-semana-row" style="display:none">
       ${DIAS_SEMANA_ES.map((d,i)=>`<button type="button" class="dia-chip" data-dia="${DIAS_SEMANA_VALORES[i]}" onclick="toggleDiaTarea(this)">${d}</button>`).join('')}
+    </div>
+    <div id="f-tar-cantidad-row" class="personalizado-row" style="display:none">
+      <span>Termina después de</span>
+      <input class="field-input" id="f-tar-cantidad" type="number" min="1" max="104" value="10" style="width:60px" oninput="actualizarHintRepeticionTarea()">
+      <span>repeticiones</span>
     </div>
     <div class="field-hint" id="f-tar-repeat-hint"></div>
   </div>
@@ -483,7 +499,9 @@ const FORMS={
       const frecuencia=v('f-tar-frecuencia');
       let extra=0;
       if(frecuencia){
-        const fechasExtra=generarFechasRecurrentes(fecha,frecuencia,diasSemanaSeleccionados());
+        const fechasExtra=frecuencia==='personalizada'
+          ?generarFechasPersonalizadas(fecha,Math.max(1,Number(v('f-tar-intervalo'))||1),v('f-tar-unidad')||'dia',diasSemanaSeleccionados(),Math.max(1,Math.min(104,Number(v('f-tar-cantidad'))||10)))
+          :generarFechasRecurrentes(fecha,frecuencia,diasSemanaSeleccionados());
         for(const f of fechasExtra) await atPost('Tareas',{...campos,Fecha:f});
         extra=fechasExtra.length;
       }

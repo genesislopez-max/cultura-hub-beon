@@ -447,17 +447,47 @@ const FORMS={
   </select>
   ${!personas.length?'<div class="field-hint" style="color:#C62828">No hay nadie con Área = "People" cargado en Airtable todavía — completá ese campo en Personas para poder asignar tareas.</div>':''}
 </div>
-<div class="field-group"><label class="field-label">Fecha límite *</label><input class="field-input" id="f-tar-fecha" type="date"></div>
+<div class="field-group">
+  <label class="field-label">Fecha límite *</label>
+  <div style="display:flex;gap:8px;">
+    <input class="field-input" id="f-tar-fecha" type="date" style="flex:1" onchange="actualizarHintRepeticionTarea()">
+    <input class="field-input" id="f-tar-hora" type="time" style="flex:0 0 110px" title="Horario (opcional)">
+    <button type="button" class="repeat-toggle-btn" id="f-tar-repetir-btn" title="Configurar repetición" onclick="toggleRepeticionTarea()"><i class="ti ti-repeat"></i></button>
+  </div>
+  <div class="repeat-panel" id="f-tar-repeat-panel" style="display:none">
+    <label class="field-label" style="margin-bottom:5px">Repetir</label>
+    <select class="field-input" id="f-tar-frecuencia" onchange="onFrecuenciaTareaChange()">
+      <option value="">No repetir</option>
+      <option value="diaria">Diariamente</option>
+      <option value="semanal">Semanalmente</option>
+      <option value="mensual">Mensualmente</option>
+      <option value="anual">Anualmente</option>
+    </select>
+    <div id="f-tar-dias-row" class="dias-semana-row" style="display:none">
+      ${DIAS_SEMANA_ES.map((d,i)=>`<button type="button" class="dia-chip" data-dia="${DIAS_SEMANA_VALORES[i]}" onclick="toggleDiaTarea(this)">${d}</button>`).join('')}
+    </div>
+    <div class="field-hint" id="f-tar-repeat-hint"></div>
+  </div>
+</div>
 <div class="field-group"><label class="field-label">Descripción</label><textarea class="field-input" id="f-tar-desc" placeholder="Detalles de la tarea"></textarea></div>
 `;},
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
-      const titulo=v('f-tar-titulo'),asignado=v('f-tar-asignado'),fecha=v('f-tar-fecha');
+      const titulo=v('f-tar-titulo'),asignado=v('f-tar-asignado'),fecha=v('f-tar-fecha'),hora=v('f-tar-hora');
       if(!titulo){toast('El título es obligatorio',true);return false;}
       if(!asignado){toast('Asigná la tarea a alguien',true);return false;}
       if(!fecha){toast('La fecha límite es obligatoria',true);return false;}
-      await atPost('Tareas',{Título:titulo,Asignado:asignado,Fecha:fecha,Descripción:v('f-tar-desc'),Estado:'Por hacer'});
-      sendSlack(`✅ *Nueva tarea asignada*\n*${titulo}* — ${asignado} (vence el ${fmt(fecha)})`);
+      const campos={Título:titulo,Asignado:asignado,Fecha:fecha,Descripción:v('f-tar-desc'),Estado:'Por hacer'};
+      if(hora) campos.Hora=hora;
+      await atPost('Tareas',campos);
+      const frecuencia=v('f-tar-frecuencia');
+      let extra=0;
+      if(frecuencia){
+        const fechasExtra=generarFechasRecurrentes(fecha,frecuencia,diasSemanaSeleccionados());
+        for(const f of fechasExtra) await atPost('Tareas',{...campos,Fecha:f});
+        extra=fechasExtra.length;
+      }
+      sendSlack(`✅ *Nueva tarea asignada*\n*${titulo}* — ${asignado} (vence el ${fmt(fecha)})${extra?`\n🔁 Se repite: se crearon ${extra} tareas más`:''}`);
       return true;
     }},
 

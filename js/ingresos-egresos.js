@@ -102,6 +102,8 @@ function renderCard(r,tipo){
   const cumple=pf['Fecha de cumpleaños'];
   const div=document.createElement('div');
   div.className='kanban-card';
+  div.dataset.nombre=nombre.toLowerCase();
+  div.dataset.proyecto=(proyecto||'').toLowerCase();
   div.innerHTML=`
     <div class="kc-name">${avH(nombre)}${nombre}</div>
     <div class="kc-meta">
@@ -130,6 +132,21 @@ function renderCard(r,tipo){
   div.addEventListener('dragend',()=>{div.classList.remove('dragging');dragId=null;});
   return div;
 }
+
+// Filtro por nombre/proyecto sobre las tarjetas ya renderizadas — no hace
+// falta volver a pedir los datos ni re-renderizar el board, solo mostrar/
+// ocultar cards vía sus data-attributes.
+function filtrarKanbanChecklist(boardId,inputId){
+  const q=(document.getElementById(inputId)?.value||'').trim().toLowerCase();
+  const board=document.getElementById(boardId);
+  if(!board) return;
+  board.querySelectorAll('.kanban-card').forEach(card=>{
+    const match=!q||(card.dataset.nombre||'').includes(q)||(card.dataset.proyecto||'').includes(q);
+    card.style.display=match?'':'none';
+  });
+}
+function filtrarIngresos(){ filtrarKanbanChecklist('kb-ingresos','ingresos-search'); }
+function filtrarEgresos(){ filtrarKanbanChecklist('kb-egresos','egresos-search'); }
 
 function confirmarEliminar(checklistId, nombre){
   showConfirm(

@@ -8,7 +8,8 @@ async function loadAniversarios(personas){
     const anivEsteAño=new Date(ing);anivEsteAño.setFullYear(now.getFullYear());
     const años=anivEsteAño<now?añosAct+1:añosAct;
     if(años===0)return null;
-    return{nombre:f.Nombre,fecha:f['Fecha de ingreso'],años,days:daysTo(f['Fecha de ingreso'])};
+    const grupo=CORE_TEAM_ROLES.has((f['Rol en empresa']||'').trim())?'core':'eng';
+    return{nombre:f.Nombre,fecha:f['Fecha de ingreso'],años,days:daysTo(f['Fecha de ingreso']),grupo};
   }).filter(Boolean).sort((a,b)=>a.days-b.days);
   const esteM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesActual);
   const proxM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesProximo).length;
@@ -58,7 +59,7 @@ async function loadAniversarios(personas){
 
     let html='';
     Object.entries(grupos).sort(([a],[b])=>a.localeCompare(b)).forEach(([,{label,items,esActual}])=>{
-      html+=`<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin-bottom:16px;">
+      html+=`<div class="aniv-grupo-mes" style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin:0 14px 22px;">
         <div style="padding:12px 18px;background:linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%);border-left:3px solid var(--blue);display:flex;align-items:center;gap:10px;">
           <span style="font-size:13px;font-weight:700;color:var(--blue)">${label.charAt(0).toUpperCase()+label.slice(1)}</span>
           ${esActual?'<span style="font-size:11px;font-weight:600;color:var(--blue);background:#D6DEFF;padding:2px 8px;border-radius:20px">Este mes</span>':''}
@@ -74,7 +75,7 @@ async function loadAniversarios(personas){
             if(proxAniv<now) proxAniv.setFullYear(now.getFullYear()+1);
             const proxAnivStr=proxAniv.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
             const bg=idx%2===0?'background:var(--bg2)':'';
-            return`<tr data-nombre="${r.nombre.toLowerCase()}" data-años="${r.años}" style="${bg}"><td>${avH(r.nombre)}${r.nombre}</td><td style="font-size:12px;color:var(--text2)">${fmt(r.fecha)}</td><td style="font-size:12px;color:var(--text2)">${proxAnivStr}</td><td><span class="badge badge-purple">${r.años} ${r.años===1?'año':'años'} ${em} · ${dl}</span></td></tr>`;
+            return`<tr data-nombre="${r.nombre.toLowerCase()}" data-años="${r.años}" data-grupo="${r.grupo}" style="${bg}"><td>${avH(r.nombre)}${r.nombre}</td><td style="font-size:12px;color:var(--text2)">${fmt(r.fecha)}</td><td style="font-size:12px;color:var(--text2)">${proxAnivStr}</td><td><span class="badge badge-purple">${r.años} ${r.años===1?'año':'años'} ${em} · ${dl}</span></td></tr>`;
           }).join('')}</tbody>
         </table>
       </div>`;
@@ -92,20 +93,23 @@ async function loadAniversarios(personas){
 function filtrarAniversarios(){
   const q=(document.getElementById('aniv-search')?.value||'').toLowerCase();
   const año=document.getElementById('aniv-año')?.value||'';
+  const grupo=document.getElementById('aniv-grupo')?.value||'';
   const container=document.getElementById('aniv-container');
   if(!container) return;
   let total=0;
   // Filtrar filas y ocultar secciones vacías
-  container.querySelectorAll('div[style*="margin-bottom"]').forEach(seccion=>{
+  container.querySelectorAll('.aniv-grupo-mes').forEach(seccion=>{
     const filas=seccion.querySelectorAll('tr[data-nombre]');
     let visibles=0;
     filas.forEach(tr=>{
       const nombre=tr.dataset.nombre||'';
       const años=tr.dataset.años||'';
+      const g=tr.dataset.grupo||'';
       const matchQ=!q||nombre.includes(q);
       const matchAño=!año||años===año;
-      tr.style.display=matchQ&&matchAño?'':'none';
-      if(matchQ&&matchAño) visibles++;
+      const matchGrupo=!grupo||g===grupo;
+      tr.style.display=matchQ&&matchAño&&matchGrupo?'':'none';
+      if(matchQ&&matchAño&&matchGrupo) visibles++;
     });
     seccion.style.display=visibles>0?'':'none';
     total+=visibles;

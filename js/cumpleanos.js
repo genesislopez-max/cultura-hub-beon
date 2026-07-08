@@ -9,6 +9,7 @@ async function loadCumpleanos(personas){
     const proximo=new Date(now.getTime()+days*86400000);
     return{nombre:f.Nombre,fecha,days,proximo,grupo:CORE_TEAM_ROLES.has(rol)?'core':'eng'};
   }).sort((a,b)=>a.days-b.days);
+  cacheCumpleRows=rows;
 
   const esteM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesActual);
   const proxM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesProximo).length;
@@ -29,14 +30,21 @@ async function loadCumpleanos(personas){
   listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">• ${r.nombre} (${fmt(r.fecha)})</div>`).join('');
   moreEl.style.display=esteM.length>5?'block':'none';
 
-  const engRows=rows.filter(r=>r.grupo==='eng');
-  const coreRows=rows.filter(r=>r.grupo==='core');
-  document.getElementById('badge-cumple-eng').textContent=`${engRows.length} personas`;
-  document.getElementById('badge-cumple-core').textContent=`${coreRows.length} personas`;
-  renderCumpleGrupo('cumple-eng-container',engRows,now);
-  renderCumpleGrupo('cumple-core-container',coreRows,now);
+  filtrarCumpleanos();
 
   return rows.filter(r=>r.days<=60).map(r=>({nombre:r.nombre,evento:'Cumpleaños 🎂',fecha:r.fecha,days:r.days}));
+}
+
+function filtrarCumpleanos(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const q=(document.getElementById('cumple-search')?.value||'').trim().toLowerCase();
+  const filtrados=q?cacheCumpleRows.filter(r=>r.nombre.toLowerCase().includes(q)):cacheCumpleRows;
+  const engRows=filtrados.filter(r=>r.grupo==='eng');
+  const coreRows=filtrados.filter(r=>r.grupo==='core');
+  document.getElementById('badge-cumple-eng').textContent=`${engRows.length} persona${engRows.length!==1?'s':''}`;
+  document.getElementById('badge-cumple-core').textContent=`${coreRows.length} persona${coreRows.length!==1?'s':''}`;
+  renderCumpleGrupo('cumple-eng-container',engRows,now);
+  renderCumpleGrupo('cumple-core-container',coreRows,now);
 }
 
 function filaCumple(r,now){
@@ -63,8 +71,8 @@ function bloqueMesCumple(offset,rows,now){
   if(!delMes.length) return '';
   const nombreMes=new Date(now.getFullYear(),now.getMonth()+offset,1).toLocaleString('es-AR',{month:'long',year:'numeric'});
   const nombreCap=nombreMes.charAt(0).toUpperCase()+nombreMes.slice(1);
-  return`<div style="margin-bottom:20px;">
-    <div style="font-size:11px;font-weight:700;color:var(--text3);padding:10px 18px 8px;letter-spacing:0.06em;text-transform:uppercase;">${nombreCap} <span style="font-weight:500">(${delMes.length})</span></div>
+  return`<div style="margin-bottom:26px;">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);padding:6px 18px 10px;letter-spacing:0.06em;text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--border);">${nombreCap} <span style="font-weight:500">(${delMes.length})</span></div>
     <table class="data-table"><thead><tr><th>Persona</th><th>Fecha</th><th>Próximo</th><th>Días restantes</th></tr></thead>
     <tbody>${delMes.map(r=>filaCumple(r,now)).join('')}</tbody></table>
   </div>`;

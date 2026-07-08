@@ -31,8 +31,13 @@ function switchOSTab(tab,btn){
   if(btn) btn.classList.add('active');
   document.getElementById('os-tab-persona').style.display=tab==='persona'?'':'none';
   document.getElementById('os-tab-proyecto').style.display=tab==='proyecto'?'':'none';
+  const tabHistorial=document.getElementById('os-tab-historial');
+  if(tabHistorial) tabHistorial.style.display=tab==='historial'?'':'none';
   const tabMetricas=document.getElementById('os-tab-metricas');
   if(tabMetricas) tabMetricas.style.display=tab==='metricas'?'':'none';
+  if(tab==='historial'){
+    renderOSHistorial();
+  }
   if(tab==='metricas'){
     poblarSelectorAnio('osq-anio',cacheOSRaw.map(r=>r.fields['Fecha inicio']).filter(Boolean).map(f=>new Date(f+'T12:00:00').getFullYear()));
     if(!osqInicializado){

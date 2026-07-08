@@ -34,7 +34,13 @@ function filtrarTareas(){
 
 function tareasFiltradas(){
   const asignado=document.getElementById('tareas-filtro-asignado')?.value||'';
-  return asignado?cacheTareasRaw.filter(r=>r.fields.Asignado===asignado):cacheTareasRaw;
+  const q=(document.getElementById('tareas-search')?.value||'').trim().toLowerCase();
+  return cacheTareasRaw.filter(r=>{
+    const f=r.fields;
+    const matchAsignado=!asignado||f.Asignado===asignado;
+    const matchQ=!q||(f.Título||'').toLowerCase().includes(q)||(f.Descripción||'').toLowerCase().includes(q);
+    return matchAsignado&&matchQ;
+  });
 }
 
 function actualizarMetricasTareas(){

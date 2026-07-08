@@ -63,6 +63,9 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-xs);}
 .table-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .table-scroll{overflow-x:auto;}
+/* Contenedores con tablas agrupadas (por mes/equipo) — un poco de aire arriba
+   para que el primer grupo no quede pegado a los filtros/título de la card. */
+#aniv-container,#cumple-eng-container,#cumple-core-container,#benef-catalogo-container{padding-top:14px;}
 .search-bar{display:flex;align-items:center;gap:8px;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--bg2);flex-wrap:wrap;}
 .side-panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:200;opacity:0;pointer-events:none;transition:opacity 0.2s;}
 .side-panel-overlay.open{opacity:1;pointer-events:all;}

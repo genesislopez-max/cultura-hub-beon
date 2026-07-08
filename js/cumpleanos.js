@@ -63,8 +63,8 @@ function bloqueMesCumple(offset,rows,now){
   if(!delMes.length) return '';
   const nombreMes=new Date(now.getFullYear(),now.getMonth()+offset,1).toLocaleString('es-AR',{month:'long',year:'numeric'});
   const nombreCap=nombreMes.charAt(0).toUpperCase()+nombreMes.slice(1);
-  return`<div style="margin-bottom:20px;">
-    <div style="font-size:11px;font-weight:700;color:var(--text3);padding:10px 18px 8px;letter-spacing:0.06em;text-transform:uppercase;">${nombreCap} <span style="font-weight:500">(${delMes.length})</span></div>
+  return`<div style="margin-bottom:26px;">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);padding:6px 18px 10px;letter-spacing:0.06em;text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--border);">${nombreCap} <span style="font-weight:500">(${delMes.length})</span></div>
     <table class="data-table"><thead><tr><th>Persona</th><th>Fecha</th><th>Próximo</th><th>Días restantes</th></tr></thead>
     <tbody>${delMes.map(r=>filaCumple(r,now)).join('')}</tbody></table>
   </div>`;

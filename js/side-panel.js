@@ -30,8 +30,16 @@ async function verBenefPersona(nombre, grupo, nivel){
     const b=cacheBeneficiosRaw.find(x=>x.fields.Beneficio===bNombre);
     return s+(b?.fields.Valor?Number(b.fields.Valor):0);
   },0);
-  const osRecs=dOS.records||[];
-  const gtRecs=dGT.records||[];
+  // Proyecto es un linked record — resolver el ID a nombre acá también,
+  // igual que hacen loadOffsites()/loadGetTogether() con su propio caché,
+  // para no mostrar el código crudo (recXXXXXXXX) en el resumen.
+  const resolverProyecto=f=>{
+    if(!Array.isArray(f.Proyecto)) return f;
+    const match=(cacheProyectosRaw||[]).find(p=>p.id===f.Proyecto[0]);
+    return {...f, Proyecto:match?match.fields.Proyecto:''};
+  };
+  const osRecs=(dOS.records||[]).map(r=>({...r, fields:resolverProyecto(r.fields)}));
+  const gtRecs=(dGT.records||[]).map(r=>({...r, fields:resolverProyecto(r.fields)}));
 
   // Tope capacitación
   const topeCapEntry=cachePresupuestoLoyalty.find(r=>r.fields.Grupo===grupo&&r.fields.Nivel===nivel);

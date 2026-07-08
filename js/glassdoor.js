@@ -1,35 +1,3 @@
-function filtrarReviews(){
-  if(!document.getElementById('tbody-reviews')) return;
-  const q=(document.getElementById('reviews-search')?.value||'').toLowerCase();
-  const manager=document.getElementById('reviews-manager')?.value||'';
-  const estado=document.getElementById('reviews-estado')?.value||'';
-  const tb=document.getElementById('tbody-reviews');
-  if(!tb) return;
-  let count=0;
-  tb.querySelectorAll('tr').forEach(tr=>{
-    if(tr.classList.contains('empty-row')){tr.style.display='none';return;}
-    const cells=[...tr.querySelectorAll('td')].map(td=>td.textContent.toLowerCase());
-    const persona=cells[0]||'', mgr=cells[1]||'', estadoCell=cells[4]||'';
-    const matchQ=!q||persona.includes(q);
-    const matchMgr=!manager||mgr.includes(manager.toLowerCase());
-    const matchEst=!estado||estadoCell.includes(estado.toLowerCase());
-    const visible=matchQ&&matchMgr&&matchEst;
-    tr.style.display=visible?'':'none';
-    if(visible) count++;
-  });
-  let emptyRow=tb.querySelector('.empty-row');
-  if(count===0){
-    if(!emptyRow){emptyRow=document.createElement('tr');emptyRow.className='empty-row';emptyRow.innerHTML='<td colspan="5">Sin resultados</td>';tb.appendChild(emptyRow);}
-    emptyRow.style.display='';
-  } else if(emptyRow){ emptyRow.style.display='none'; }
-}
-function poblarFiltrosReviews(){
-  const tb=document.getElementById('tbody-reviews');
-  if(!tb) return;
-  const managers=[...new Set([...tb.querySelectorAll('tr:not(.empty-row) td:nth-child(2)')].map(td=>td.textContent.trim()).filter(Boolean))].sort();
-  const sel=document.getElementById('reviews-manager');
-  if(sel) sel.innerHTML='<option value="">Todos los managers</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
-}
 // Reminders de Glassdoor ("Sincronizar Glassdoor" abajo) y reminders manuales
 // sueltos viven los dos en la tabla Eventos — antes tenían una pestaña propia
 // ("Reminders") que terminaba duplicando esta, así que quedaron acá.
@@ -94,6 +62,7 @@ async function loadReviews(){
   }).join('');
   moreEl.style.display=pendientes.length>5?'block':'none';
 
+  poblarGDManagers();
   filtrarGD();
   renderOtrosReminders();
 }
@@ -245,16 +214,32 @@ async function limpiarGlassdoorCoreTeam(){
   await loadReviews();
 }
 
+// Manager de la persona asociada a un reminder de Glassdoor — el Evento no
+// tiene el dato directo, hay que cruzarlo contra Personas por nombre.
+function managerDeEventoGD(f){
+  const nombre=(f.Evento||'').replace(/.*—\s*/,'').trim();
+  const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre);
+  return persona?.fields.Manager||'';
+}
+function poblarGDManagers(){
+  const sel=document.getElementById('gd-manager');
+  if(!sel) return;
+  const actual=sel.value;
+  const managers=[...new Set(cacheGDRecs.map(r=>managerDeEventoGD(r.fields)).filter(Boolean))].sort();
+  sel.innerHTML='<option value="">Todos los managers</option>'+managers.map(m=>`<option value="${m}"${m===actual?' selected':''}>${m}</option>`).join('');
+}
 function filtrarGD(){
   const q=(document.getElementById('gd-search')?.value||'').toLowerCase();
   const estadoFil=document.getElementById('gd-estado')?.value||'';
+  const managerFil=document.getElementById('gd-manager')?.value||'';
   const hoy=new Date();hoy.setHours(0,0,0,0);
   const filtrados=cacheGDRecs.filter(r=>{
     const nombre=(r.fields.Evento||'').toLowerCase();
     const estado=(r.fields.Estado||'Pendiente').toLowerCase();
     const matchQ=!q||nombre.includes(q);
     const matchE=!estadoFil||(estadoFil==='pendiente'&&estado!=='completado')||(estadoFil==='solicitada'&&estado==='completado');
-    return matchQ&&matchE;
+    const matchM=!managerFil||managerDeEventoGD(r.fields)===managerFil;
+    return matchQ&&matchE&&matchM;
   }).sort((a,b)=>(a.fields.Fecha||'').localeCompare(b.fields.Fecha||''));
   const tb=document.getElementById('tbody-glassdoor');
   if(!tb) return;

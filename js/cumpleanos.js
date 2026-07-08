@@ -9,6 +9,7 @@ async function loadCumpleanos(personas){
     const proximo=new Date(now.getTime()+days*86400000);
     return{nombre:f.Nombre,fecha,days,proximo,grupo:CORE_TEAM_ROLES.has(rol)?'core':'eng'};
   }).sort((a,b)=>a.days-b.days);
+  cacheCumpleRows=rows;
 
   const esteM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesActual);
   const proxM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesProximo).length;
@@ -29,14 +30,21 @@ async function loadCumpleanos(personas){
   listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">• ${r.nombre} (${fmt(r.fecha)})</div>`).join('');
   moreEl.style.display=esteM.length>5?'block':'none';
 
-  const engRows=rows.filter(r=>r.grupo==='eng');
-  const coreRows=rows.filter(r=>r.grupo==='core');
-  document.getElementById('badge-cumple-eng').textContent=`${engRows.length} personas`;
-  document.getElementById('badge-cumple-core').textContent=`${coreRows.length} personas`;
-  renderCumpleGrupo('cumple-eng-container',engRows,now);
-  renderCumpleGrupo('cumple-core-container',coreRows,now);
+  filtrarCumpleanos();
 
   return rows.filter(r=>r.days<=60).map(r=>({nombre:r.nombre,evento:'Cumpleaños 🎂',fecha:r.fecha,days:r.days}));
+}
+
+function filtrarCumpleanos(){
+  const now=new Date();now.setHours(0,0,0,0);
+  const q=(document.getElementById('cumple-search')?.value||'').trim().toLowerCase();
+  const filtrados=q?cacheCumpleRows.filter(r=>r.nombre.toLowerCase().includes(q)):cacheCumpleRows;
+  const engRows=filtrados.filter(r=>r.grupo==='eng');
+  const coreRows=filtrados.filter(r=>r.grupo==='core');
+  document.getElementById('badge-cumple-eng').textContent=`${engRows.length} persona${engRows.length!==1?'s':''}`;
+  document.getElementById('badge-cumple-core').textContent=`${coreRows.length} persona${coreRows.length!==1?'s':''}`;
+  renderCumpleGrupo('cumple-eng-container',engRows,now);
+  renderCumpleGrupo('cumple-core-container',coreRows,now);
 }
 
 function filaCumple(r,now){

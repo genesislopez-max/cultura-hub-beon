@@ -1,18 +1,22 @@
 function filtrarProyectos(){
   const q=(document.getElementById('proyectos-search')?.value||'').toLowerCase();
+  const estadoFil=document.getElementById('proyectos-estado')?.value||'';
   const tb=document.getElementById('tbody-proyectos');
   if(!tb) return;
   let count=0;
   tb.querySelectorAll('tr').forEach(tr=>{
     if(tr.classList.contains('empty-row')){tr.style.display='none';return;}
     const texto=tr.textContent.toLowerCase();
-    const visible=!q||texto.includes(q);
+    const estado=tr.dataset.estado||'';
+    const matchQ=!q||texto.includes(q);
+    const matchEstado=!estadoFil?true:estadoFil==='activos'?estado!=='De Baja':estado===estadoFil;
+    const visible=matchQ&&matchEstado;
     tr.style.display=visible?'':'none';
     if(visible) count++;
   });
   let emptyRow=tb.querySelector('.empty-row');
   if(count===0){
-    if(!emptyRow){emptyRow=document.createElement('tr');emptyRow.className='empty-row';emptyRow.innerHTML='<td colspan="7">Sin resultados</td>';tb.appendChild(emptyRow);}
+    if(!emptyRow){emptyRow=document.createElement('tr');emptyRow.className='empty-row';emptyRow.innerHTML='<td colspan="8">Sin resultados</td>';tb.appendChild(emptyRow);}
     emptyRow.style.display='';
   } else if(emptyRow){ emptyRow.style.display='none'; }
 }
@@ -57,9 +61,11 @@ async function loadProyectos(){
   cachePersonasRaw.forEach(p=>{const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
 
   const tb=document.getElementById('tbody-proyectos');
-  tb.innerHTML=recs.length?recs.map(r=>{
+  tb.innerHTML=todosRecs.length?todosRecs.map(r=>{
     const f=r.fields;
     const nombre=f.Proyecto||'—';
+    const estado=f.Estado||'';
+    const estadoBadge=estado==='De Baja'?'<span class="badge badge-red">De Baja</span>':estado?`<span class="badge badge-green">${estado}</span>`:'<span style="color:var(--text3);font-size:12px">—</span>';
     const c=devs[nombre]||0;
     const devBadge=c>0
       ?`<span class="badge badge-blue"><i class="ti ti-users" style="font-size:11px"></i> ${c}</span>`
@@ -86,8 +92,9 @@ async function loadProyectos(){
     }
 
     const fechaInicioVal=f['Fecha de Inicio']||f['Fecha de inicio']||'';
-    return`<tr class="tr-clickable" onclick="openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}')">
+    return`<tr class="tr-clickable" data-estado="${estado}" onclick="openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}')">
       <td><strong>${nombre}</strong></td>
+      <td>${estadoBadge}</td>
       <td style="font-size:12px;color:var(--text2)">${fechaInicioVal?fmt(fechaInicioVal):'—'}</td>
       <td>${devBadge}</td>
       <td>${pubBadge}</td>
@@ -95,7 +102,8 @@ async function loadProyectos(){
       <td style="font-size:12px;color:var(--text2)">${promDias}</td>
       <td><button onclick="event.stopPropagation();openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}',true)" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button></td>
     </tr>`;
-  }).join(''):'<tr class="empty-row"><td colspan="7">No hay proyectos activos</td></tr>';
+  }).join(''):'<tr class="empty-row"><td colspan="8">No hay proyectos cargados</td></tr>';
+  filtrarProyectos();
 }
 
 // Abre el modal de Meet our Teams para un proyecto

@@ -305,7 +305,7 @@ function actualizarBeneficiosPorPersona(){
   sel.innerHTML='<option value="">Seleccioná un beneficio…</option>'+nombres.map(n=>`<option value="${n}"${n===actual?' selected':''}>${n}</option>`).join('');
   const hint=document.getElementById('f-ba-beneficio-hint');
   if(hint) hint.textContent=grupo?`Mostrando beneficios de ${grupo}`:'Elegí una persona para filtrar por su grupo';
-  if(!nombres.includes(actual)){ actualizarMontoBenef(); toggleCamposTerapia(); }
+  if(!nombres.includes(actual)){ actualizarMontoBenef(); toggleCamposTerapia(); toggleCamposLink(); }
 }
 
 // Terapia es el único beneficio que hoy necesita datos extra al asignarlo
@@ -319,15 +319,26 @@ function toggleCamposTerapia(){
   const fg=document.getElementById('fg-ba-terapia');
   if(fg) fg.style.display=esBeneficioTerapia(nombre)?'block':'none';
 }
-// Udemy necesita Curso y Link al asignarlo — el Quarter no se tipea, se
-// calcula solo a partir de la Fecha activación (ver quarterLabel en utils.js).
-function esBeneficioUdemy(nombreBeneficio){
-  return (nombreBeneficio||'').trim().toLowerCase()==='udemy';
+// Beneficios de licencias/plataformas (Udemy, O'Reilly, Pluralsight) necesitan
+// un Link al asignarlos — Udemy además pide el Curso. El Quarter no se tipea
+// en ninguno, se calcula solo a partir de la Fecha activación (ver
+// quarterLabel en utils.js).
+function normalizarBeneficioKey(nombreBeneficio){
+  return (nombreBeneficio||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
 }
-function toggleCamposUdemy(){
+function esBeneficioUdemy(nombreBeneficio){
+  return normalizarBeneficioKey(nombreBeneficio)==='udemy';
+}
+function esBeneficioConLink(nombreBeneficio){
+  const k=normalizarBeneficioKey(nombreBeneficio);
+  return k==='udemy'||k==='oreilly'||k==='pluralsight';
+}
+function toggleCamposLink(){
   const nombre=document.getElementById('f-ba-beneficio')?.value||'';
-  const fg=document.getElementById('fg-ba-udemy');
-  if(fg) fg.style.display=esBeneficioUdemy(nombre)?'block':'none';
+  const fg=document.getElementById('fg-ba-link');
+  if(fg) fg.style.display=esBeneficioConLink(nombre)?'block':'none';
+  const fgCurso=document.getElementById('fg-ba-curso');
+  if(fgCurso) fgCurso.style.display=esBeneficioUdemy(nombre)?'block':'none';
 }
 function actualizarMontoBenef(){
   const sel=document.getElementById('f-ba-beneficio');

@@ -175,7 +175,7 @@ const FORMS={
   </select>
 </div>
 <div class="field-group"><label class="field-label">Beneficio *</label>
-  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef();toggleCamposTerapia();toggleCamposUdemy();">
+  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef();toggleCamposTerapia();toggleCamposLink();">
     <option value="">Seleccioná un beneficio…</option>
   </select>
   <div class="field-hint" id="f-ba-beneficio-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0"></div>
@@ -196,9 +196,9 @@ const FORMS={
   </div>
   <div class="field-group"><label class="field-label">Profesional asignado</label><input class="field-input" id="f-ba-profesional" placeholder="Nombre del/de la profesional"></div>
 </div>
-<div id="fg-ba-udemy" style="display:none">
-  <div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-ba-curso" placeholder="Ej: CompTIA Pentest+ PT0-002 (Ethical Hacking)"></div>
-  <div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-ba-link" type="url" placeholder="https://www.udemy.com/course/…"></div>
+<div id="fg-ba-link" style="display:none">
+  <div class="field-group" id="fg-ba-curso" style="display:none"><label class="field-label">Curso</label><input class="field-input" id="f-ba-curso" placeholder="Ej: CompTIA Pentest+ PT0-002 (Ethical Hacking)"></div>
+  <div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-ba-link" type="url" placeholder="https://…"></div>
   <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">El Quarter se calcula solo a partir de la Fecha activación — no hace falta escribirlo.</div>
 </div>
 <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">Si el beneficio tiene valor fijo en el catálogo, se autocompleta. Podés modificarlo.</div>
@@ -221,8 +221,8 @@ const FORMS={
         if(v('f-ba-frecuencia')) fields.Frecuencia=v('f-ba-frecuencia');
         if(v('f-ba-profesional')) fields['Profesional Asignado']=v('f-ba-profesional');
       }
-      if(esBeneficioUdemy(nombreBeneficio)){
-        if(v('f-ba-curso')) fields.Curso=v('f-ba-curso');
+      if(esBeneficioConLink(nombreBeneficio)){
+        if(esBeneficioUdemy(nombreBeneficio)&&v('f-ba-curso')) fields.Curso=v('f-ba-curso');
         if(v('f-ba-link')) fields.Link=v('f-ba-link');
         if(fecha) fields.Quarter=quarterLabel(fecha);
       }

@@ -155,7 +155,7 @@ function editarBenefAsignado(id,nombre,grupo,nivel){
   const bId=Array.isArray(f.Beneficio)?f.Beneficio[0]:f.Beneficio;
   const benef=cacheBeneficiosRaw.find(b=>b.id===bId||b.fields.Beneficio===bId);
   const bNombre=benef?.fields.Beneficio||bId||'—';
-  const esTerapia=esBeneficioTerapia(bNombre),esUdemy=esBeneficioUdemy(bNombre);
+  const esTerapia=esBeneficioTerapia(bNombre),esUdemy=esBeneficioUdemy(bNombre),esConLink=esBeneficioConLink(bNombre);
   _openFormModal({
     title:`Editar — ${bNombre}`,
     html:()=>`
@@ -177,8 +177,8 @@ ${esTerapia?`
 </div>
 <div class="field-group"><label class="field-label">Profesional asignado</label><input class="field-input" id="f-eba-profesional" value="${f['Profesional Asignado']||''}"></div>
 `:''}
-${esUdemy?`
-<div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-eba-curso" value="${f.Curso||''}"></div>
+${esConLink?`
+${esUdemy?`<div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-eba-curso" value="${f.Curso||''}"></div>`:''}
 <div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-eba-link" type="url" value="${f.Link||''}"></div>
 <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">El Quarter se recalcula solo si cambiás la Fecha activación.</div>
 `:''}`,
@@ -194,8 +194,8 @@ ${esUdemy?`
         fields.Frecuencia=v('f-eba-frecuencia')||null;
         fields['Profesional Asignado']=v('f-eba-profesional')||null;
       }
-      if(esUdemy){
-        fields.Curso=v('f-eba-curso')||null;
+      if(esConLink){
+        if(esUdemy) fields.Curso=v('f-eba-curso')||null;
         fields.Link=v('f-eba-link')||null;
         fields.Quarter=fecha?quarterLabel(fecha):null;
       }

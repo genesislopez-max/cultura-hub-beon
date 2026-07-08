@@ -319,26 +319,25 @@ function toggleCamposTerapia(){
   const fg=document.getElementById('fg-ba-terapia');
   if(fg) fg.style.display=esBeneficioTerapia(nombre)?'block':'none';
 }
-// Beneficios de licencias/plataformas (Udemy, O'Reilly, Pluralsight) necesitan
-// un Link al asignarlos — Udemy además pide el Curso. El Quarter no se tipea
-// en ninguno, se calcula solo a partir de la Fecha activación (ver
-// quarterLabel en utils.js).
+// Udemy necesita Curso y Link al asignarlo — O'Reilly y Pluralsight en la
+// práctica nunca cargan un link, así que no se les pide (piden Enterprise:
+// no hay nada individual que enlazar). El Quarter de los tres se calcula
+// solo a partir de la Fecha activación (ver quarterLabel en utils.js), sin
+// tipearlo, aunque no tengan campos propios en el formulario.
 function normalizarBeneficioKey(nombreBeneficio){
   return (nombreBeneficio||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
 }
 function esBeneficioUdemy(nombreBeneficio){
   return normalizarBeneficioKey(nombreBeneficio)==='udemy';
 }
-function esBeneficioConLink(nombreBeneficio){
+function esBeneficioConQuarterAuto(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
   return k==='udemy'||k==='oreilly'||k==='pluralsight';
 }
 function toggleCamposLink(){
   const nombre=document.getElementById('f-ba-beneficio')?.value||'';
   const fg=document.getElementById('fg-ba-link');
-  if(fg) fg.style.display=esBeneficioConLink(nombre)?'block':'none';
-  const fgCurso=document.getElementById('fg-ba-curso');
-  if(fgCurso) fgCurso.style.display=esBeneficioUdemy(nombre)?'block':'none';
+  if(fg) fg.style.display=esBeneficioUdemy(nombre)?'block':'none';
 }
 function actualizarMontoBenef(){
   const sel=document.getElementById('f-ba-beneficio');

@@ -5,7 +5,7 @@
 // cuánta gente estaba activa (Personas: Fecha de ingreso/egreso) en la fecha
 // del evento, así no hace falta guardar quién NO fue.
 async function loadActividadesVirtuales(){
-  const d=await atGet('Actividades Virtuales','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
+  const d=await atGet('Asistencia a Actividades','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
   cacheAVRaw=(d.records||[]).map(r=>{
     const f={...r.fields};
     if(Array.isArray(f.Persona)){

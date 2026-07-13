@@ -169,7 +169,7 @@ const FORMS={
       for(const nombre of nombres){
         const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
         if(!persona) continue;
-        await atPost('Actividades Virtuales',{Persona:[persona.id],Evento:evento,Fecha:fecha,Grupo:grupo});
+        await atPost('Asistencia a Actividades',{Persona:[persona.id],Evento:evento,Fecha:fecha,Grupo:grupo});
       }
       return true;
     }},

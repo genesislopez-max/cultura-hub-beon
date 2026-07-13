@@ -47,6 +47,7 @@
     <button class="sb-item" onclick="showSection('ambassadors',this)"><i class="ti ti-plane"></i>Ambassador Week</button>
     <button class="sb-item" onclick="showSection('offsites',this)"><i class="ti ti-map-pin"></i>Off Sites</button>
     <button class="sb-item" onclick="showSection('gettogether',this)"><i class="ti ti-users-group"></i>Get Together</button>
+    <button class="sb-item" onclick="showSection('actividades',this)"><i class="ti ti-broadcast"></i>Actividades Virtuales</button>
     <div class="sb-bottom">
       <div class="sb-user" id="sb-user" style="display:none">
         <img class="sb-user-pic" id="sb-user-pic" src="" alt="">
@@ -945,6 +946,82 @@
         </div>
       </div>
 
+      <!-- ACTIVIDADES VIRTUALES -->
+      <div class="section-page" id="page-actividades">
+        <div class="metrics">
+          <div class="metric"><div class="metric-label">Actividades realizadas</div><div class="metric-val" style="color:var(--blue)" id="av-total-eventos">—</div><div class="metric-sub">distintas</div></div>
+          <div class="metric"><div class="metric-label">Asistencias totales</div><div class="metric-val" style="color:#0F6E56" id="av-total-asistencias">—</div><div class="metric-sub">registradas</div></div>
+          <div class="metric"><div class="metric-label">Personas participantes</div><div class="metric-val" style="color:#9a6700" id="av-total-personas">—</div><div class="metric-sub">únicas</div></div>
+          <div class="metric"><div class="metric-label">Asistencia promedio</div><div class="metric-val" id="av-prom-asistencia">—</div><div class="metric-sub">por actividad</div></div>
+        </div>
+        <div class="tab-bar" style="margin-bottom:0">
+          <button class="tab-btn active" onclick="switchAVTab('persona',this)">Por persona</button>
+          <button class="tab-btn" onclick="switchAVTab('evento',this)">Por evento</button>
+          <button class="tab-btn" onclick="switchAVTab('metricas',this)">Métricas</button>
+        </div>
+
+        <!-- POR PERSONA -->
+        <div id="av-tab-persona">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head"><span class="table-head-title">Resumen por persona</span><span class="badge badge-blue" id="av-badge-persona">—</span></div>
+            <div class="search-bar">
+              <div class="search-wrap"><i class="ti ti-search search-icon"></i>
+                <input class="search-input" id="av-search-persona" placeholder="Buscar persona…" oninput="filtrarAVPersona()">
+              </div>
+            </div>
+            <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr><th>Persona</th><th>Actividades</th><th>% asistencia</th><th>Última actividad</th></tr></thead>
+              <tbody id="av-tbody-persona"></tbody>
+            </table>
+          </div>
+          </div>
+        </div>
+
+        <!-- POR EVENTO -->
+        <div id="av-tab-evento" style="display:none">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head"><span class="table-head-title">Resumen por evento</span><span class="badge badge-blue" id="av-badge-evento">—</span></div>
+            <div class="search-bar">
+              <div class="search-wrap"><i class="ti ti-search search-icon"></i>
+                <input class="search-input" id="av-search-evento" placeholder="Buscar evento…" oninput="filtrarAVEvento()">
+              </div>
+            </div>
+            <div class="table-scroll">
+            <table class="data-table">
+              <thead><tr><th>Evento</th><th>Fecha</th><th>Asistentes</th><th>% asistencia</th></tr></thead>
+              <tbody id="av-tbody-evento"></tbody>
+            </table>
+          </div>
+          </div>
+        </div>
+
+        <!-- MÉTRICAS -->
+        <div id="av-tab-metricas" style="display:none">
+          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head" style="flex-wrap:wrap;gap:8px;">
+              <span class="table-head-title">Métricas del trimestre</span>
+              <div style="display:flex;gap:8px;margin-left:auto;">
+                <select class="filter-select" id="avq-anio" onchange="renderAVMetricasQ()"></select>
+                <select class="filter-select" id="avq-trimestre" onchange="renderAVMetricasQ()">
+                  <option value="1">Q1 · Ene-Mar</option>
+                  <option value="2">Q2 · Abr-Jun</option>
+                  <option value="3">Q3 · Jul-Sep</option>
+                  <option value="4">Q4 · Oct-Dic</option>
+                </select>
+              </div>
+            </div>
+            <div class="metrics" style="padding:16px 18px 4px;">
+              <div class="metric"><div class="metric-label">Actividades en el Q</div><div class="metric-val" style="color:var(--blue)" id="avq-total">—</div><div class="metric-sub" id="avq-total-sub"></div></div>
+              <div class="metric"><div class="metric-label">Personas participantes</div><div class="metric-val" style="color:#0F6E56" id="avq-personas">—</div><div class="metric-sub">en el período</div></div>
+              <div class="metric"><div class="metric-label">Asistencia promedio</div><div class="metric-val" id="avq-prom">—</div><div class="metric-sub">por actividad</div></div>
+              <div class="metric"><div class="metric-label">Evento más popular</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="avq-top">—</div><div class="metric-sub" id="avq-top-sub"></div></div>
+            </div>
+            <div id="avq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -1146,6 +1223,7 @@
 <script src="js/ambassador-week.js"></script>
 <script src="js/side-panel.js"></script>
 <script src="js/get-together.js"></script>
+<script src="js/actividades-virtuales.js"></script>
 <script src="js/forms.js"></script>
 <script src="js/nav.js"></script>
 </body>

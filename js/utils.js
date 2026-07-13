@@ -12,6 +12,21 @@ function toast(msg,err=false){
   t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
 }
 function fmt(d){if(!d)return'—';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});}
+
+// ¿Esta persona ya había ingresado (y todavía no se había ido) en la fecha
+// dada? Se usa para calcular "% de asistencia" sin tener que guardar una fila
+// por cada persona que NO asistió a un evento — el universo de gente
+// "disponible para asistir" se calcula al vuelo a partir de Personas.
+function personaActivaEnFecha(persona,fechaStr){
+  if(!fechaStr) return true;
+  const f=persona.fields||{};
+  const fecha=new Date(fechaStr+'T12:00:00');
+  const ingreso=f['Fecha de ingreso']?new Date(f['Fecha de ingreso']+'T00:00:00'):null;
+  const egreso=f['Fecha de egreso']?new Date(f['Fecha de egreso']+'T00:00:00'):null;
+  if(ingreso&&fecha<ingreso) return false;
+  if(egreso&&fecha>=egreso) return false;
+  return true;
+}
 function daysTo(ds){
   if(!ds)return 9999;
   const now=new Date();now.setHours(0,0,0,0);

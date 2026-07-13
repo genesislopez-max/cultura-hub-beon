@@ -96,26 +96,81 @@ function renderAVPersona(){
     const elegibles=persona?eventosUnicos.filter(fecha=>personaActivaEnFecha(persona,fecha)).length:eventosUnicos.length;
     const pct=elegibles?Math.round(d.eventos.length/elegibles*100):null;
     const bg=idx%2===0?'background:var(--bg2)':'';
-    const fila=`<tr class="tr-clickable" style="${bg}" onclick="toggleAVPersonaDetalle('${nombre.replace(/'/g,"\\'")}')">
+    return `<tr class="tr-clickable" style="${bg}" onclick="verAVPersona('${nombre.replace(/'/g,"\\'")}')">
       <td>${avH(nombre)}${nombre}</td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.eventos.length}</td>
       <td style="font-size:12px;color:var(--text2)">${pct!=null?pct+'% ('+elegibles+' posibles)':'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
     </tr>`;
-    return avPersonaExpandido===nombre?fila+filaDetalleAVPersona(d):fila;
   }).join('')||'<tr class="empty-row"><td colspan="4">Sin resultados</td></tr>';
 }
 
-function filaDetalleAVPersona(d){
-  const items=[...d.eventos].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(e=>
-    `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;"><span>${e.evento}</span><span style="color:var(--text3);font-size:12px">${fmt(e.fecha)}</span></div>`
-  ).join('');
-  return `<tr class="benef-detalle-row" onclick="event.stopPropagation()"><td colspan="4"><div style="padding:12px 18px;background:var(--bg2);border-radius:8px;margin:4px 0;">${items}</div></td></tr>`;
+// ─── Tarjeta lateral "Por persona" — historial completo + filtro de año/Q ─────
+// Se usa para revisiones internas (cuántos eventos asistió una persona en un
+// período dado), por eso el año y el trimestre se pueden filtrar por separado.
+function verAVPersona(nombre){
+  avPanelPersona=nombre;
+  const panel=document.getElementById('sp-panel');
+  const overlay=document.getElementById('sp-overlay');
+  document.getElementById('sp-nombre').textContent=nombre;
+  document.getElementById('sp-subtitle').textContent='Actividades Virtuales';
+  const anios=[...new Set(cacheAVRaw.map(r=>r.fields.Fecha).filter(Boolean).map(f=>new Date(f+'T12:00:00').getFullYear()))].sort((a,b)=>b-a);
+  document.getElementById('sp-body').innerHTML=`
+    <div style="display:flex;gap:8px;margin-bottom:18px">
+      <select class="filter-select" id="sp-av-anio" onchange="renderAVPersonaCard()" style="flex:1">
+        <option value="">Todos los años</option>
+        ${anios.map(a=>`<option value="${a}">${a}</option>`).join('')}
+      </select>
+      <select class="filter-select" id="sp-av-trimestre" onchange="renderAVPersonaCard()" style="flex:1">
+        <option value="">Todos los trimestres</option>
+        <option value="1">Q1 · Ene-Mar</option>
+        <option value="2">Q2 · Abr-Jun</option>
+        <option value="3">Q3 · Jul-Sep</option>
+        <option value="4">Q4 · Oct-Dic</option>
+      </select>
+    </div>
+    <div class="metrics-2" id="sp-av-resumen" style="margin-bottom:20px"></div>
+    <div class="side-panel-section">
+      <div class="side-panel-section-title">Actividades</div>
+      <div id="sp-av-lista"></div>
+    </div>`;
+  panel.classList.add('open');
+  overlay.classList.add('open');
+  document.body.style.overflow='hidden';
+  renderAVPersonaCard();
 }
 
-function toggleAVPersonaDetalle(nombre){
-  avPersonaExpandido=avPersonaExpandido===nombre?null:nombre;
-  renderAVPersona();
+function renderAVPersonaCard(){
+  const nombre=avPanelPersona;
+  if(!nombre) return;
+  const anio=document.getElementById('sp-av-anio')?.value||'';
+  const trimestre=document.getElementById('sp-av-trimestre')?.value||'';
+  const dentroDelRango=fecha=>{
+    if(!fecha) return false;
+    const d=new Date(fecha+'T12:00:00');
+    if(anio&&d.getFullYear()!==Number(anio)) return false;
+    if(trimestre&&Math.floor(d.getMonth()/3)+1!==Number(trimestre)) return false;
+    return true;
+  };
+
+  const eventosPersona=cacheAVRaw.filter(r=>r.fields.Persona===nombre&&dentroDelRango(r.fields.Fecha))
+    .map(r=>({evento:r.fields.Evento||'—',fecha:r.fields.Fecha||''}))
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha));
+
+  // Denominador: eventos únicos (de cualquier persona) dentro del mismo
+  // período filtrado, en los que esta persona estaba activa en la empresa.
+  const eventosUnicosEnRango=Object.values(agruparAVPorEvento(cacheAVRaw)).filter(e=>dentroDelRango(e.fecha));
+  const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+  const elegibles=persona?eventosUnicosEnRango.filter(e=>personaActivaEnFecha(persona,e.fecha)).length:eventosUnicosEnRango.length;
+  const pct=elegibles?Math.round(eventosPersona.length/elegibles*100):null;
+
+  document.getElementById('sp-av-resumen').innerHTML=`
+    <div class="metric"><div class="metric-label">Asistió</div><div class="metric-val" style="color:var(--blue)">${eventosPersona.length}</div><div class="metric-sub">actividad${eventosPersona.length!==1?'es':''}</div></div>
+    <div class="metric"><div class="metric-label">% asistencia</div><div class="metric-val">${pct!=null?pct+'%':'—'}</div><div class="metric-sub">${elegibles} posible${elegibles!==1?'s':''}</div></div>`;
+
+  document.getElementById('sp-av-lista').innerHTML=eventosPersona.length
+    ?eventosPersona.map(e=>`<div class="side-panel-row"><span>${e.evento}</span><span style="font-size:12px;color:var(--text2)">${fmt(e.fecha)}</span></div>`).join('')
+    :'<div class="sp-empty">Sin actividades en este período</div>';
 }
 
 function renderAVEvento(){
@@ -222,7 +277,7 @@ function renderListaAsistentesAV(){
 function filtrarListaAsistentesAV(){
   const q=(document.getElementById('f-av-buscar')?.value||'').toLowerCase();
   document.querySelectorAll('#f-av-lista label').forEach(lab=>{
-    lab.style.display=(!q||lab.dataset.nombreLower.includes(q))?'':'none';
+    lab.style.display=(!q||lab.dataset.nombreLower.includes(q))?'flex':'none';
   });
 }
 

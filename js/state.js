@@ -46,6 +46,12 @@ let awqInicializado=false;
 // Get Together
 let gtqInicializado=false;
 
+// Actividades Virtuales (webinars/workshops/townhalls/etc.)
+let cacheAVRaw=[];
+let avqInicializado=false;
+let avEventoExpandido=null;
+let avPersonaExpandido=null;
+
 // Panel lateral persona
 let cacheCapacitaciones=[], cacheGetTogetherRaw=[];
 let cacheCumpleRows=[]; // filas ya calculadas (nombre/fecha/días/grupo) — para filtrar sin recalcular

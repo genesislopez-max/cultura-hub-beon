@@ -132,6 +132,39 @@ function abrirEdicionPersona(nombre){
 }
 
 const FORMS={
+  actividades:{title:'Registrar actividad virtual',html:()=>`
+<div class="field-group"><label class="field-label">Evento *</label><input class="field-input" id="f-av-evento" placeholder="Ej: Bingo Halloween"></div>
+<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-av-fecha" type="date"></div>
+<div class="field-group">
+  <label class="field-label">Asistentes *</label>
+  <div class="search-wrap" style="margin-bottom:8px">
+    <i class="ti ti-search search-icon"></i>
+    <input class="search-input" id="f-av-buscar" placeholder="Buscar persona…" oninput="filtrarListaAsistentesAV()">
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <span class="field-hint" id="f-av-contador">0 seleccionados</span>
+    <button type="button" onclick="toggleSeleccionarTodosAV()" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer">Seleccionar todos</button>
+  </div>
+  <div id="f-av-lista" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:9px;padding:6px 10px;"></div>
+</div>
+`,
+    onMount:()=>{ renderListaAsistentesAV(); },
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      const evento=v('f-av-evento').trim();
+      const fecha=v('f-av-fecha');
+      if(!evento){toast('El evento es obligatorio',true);return false;}
+      if(!fecha){toast('La fecha es obligatoria',true);return false;}
+      const nombres=asistentesSeleccionadosAV();
+      if(!nombres.length){toast('Seleccioná al menos un asistente',true);return false;}
+      for(const nombre of nombres){
+        const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+        if(!persona) continue;
+        await atPost('Actividades Virtuales',{Persona:[persona.id],Evento:evento,Fecha:fecha});
+      }
+      return true;
+    }},
+
   ambassadors:{title:'Registrar asistencia AW',html:()=>{
     const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
     const ediciones=[...new Set(cacheAWRaw.map(r=>r.fields['Edición AW']||'').filter(Boolean))].sort();

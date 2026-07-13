@@ -495,17 +495,18 @@ const FORMS={
       if(!fecha){toast('La fecha límite es obligatoria',true);return false;}
       const campos={Título:titulo,Asignado:asignado,Fecha:fecha,Descripción:v('f-tar-desc'),Estado:'Por hacer'};
       if(hora) campos.Hora=hora;
-      await atPost('Tareas',campos);
       const frecuencia=v('f-tar-frecuencia');
-      let extra=0;
       if(frecuencia){
-        const fechasExtra=frecuencia==='personalizada'
-          ?generarFechasPersonalizadas(fecha,Math.max(1,Number(v('f-tar-intervalo'))||1),v('f-tar-unidad')||'dia',diasSemanaSeleccionados(),Math.max(1,Math.min(104,Number(v('f-tar-cantidad'))||10)))
-          :generarFechasRecurrentes(fecha,frecuencia,diasSemanaSeleccionados());
-        for(const f of fechasExtra) await atPost('Tareas',{...campos,Fecha:f});
-        extra=fechasExtra.length;
+        const config={frecuencia,dias:diasSemanaSeleccionados()};
+        if(frecuencia==='personalizada'){
+          config.intervalo=Math.max(1,Number(v('f-tar-intervalo'))||1);
+          config.unidad=v('f-tar-unidad')||'dia';
+          config.restantes=Math.max(1,Math.min(104,Number(v('f-tar-cantidad'))||10));
+        }
+        campos.RepeticionConfig=JSON.stringify(config);
       }
-      sendSlack(`✅ *Nueva tarea asignada*\n*${titulo}* — ${asignado} (vence el ${fmt(fecha)})${extra?`\n🔁 Se repite: se crearon ${extra} tareas más`:''}`);
+      await atPost('Tareas',campos);
+      sendSlack(`✅ *Nueva tarea asignada*\n*${titulo}* — ${asignado} (vence el ${fmt(fecha)})${frecuencia?`\n🔁 Se repite — la siguiente se crea sola cuando la marques como Hecha`:''}`);
       return true;
     }},
 

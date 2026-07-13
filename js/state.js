@@ -50,7 +50,7 @@ let gtqInicializado=false;
 let cacheAVRaw=[];
 let avqInicializado=false;
 let avEventoExpandido=null;
-let avPersonaExpandido=null;
+let avPanelPersona=null;
 
 // Panel lateral persona
 let cacheCapacitaciones=[], cacheGetTogetherRaw=[];

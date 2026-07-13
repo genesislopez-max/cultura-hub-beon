@@ -156,7 +156,7 @@ const FORMS={
   <div id="f-av-lista" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:9px;padding:6px 10px;"></div>
 </div>
 `,
-    onMount:()=>{ renderListaAsistentesAV(); },
+    onMount:()=>{ avAsistentesPreseleccionados=new Set(); renderListaAsistentesAV(); },
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       const evento=v('f-av-evento').trim();

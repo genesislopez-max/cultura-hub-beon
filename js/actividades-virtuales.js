@@ -215,12 +215,91 @@ function renderAVEvento(){
 function filaDetalleAVEvento(d){
   const nombres=[...d.asistentes].sort();
   const items=nombres.map(n=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">${avH(n)}<span style="font-size:13px">${n}</span></div>`).join('');
-  return `<tr class="benef-detalle-row" onclick="event.stopPropagation()"><td colspan="4"><div style="padding:12px 18px;background:var(--bg2);border-radius:8px;margin:4px 0;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">${d.asistentes.length} asistente${d.asistentes.length!==1?'s':''}</div>${items}</div></td></tr>`;
+  const key=`${d.evento}|${d.fecha}`;
+  return `<tr class="benef-detalle-row" onclick="event.stopPropagation()"><td colspan="4"><div style="padding:12px 18px;background:var(--bg2);border-radius:8px;margin:4px 0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);">${d.asistentes.length} asistente${d.asistentes.length!==1?'s':''}</div>
+      <button onclick="editarEventoAV('${key.replace(/'/g,"\\'")}')" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;"><i class="ti ti-pencil"></i>Editar evento</button>
+    </div>
+    ${items}
+  </div></td></tr>`;
 }
 
 function toggleAVEventoDetalle(key){
   avEventoExpandido=avEventoExpandido===key?null:key;
   renderAVEvento();
+}
+
+function registrosDeEventoAV(evento,fecha){
+  return cacheAVRaw.filter(r=>(r.fields.Evento||'—')===evento&&(r.fields.Fecha||'')===fecha);
+}
+
+// Edita Evento/Fecha/Grupo y la lista de asistentes de un evento ya guardado.
+// Como cada asistente es un registro separado en Airtable, "editar el evento"
+// significa: actualizar los registros de quienes siguen, borrar los de quienes
+// se sacaron, y crear uno nuevo por cada persona agregada.
+function editarEventoAV(key){
+  const sep=key.lastIndexOf('|');
+  const evento=key.slice(0,sep), fecha=key.slice(sep+1);
+  const registros=registrosDeEventoAV(evento,fecha);
+  if(!registros.length) return;
+  const grupoActual=registros[0].fields.Grupo||'Todos';
+  avAsistentesPreseleccionados=new Set(registros.map(r=>r.fields.Persona).filter(Boolean));
+  _openFormModal({
+    title:`Editar — ${evento}`,
+    html:()=>`
+<div class="field-group"><label class="field-label">Evento *</label><input class="field-input" id="f-av-evento" value="${evento.replace(/"/g,'&quot;')}"></div>
+<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-av-fecha" type="date" value="${fecha}"></div>
+<div class="field-group"><label class="field-label">Dirigido a *</label>
+  <select class="field-input" id="f-av-grupo" onchange="renderListaAsistentesAV()">
+    <option value="Todos"${grupoActual==='Todos'?' selected':''}>Todos</option>
+    <option value="Engineers & Tech"${grupoActual==='Engineers & Tech'?' selected':''}>Engineers &amp; Tech</option>
+    <option value="Core Team"${grupoActual==='Core Team'?' selected':''}>Core Team</option>
+  </select>
+  <div class="field-hint">Se usa para calcular el % de asistencia sobre el grupo correcto, no sobre toda la empresa.</div>
+</div>
+<div class="field-group">
+  <label class="field-label">Asistentes *</label>
+  <div class="search-wrap" style="margin-bottom:8px">
+    <i class="ti ti-search search-icon"></i>
+    <input class="search-input" id="f-av-buscar" placeholder="Buscar persona…" oninput="filtrarListaAsistentesAV()">
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <span class="field-hint" id="f-av-contador">0 seleccionados</span>
+    <button type="button" onclick="toggleSeleccionarTodosAV()" style="background:none;border:none;color:var(--blue);font-size:12px;font-weight:600;cursor:pointer">Seleccionar todos</button>
+  </div>
+  <div id="f-av-lista" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:9px;padding:6px 10px;"></div>
+</div>
+`,
+    onMount:()=>{ renderListaAsistentesAV(); },
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      const evento2=v('f-av-evento').trim();
+      const fecha2=v('f-av-fecha');
+      const grupo2=v('f-av-grupo')||'Todos';
+      if(!evento2){toast('El evento es obligatorio',true);return false;}
+      if(!fecha2){toast('La fecha es obligatoria',true);return false;}
+      const nuevosNombres=new Set(asistentesSeleccionadosAV());
+      if(!nuevosNombres.size){toast('Seleccioná al menos un asistente',true);return false;}
+
+      for(const r of registros){
+        const nombre=r.fields.Persona;
+        if(nuevosNombres.has(nombre)){
+          await atPatch(`Asistencia a Actividades/${r.id}`,{Evento:evento2,Fecha:fecha2,Grupo:grupo2});
+          nuevosNombres.delete(nombre);
+        } else {
+          await atDelete('Asistencia a Actividades',r.id).catch(()=>{});
+        }
+      }
+      for(const nombre of nuevosNombres){
+        const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+        if(!persona) continue;
+        await atPost('Asistencia a Actividades',{Persona:[persona.id],Evento:evento2,Fecha:fecha2,Grupo:grupo2});
+      }
+      avEventoExpandido=null;
+      return true;
+    },
+  });
 }
 
 // "Alta" = una actividad cuya Fecha cae dentro del trimestre elegido.
@@ -275,15 +354,20 @@ function renderAVMetricasQ(){
   </tbody></table>`;
 }
 
-// ─── Formulario "Registrar actividad" — lista de asistentes con checkboxes ────
+// ─── Formulario "Registrar actividad"/"Editar evento" — lista de asistentes
+// con checkboxes. avAsistentesPreseleccionados trae los nombres que ya
+// figuraban en el evento cuando se abre en modo edición (vacío al crear uno
+// nuevo) — se re-aplica cada vez que se re-renderiza la lista (ej. al cambiar
+// el grupo "Dirigido a").
 function renderListaAsistentesAV(){
   const cont=document.getElementById('f-av-lista');
   if(!cont) return;
   const grupo=document.getElementById('f-av-grupo')?.value||'Todos';
+  const marcados=avAsistentesPreseleccionados||new Set();
   const nombres=[...(cachePersonasRaw||[])].filter(p=>personaPerteneceAGrupoAV(p,grupo)).map(p=>p.fields.Nombre).filter(Boolean).sort();
   cont.innerHTML=nombres.map(n=>`
     <label style="display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13px;cursor:pointer" data-nombre-lower="${n.toLowerCase()}">
-      <input type="checkbox" class="av-asistente-chk" value="${n.replace(/"/g,'&quot;')}"> ${n}
+      <input type="checkbox" class="av-asistente-chk" value="${n.replace(/"/g,'&quot;')}"${marcados.has(n)?' checked':''}> ${n}
     </label>`).join('');
   cont.querySelectorAll('.av-asistente-chk').forEach(chk=>chk.addEventListener('change',actualizarContadorAV));
   filtrarListaAsistentesAV();

@@ -196,6 +196,9 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .col-aviso-dado .kanban-col-head{border-top:3px solid #9a6700;}
 .col-en-proceso .kanban-col-head{border-top:3px solid #E24B4A;}
 .col-offboarding-completo .kanban-col-head{border-top:3px solid #6B7280;}
+.col-tarea-porhacer .kanban-col-head{background:linear-gradient(90deg,#FCEBEB 0%,rgba(255,255,255,0.55) 100%);border-left:3px solid #A32D2D;}
+.col-tarea-enproceso .kanban-col-head{background:linear-gradient(90deg,#FFF8E1 0%,rgba(255,255,255,0.55) 100%);border-left:3px solid #9a6700;}
+.col-tarea-hecho .kanban-col-head{background:linear-gradient(90deg,#EAFAF1 0%,rgba(255,255,255,0.55) 100%);border-left:3px solid #0F6E56;}
 
 /* CHECKLIST */
 .cl-etapa-header{padding:10px 18px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--text2);display:flex;align-items:center;justify-content:space-between;}

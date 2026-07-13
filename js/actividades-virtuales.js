@@ -64,6 +64,31 @@ function activosParaEventoAV(evento){
   return (cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,evento.fecha)&&personaPerteneceAGrupoAV(p,evento.grupo)).length;
 }
 
+// % de asistencia de un evento sobre un grupo puntual (Core Team/Engineers &
+// Tech), sin importar a quién estaba dirigido el evento — así un evento
+// "Todos" se puede leer separado por grupo en vez de un solo número mezclado.
+function pctPorGrupoAV(evento,grupo){
+  const activos=(cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,evento.fecha)&&personaPerteneceAGrupoAV(p,grupo)).length;
+  if(!activos) return null;
+  const asistio=evento.asistentes.filter(nombre=>{
+    const p=(cachePersonasRaw||[]).find(x=>(x.fields.Nombre||'').trim()===nombre.trim());
+    return p&&personaPerteneceAGrupoAV(p,grupo);
+  }).length;
+  return Math.round(asistio/activos*100);
+}
+
+function promPorGrupoAV(eventos,grupo){
+  const pcts=eventos.map(e=>pctPorGrupoAV(e,grupo)).filter(p=>p!=null);
+  return pcts.length?Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length):null;
+}
+
+function barraPctAV(pct,color){
+  return `<div style="display:flex;align-items:center;gap:8px;">
+    <div style="flex:1;max-width:100px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct||0}%;height:100%;background:${color};border-radius:3px"></div></div>
+    <span style="font-size:12px;color:var(--text2)">${pct!=null?pct+'%':'—'}</span>
+  </div>`;
+}
+
 function renderAVMetricas(){
   const eventos=Object.values(agruparAVPorEvento(cacheAVRaw));
   document.getElementById('av-total-eventos').textContent=eventos.length;
@@ -322,12 +347,10 @@ function renderAVMetricasQ(){
   const personas=new Set(enQ.map(r=>r.fields.Persona).filter(Boolean));
   document.getElementById('avq-personas').textContent=personas.size;
 
-  const pcts=eventos.map(e=>{
-    const activos=activosParaEventoAV(e);
-    return activos?Math.round(e.asistentes.length/activos*100):null;
-  }).filter(p=>p!=null);
-  const prom=pcts.length?Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length):0;
-  document.getElementById('avq-prom').textContent=eventos.length?`${prom}%`:'—';
+  const promCore=promPorGrupoAV(eventos,'Core Team');
+  const promEng=promPorGrupoAV(eventos,'Engineers & Tech');
+  document.getElementById('avq-prom-core').textContent=promCore!=null?`${promCore}%`:'—';
+  document.getElementById('avq-prom-eng').textContent=promEng!=null?`${promEng}%`:'—';
 
   const ranking=eventos.sort((a,b)=>b.asistentes.length-a.asistentes.length);
   const top=ranking[0];
@@ -340,16 +363,18 @@ function renderAVMetricasQ(){
     cont.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Sin actividades registradas en este trimestre.</div>';
     return;
   }
-  cont.innerHTML=`<table class="data-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Asistentes</th><th>% asistencia</th></tr></thead><tbody>
+  // Se muestra el % separado por Core Team y por Engineers & Tech (en vez de
+  // un solo % mezclado) — sobre todo relevante en eventos "Todos", donde antes
+  // un solo número escondía que la asistencia real puede ser muy distinta
+  // entre los dos grupos.
+  cont.innerHTML=`<table class="data-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Asistentes</th><th>% Core Team</th><th>% Engineers & Tech</th></tr></thead><tbody>
     ${ranking.map(e=>{
-      const activos=activosParaEventoAV(e);
-      const pct=activos?Math.round(e.asistentes.length/activos*100):null;
-      return`<tr><td>${e.evento}</td><td style="font-size:12px;color:var(--text2)">${fmt(e.fecha)}</td><td style="font-weight:600">${e.asistentes.length}</td><td>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <div style="flex:1;max-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct||0}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
-          <span style="font-size:12px;color:var(--text2)">${pct!=null?pct+'%':'—'}</span>
-        </div>
-      </td></tr>`;
+      const pctCore=pctPorGrupoAV(e,'Core Team');
+      const pctEng=pctPorGrupoAV(e,'Engineers & Tech');
+      return`<tr><td>${e.evento}</td><td style="font-size:12px;color:var(--text2)">${fmt(e.fecha)}</td><td style="font-weight:600">${e.asistentes.length}</td>
+        <td>${barraPctAV(pctCore,'#7432FF')}</td>
+        <td>${barraPctAV(pctEng,'#3A69FF')}</td>
+      </tr>`;
     }).join('')}
   </tbody></table>`;
 }

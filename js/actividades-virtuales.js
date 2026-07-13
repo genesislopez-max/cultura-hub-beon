@@ -5,7 +5,7 @@
 // cuánta gente estaba activa (Personas: Fecha de ingreso/egreso) en la fecha
 // del evento, así no hace falta guardar quién NO fue.
 async function loadActividadesVirtuales(){
-  const d=await atGet('Actividades Virtuales','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
+  const d=await atGet('Asistencia a Actividades','&sort[0][field]=Fecha&sort[0][direction]=desc').catch(()=>({records:[]}));
   cacheAVRaw=(d.records||[]).map(r=>{
     const f={...r.fields};
     if(Array.isArray(f.Persona)){
@@ -45,10 +45,23 @@ function agruparAVPorEvento(rows){
   const mapa={};
   rows.forEach(r=>{
     const key=`${r.fields.Evento||'—'}|${r.fields.Fecha||''}`;
-    if(!mapa[key]) mapa[key]={evento:r.fields.Evento||'—',fecha:r.fields.Fecha||'',asistentes:[]};
+    if(!mapa[key]) mapa[key]={evento:r.fields.Evento||'—',fecha:r.fields.Fecha||'',grupo:r.fields.Grupo||'Todos',asistentes:[]};
     if(r.fields.Persona) mapa[key].asistentes.push(r.fields.Persona);
   });
   return mapa;
+}
+
+// Un evento puede estar dirigido solo a Core Team o solo a Engineers & Tech
+// — el denominador del % de asistencia tiene que limitarse a ese grupo, no a
+// toda la empresa, para que el porcentaje sea real.
+function personaPerteneceAGrupoAV(persona,grupo){
+  if(!grupo||grupo==='Todos') return true;
+  const esCore=CORE_TEAM_ROLES.has((persona.fields['Rol en empresa']||'').trim());
+  return grupo==='Core Team'?esCore:!esCore;
+}
+
+function activosParaEventoAV(evento){
+  return (cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,evento.fecha)&&personaPerteneceAGrupoAV(p,evento.grupo)).length;
 }
 
 function renderAVMetricas(){
@@ -59,7 +72,7 @@ function renderAVMetricas(){
   document.getElementById('av-total-personas').textContent=personas.size;
 
   const pcts=eventos.map(e=>{
-    const activos=(cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,e.fecha)).length;
+    const activos=activosParaEventoAV(e);
     return activos?Math.round(e.asistentes.length/activos*100):null;
   }).filter(p=>p!=null);
   const prom=pcts.length?Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length):0;
@@ -81,8 +94,8 @@ function renderAVPersona(){
   });
 
   // Denominador de cada persona: cantidad de eventos únicos que se hicieron
-  // mientras esa persona estaba activa en la empresa.
-  const eventosUnicos=Object.values(agruparAVPorEvento(cacheAVRaw)).map(e=>e.fecha);
+  // mientras esa persona estaba activa en la empresa y dentro de su grupo.
+  const eventosUnicos=Object.values(agruparAVPorEvento(cacheAVRaw));
 
   const filas=Object.entries(mapa)
     .filter(([n])=>!q||n.toLowerCase().includes(q))
@@ -93,7 +106,7 @@ function renderAVPersona(){
   if(!tb) return;
   tb.innerHTML=filas.map(([nombre,d],idx)=>{
     const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
-    const elegibles=persona?eventosUnicos.filter(fecha=>personaActivaEnFecha(persona,fecha)).length:eventosUnicos.length;
+    const elegibles=persona?eventosUnicos.filter(e=>personaActivaEnFecha(persona,e.fecha)&&personaPerteneceAGrupoAV(persona,e.grupo)).length:eventosUnicos.length;
     const pct=elegibles?Math.round(d.eventos.length/elegibles*100):null;
     const bg=idx%2===0?'background:var(--bg2)':'';
     return `<tr class="tr-clickable" style="${bg}" onclick="verAVPersona('${nombre.replace(/'/g,"\\'")}')">
@@ -113,7 +126,7 @@ function verAVPersona(nombre){
   const panel=document.getElementById('sp-panel');
   const overlay=document.getElementById('sp-overlay');
   document.getElementById('sp-nombre').textContent=nombre;
-  document.getElementById('sp-subtitle').textContent='Actividades Virtuales';
+  document.getElementById('sp-subtitle').textContent='Asistencia a Actividades';
   const anios=[...new Set(cacheAVRaw.map(r=>r.fields.Fecha).filter(Boolean).map(f=>new Date(f+'T12:00:00').getFullYear()))].sort((a,b)=>b-a);
   document.getElementById('sp-body').innerHTML=`
     <div style="display:flex;gap:8px;margin-bottom:18px">
@@ -158,10 +171,11 @@ function renderAVPersonaCard(){
     .sort((a,b)=>b.fecha.localeCompare(a.fecha));
 
   // Denominador: eventos únicos (de cualquier persona) dentro del mismo
-  // período filtrado, en los que esta persona estaba activa en la empresa.
+  // período filtrado, en los que esta persona estaba activa en la empresa y
+  // dentro de su grupo.
   const eventosUnicosEnRango=Object.values(agruparAVPorEvento(cacheAVRaw)).filter(e=>dentroDelRango(e.fecha));
   const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
-  const elegibles=persona?eventosUnicosEnRango.filter(e=>personaActivaEnFecha(persona,e.fecha)).length:eventosUnicosEnRango.length;
+  const elegibles=persona?eventosUnicosEnRango.filter(e=>personaActivaEnFecha(persona,e.fecha)&&personaPerteneceAGrupoAV(persona,e.grupo)).length:eventosUnicosEnRango.length;
   const pct=elegibles?Math.round(eventosPersona.length/elegibles*100):null;
 
   document.getElementById('sp-av-resumen').innerHTML=`
@@ -185,11 +199,11 @@ function renderAVEvento(){
   const tb=document.getElementById('av-tbody-evento');
   if(!tb) return;
   tb.innerHTML=filas.map(([key,d],idx)=>{
-    const activos=(cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,d.fecha)).length;
+    const activos=activosParaEventoAV(d);
     const pct=activos?Math.round(d.asistentes.length/activos*100):null;
     const bg=idx%2===0?'background:var(--bg2)':'';
     const fila=`<tr class="tr-clickable" style="${bg}" onclick="toggleAVEventoDetalle('${key.replace(/'/g,"\\'")}')">
-      <td><strong>${d.evento}</strong></td>
+      <td><strong>${d.evento}</strong> ${d.grupo&&d.grupo!=='Todos'?`<span class="badge badge-gray" style="font-size:10px">${d.grupo}</span>`:''}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.fecha)}</td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.asistentes.length}</td>
       <td style="font-size:12px;color:var(--text2)">${pct!=null?pct+'% ('+activos+' activos)':'—'}</td>
@@ -230,7 +244,7 @@ function renderAVMetricasQ(){
   document.getElementById('avq-personas').textContent=personas.size;
 
   const pcts=eventos.map(e=>{
-    const activos=(cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,e.fecha)).length;
+    const activos=activosParaEventoAV(e);
     return activos?Math.round(e.asistentes.length/activos*100):null;
   }).filter(p=>p!=null);
   const prom=pcts.length?Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length):0;
@@ -249,7 +263,7 @@ function renderAVMetricasQ(){
   }
   cont.innerHTML=`<table class="data-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Asistentes</th><th>% asistencia</th></tr></thead><tbody>
     ${ranking.map(e=>{
-      const activos=(cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,e.fecha)).length;
+      const activos=activosParaEventoAV(e);
       const pct=activos?Math.round(e.asistentes.length/activos*100):null;
       return`<tr><td>${e.evento}</td><td style="font-size:12px;color:var(--text2)">${fmt(e.fecha)}</td><td style="font-weight:600">${e.asistentes.length}</td><td>
         <div style="display:flex;align-items:center;gap:8px;">
@@ -265,12 +279,14 @@ function renderAVMetricasQ(){
 function renderListaAsistentesAV(){
   const cont=document.getElementById('f-av-lista');
   if(!cont) return;
-  const nombres=[...(cachePersonasRaw||[])].map(p=>p.fields.Nombre).filter(Boolean).sort();
+  const grupo=document.getElementById('f-av-grupo')?.value||'Todos';
+  const nombres=[...(cachePersonasRaw||[])].filter(p=>personaPerteneceAGrupoAV(p,grupo)).map(p=>p.fields.Nombre).filter(Boolean).sort();
   cont.innerHTML=nombres.map(n=>`
     <label style="display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13px;cursor:pointer" data-nombre-lower="${n.toLowerCase()}">
       <input type="checkbox" class="av-asistente-chk" value="${n.replace(/"/g,'&quot;')}"> ${n}
     </label>`).join('');
   cont.querySelectorAll('.av-asistente-chk').forEach(chk=>chk.addEventListener('change',actualizarContadorAV));
+  filtrarListaAsistentesAV();
   actualizarContadorAV();
 }
 

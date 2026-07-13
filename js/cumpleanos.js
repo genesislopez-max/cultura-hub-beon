@@ -43,8 +43,8 @@ function filtrarCumpleanos(){
   const coreRows=filtrados.filter(r=>r.grupo==='core');
   document.getElementById('badge-cumple-eng').textContent=`${engRows.length} persona${engRows.length!==1?'s':''}`;
   document.getElementById('badge-cumple-core').textContent=`${coreRows.length} persona${coreRows.length!==1?'s':''}`;
-  renderCumpleGrupo('cumple-eng-container',engRows,now);
-  renderCumpleGrupo('cumple-core-container',coreRows,now);
+  renderCumpleGrupo('cumple-eng-container',engRows,now,'eng');
+  renderCumpleGrupo('cumple-core-container',coreRows,now,'core');
 }
 
 function filaCumple(r,now){
@@ -63,7 +63,12 @@ function filaCumple(r,now){
 // que alguien que cumple efectivamente esta semana, solo porque comparten
 // nombre de mes. Los offsets más lejanos quedan colapsados atrás de "Ver más
 // adelante" para que la lista no se sienta interminable.
-function bloqueMesCumple(offset,rows,now){
+// Colores por grupo — mismos que ya usan las cards "Engineers & Tech"/"Core
+// Team" de arriba, para que el header de cada mes se lea como parte de ese
+// mismo grupo en vez de mezclarse con el header de columnas de la tabla.
+const CUMPLE_ACCENT={eng:{borde:'#3A69FF',tinte:'#EEF2FF'},core:{borde:'#7432FF',tinte:'#F3EEFF'}};
+
+function bloqueMesCumple(offset,rows,now,grupo){
   const delMes=rows.filter(r=>{
     const m=(r.proximo.getFullYear()-now.getFullYear())*12+(r.proximo.getMonth()-now.getMonth());
     return m===offset;
@@ -71,14 +76,15 @@ function bloqueMesCumple(offset,rows,now){
   if(!delMes.length) return '';
   const nombreMes=new Date(now.getFullYear(),now.getMonth()+offset,1).toLocaleString('es-AR',{month:'long',year:'numeric'});
   const nombreCap=nombreMes.charAt(0).toUpperCase()+nombreMes.slice(1);
-  return`<div style="margin-bottom:26px;">
-    <div style="font-size:11px;font-weight:700;color:var(--text3);padding:6px 18px 10px;letter-spacing:0.06em;text-transform:uppercase;background:var(--bg);border-bottom:1px solid var(--border);">${nombreCap} <span style="font-weight:500">(${delMes.length})</span></div>
-    <table class="data-table"><thead><tr><th>Persona</th><th>Fecha</th><th>Próximo</th><th>Días restantes</th></tr></thead>
+  const {borde,tinte}=CUMPLE_ACCENT[grupo]||CUMPLE_ACCENT.eng;
+  return`<div class="cumple-grupo-mes" style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin:0 14px 22px;">
+    <div style="font-size:13px;font-weight:700;color:var(--text);padding:10px 18px;background:linear-gradient(90deg,${tinte} 0%,var(--bg2) 100%);border-left:3px solid ${borde};">${nombreCap} <span style="font-weight:500;color:var(--text3);font-size:12px">(${delMes.length})</span></div>
+    <table class="data-table" style="border-radius:0"><thead><tr><th>Persona</th><th>Fecha</th><th>Próximo</th><th>Días restantes</th></tr></thead>
     <tbody>${delMes.map(r=>filaCumple(r,now)).join('')}</tbody></table>
   </div>`;
 }
 
-function renderCumpleGrupo(containerId,rows,now){
+function renderCumpleGrupo(containerId,rows,now,grupo){
   const container=document.getElementById(containerId);
   if(!container) return;
   if(!rows.length){
@@ -86,10 +92,10 @@ function renderCumpleGrupo(containerId,rows,now){
     return;
   }
   const offsets=Array.from({length:13},(_,i)=>i); // 0..12: cubre el año completo, incluido "este mes pero ya pasó" (offset 12)
-  const cercanos=offsets.slice(0,3).map(o=>bloqueMesCumple(o,rows,now)).join('');
-  const lejanos=offsets.slice(3).map(o=>bloqueMesCumple(o,rows,now)).join('');
+  const cercanos=offsets.slice(0,3).map(o=>bloqueMesCumple(o,rows,now,grupo)).join('');
+  const lejanos=offsets.slice(3).map(o=>bloqueMesCumple(o,rows,now,grupo)).join('');
   container.innerHTML=cercanos+(lejanos?`
-    <details style="margin:0 18px 18px;">
+    <details style="margin:0 14px 18px;">
       <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--blue);padding:10px 0;">Ver más adelante →</summary>
       ${lejanos}
     </details>`:'');

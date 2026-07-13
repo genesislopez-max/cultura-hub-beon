@@ -51,6 +51,7 @@ let cacheAVRaw=[];
 let avqInicializado=false;
 let avEventoExpandido=null;
 let avPanelPersona=null;
+let avAsistentesPreseleccionados=new Set();
 
 // Panel lateral persona
 let cacheCapacitaciones=[], cacheGetTogetherRaw=[];

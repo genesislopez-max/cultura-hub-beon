@@ -135,6 +135,14 @@ const FORMS={
   actividades:{title:'Registrar actividad virtual',html:()=>`
 <div class="field-group"><label class="field-label">Evento *</label><input class="field-input" id="f-av-evento" placeholder="Ej: Bingo Halloween"></div>
 <div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-av-fecha" type="date"></div>
+<div class="field-group"><label class="field-label">Dirigido a *</label>
+  <select class="field-input" id="f-av-grupo" onchange="renderListaAsistentesAV()">
+    <option value="Todos">Todos</option>
+    <option value="Engineers & Tech">Engineers &amp; Tech</option>
+    <option value="Core Team">Core Team</option>
+  </select>
+  <div class="field-hint">Se usa para calcular el % de asistencia sobre el grupo correcto, no sobre toda la empresa.</div>
+</div>
 <div class="field-group">
   <label class="field-label">Asistentes *</label>
   <div class="search-wrap" style="margin-bottom:8px">
@@ -153,6 +161,7 @@ const FORMS={
       const v=id=>document.getElementById(id)?.value||'';
       const evento=v('f-av-evento').trim();
       const fecha=v('f-av-fecha');
+      const grupo=v('f-av-grupo')||'Todos';
       if(!evento){toast('El evento es obligatorio',true);return false;}
       if(!fecha){toast('La fecha es obligatoria',true);return false;}
       const nombres=asistentesSeleccionadosAV();
@@ -160,7 +169,7 @@ const FORMS={
       for(const nombre of nombres){
         const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
         if(!persona) continue;
-        await atPost('Actividades Virtuales',{Persona:[persona.id],Evento:evento,Fecha:fecha});
+        await atPost('Actividades Virtuales',{Persona:[persona.id],Evento:evento,Fecha:fecha,Grupo:grupo});
       }
       return true;
     }},

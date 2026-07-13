@@ -141,6 +141,22 @@ function generarFechasPersonalizadas(fechaInicioStr,intervalo,unidad,diasSemana,
   return fechas.sort();
 }
 
+// Próxima ocurrencia (una sola fecha) a partir de la fecha de la tarea que se
+// acaba de completar y su config de repetición guardada — usado para crear
+// la siguiente tarea recién cuando se marca "Hecho" la actual (en vez de
+// generar todo el lote por adelantado). Devuelve null si no repite más
+// (personalizada con restantes agotado).
+function proximaFechaRepeticion(fechaBaseStr,config){
+  if(!config||!config.frecuencia) return null;
+  if(config.frecuencia==='personalizada'){
+    if(config.restantes!=null&&config.restantes<=0) return null;
+    const fechas=generarFechasPersonalizadas(fechaBaseStr,config.intervalo||1,config.unidad||'dia',config.dias||[],1);
+    return fechas[0]||null;
+  }
+  const fechas=generarFechasRecurrentes(fechaBaseStr,config.frecuencia,config.dias||[]);
+  return fechas[0]||null;
+}
+
 // ─── CONFIRM DIALOG ──────────────────────────────────────────────────────────
 function showConfirm(title, msg, onOk){
   document.getElementById('confirm-title').textContent=title;

@@ -96,6 +96,14 @@ function setupDragDropTareas(){
   const board=document.getElementById('kb-tareas');
   if(!board) return;
   board.querySelectorAll('.kanban-col').forEach(col=>{
+    // Las columnas son elementos fijos del HTML que se reusan en cada
+    // render (solo se reemplaza el contenido de adentro) — sin este guard,
+    // cada llamada a renderTareasKanban() agregaba otro listener más sobre
+    // los mismos elementos, y un solo drop terminaba disparando la lógica
+    // de "marcar Hecho" (y la creación de la próxima ocurrencia) una vez
+    // por cada render acumulado en la sesión.
+    if(col.dataset.dragReady) return;
+    col.dataset.dragReady='1';
     col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drag-over');});
     col.addEventListener('dragleave',e=>{if(!col.contains(e.relatedTarget))col.classList.remove('drag-over');});
     col.addEventListener('drop',async e=>{
@@ -108,6 +116,10 @@ function setupDragDropTareas(){
       try{
         await atPatch(`Tareas/${idToMove}`,{Estado:nuevoEstado});
         toast(`Movida a "${nuevoEstado}" ✓`);
+        if(nuevoEstado==='Hecho'){
+          const tarea=cacheTareasRaw.find(r=>r.id===idToMove);
+          if(tarea) await generarProximaTareaRepetida(tarea);
+        }
         await loadTareas();
       }catch(err){
         toast('Error al mover: '+err.message,true);
@@ -216,16 +228,50 @@ function abrirEdicionTarea(id){
   </select>
 </div>
 <div class="field-group"><label class="field-label">Descripción</label><textarea class="field-input" id="f-tar-desc">${f.Descripción||''}</textarea></div>
+${f.RepeticionConfig?`
+<div class="field-group">
+  <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer">
+    <input type="checkbox" id="f-tar-parar-repeticion"> 🔁 Esta tarea se repite — al marcarla "Hecho" se crea sola la siguiente. Dejar de repetir después de esta.
+  </label>
+</div>`:''}
 `,
     save:async()=>{
       const v=id2=>document.getElementById(id2)?.value||'';
       if(!v('f-tar-titulo')){toast('El título es obligatorio',true);return false;}
       if(!v('f-tar-asignado')){toast('Asigná la tarea a alguien',true);return false;}
       if(!v('f-tar-fecha')){toast('La fecha límite es obligatoria',true);return false;}
-      await atPatch(`Tareas/${id}`,{Título:v('f-tar-titulo'),Asignado:v('f-tar-asignado'),Fecha:v('f-tar-fecha'),Hora:v('f-tar-hora'),Estado:v('f-tar-estado')||'Por hacer',Descripción:v('f-tar-desc')});
+      const nuevoEstado=v('f-tar-estado')||'Por hacer';
+      const pararRepeticion=document.getElementById('f-tar-parar-repeticion')?.checked;
+      const patchFields={Título:v('f-tar-titulo'),Asignado:v('f-tar-asignado'),Fecha:v('f-tar-fecha'),Hora:v('f-tar-hora'),Estado:nuevoEstado,Descripción:v('f-tar-desc')};
+      if(pararRepeticion) patchFields.RepeticionConfig='';
+      await atPatch(`Tareas/${id}`,patchFields);
+      if(nuevoEstado==='Hecho'&&!pararRepeticion){
+        await generarProximaTareaRepetida({id,fields:{...f,...patchFields}});
+      }
       return true;
     },
   });
+}
+
+// Al marcar una tarea repetida como "Hecho" (desde el Kanban o editándola),
+// se crea la siguiente ocurrencia recién en este momento — ya no se generan
+// todas de una al crear la tarea. Se limpia RepeticionConfig en la tarea ya
+// completada para que no dispare de nuevo si se la vuelve a marcar "Hecho".
+async function generarProximaTareaRepetida(tarea){
+  const f=tarea.fields;
+  if(!f.RepeticionConfig) return;
+  let config;
+  try{ config=JSON.parse(f.RepeticionConfig); }catch(e){ return; }
+  const proxima=proximaFechaRepeticion(f.Fecha,config);
+  await atPatch(`Tareas/${tarea.id}`,{RepeticionConfig:''}).catch(()=>{});
+  if(!proxima) return;
+  const nuevaConfig={...config};
+  if(config.frecuencia==='personalizada') nuevaConfig.restantes=(config.restantes||0)-1;
+  const campos={Título:f.Título,Asignado:f.Asignado,Fecha:proxima,Estado:'Por hacer',RepeticionConfig:JSON.stringify(nuevaConfig)};
+  if(f.Hora) campos.Hora=f.Hora;
+  if(f.Descripción) campos.Descripción=f.Descripción;
+  await atPost('Tareas',campos);
+  toast(`🔁 Se creó la siguiente ocurrencia — ${fmt(proxima)}`);
 }
 
 // ─── Repetición (panel del formulario "Nueva tarea") ──────────────────────────
@@ -278,27 +324,32 @@ function diasSemanaSeleccionados(){
   return[...document.querySelectorAll('#f-tar-dias-row .dia-chip.active')].map(b=>Number(b.dataset.dia));
 }
 
+// A diferencia de antes, ya no se generan todas las ocurrencias por
+// adelantado: se crea solo esta tarea, y la siguiente se crea recién cuando
+// se marca esta como "Hecho" (ver generarProximaTareaRepetida). Este hint
+// solo muestra cuándo caería esa próxima ocurrencia, a modo de previsualización.
 function actualizarHintRepeticionTarea(){
   const hint=document.getElementById('f-tar-repeat-hint');
   if(!hint) return;
   const frecuencia=document.getElementById('f-tar-frecuencia')?.value||'';
   const fecha=document.getElementById('f-tar-fecha')?.value||'';
   if(!frecuencia){hint.textContent='';return;}
-  if(!fecha){hint.textContent='Elegí primero la fecha límite para calcular las repeticiones.';return;}
-  let extras,detalle;
+  if(!fecha){hint.textContent='Elegí primero la fecha límite para calcular la repetición.';return;}
+  const config={frecuencia,dias:diasSemanaSeleccionados()};
+  let detalle;
   if(frecuencia==='personalizada'){
-    const intervalo=Math.max(1,Number(document.getElementById('f-tar-intervalo')?.value)||1);
-    const unidad=document.getElementById('f-tar-unidad')?.value||'dia';
-    const cantidad=Math.max(1,Math.min(104,Number(document.getElementById('f-tar-cantidad')?.value)||10));
-    extras=generarFechasPersonalizadas(fecha,intervalo,unidad,diasSemanaSeleccionados(),cantidad);
-    const nombres={dia:['día','días'],semana:['semana','semanas'],mes:['mes','meses'],anio:['año','años']}[unidad];
-    detalle=`cada ${intervalo} ${intervalo===1?nombres[0]:nombres[1]}`;
+    config.intervalo=Math.max(1,Number(document.getElementById('f-tar-intervalo')?.value)||1);
+    config.unidad=document.getElementById('f-tar-unidad')?.value||'dia';
+    config.restantes=Math.max(1,Math.min(104,Number(document.getElementById('f-tar-cantidad')?.value)||10));
+    const nombres={dia:['día','días'],semana:['semana','semanas'],mes:['mes','meses'],anio:['año','años']}[config.unidad];
+    detalle=`cada ${config.intervalo} ${config.intervalo===1?nombres[0]:nombres[1]}, hasta ${config.restantes} repetición${config.restantes===1?'':'es'} más`;
   }else{
-    extras=generarFechasRecurrentes(fecha,frecuencia,diasSemanaSeleccionados());
-    const horizonte={diaria:'los próximos 30 días',semanal:'las próximas 8 semanas',mensual:'los próximos 12 meses',anual:'los próximos 5 años'}[frecuencia];
-    detalle=`durante ${horizonte}`;
+    detalle={diaria:'todos los días',semanal:'cada semana',mensual:'cada mes',anual:'cada año'}[frecuencia];
   }
-  hint.textContent=extras.length?`Se van a crear ${extras.length} tarea${extras.length===1?'':'s'} más (${detalle}).`:`No hay ocurrencias — probá elegir al menos un día.`;
+  const proxima=proximaFechaRepeticion(fecha,config);
+  hint.textContent=proxima
+    ?`Se repite ${detalle}. Cuando marques esta tarea como Hecha, se crea sola la siguiente (${fmt(proxima)}).`
+    :`No hay próxima ocurrencia — probá elegir al menos un día.`;
 }
 
 function eliminarTarea(id){

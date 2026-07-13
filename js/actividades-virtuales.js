@@ -222,7 +222,7 @@ function renderListaAsistentesAV(){
 function filtrarListaAsistentesAV(){
   const q=(document.getElementById('f-av-buscar')?.value||'').toLowerCase();
   document.querySelectorAll('#f-av-lista label').forEach(lab=>{
-    lab.style.display=(!q||lab.dataset.nombreLower.includes(q))?'':'none';
+    lab.style.display=(!q||lab.dataset.nombreLower.includes(q))?'flex':'none';
   });
 }
 

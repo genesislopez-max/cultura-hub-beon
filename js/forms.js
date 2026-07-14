@@ -34,7 +34,7 @@ function valorSelectOtro(id){
 // tarjeta del Kanban de Ingresos/Egresos. mostrarEgreso solo se activa al
 // editar: la fecha de egreso se carga desde la pestaña de Egresos, no al
 // dar de alta a alguien nuevo.
-function buildPersonaCompletaHTML(v={},mostrarEgreso=false){
+function buildPersonaCompletaHTML(v={},mostrarEgreso=false,ocultarNivel=false){
   const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
   const opt=(val,cur)=>`<option value="${val}"${val===(cur||'')?' selected':''}>${val}</option>`;
   // COO/Founder ya no se pueden asignar al dar de alta — son roles fijos de
@@ -51,11 +51,11 @@ function buildPersonaCompletaHTML(v={},mostrarEgreso=false){
     ${roles.map(r=>opt(r,rolActual)).join('')}
   </select>
 </div>
-<div class="field-group"><label class="field-label">Nivel Loyalty</label>
+${ocultarNivel?'':`<div class="field-group"><label class="field-label">Nivel Loyalty</label>
   <select class="field-input" id="f-per-nivel">
     ${['Spark','Ray','Lightning','Thunder','Storm'].map(n=>opt(n,v['Nivel Loyalty']||'Spark')).join('')}
   </select>
-</div>
+</div>`}
 <div class="field-group"><label class="field-label">Proyecto</label>
   ${buildSelectConOtro('f-per-proyecto',proyectos,v.Proyecto||'','Ej: Atlas')}
 </div>
@@ -383,11 +383,12 @@ const FORMS={
   // y así NO crear tarjeta de Kanban ni mandar el Slack de "Nuevo ingreso".
   historico:{title:'Cargar persona histórica',html:()=>`
 <div class="field-hint" style="margin-bottom:14px">Para gente que ya no está en BEON. No se crea tarjeta en los Kanban de Ingresos/Egresos ni se avisa por Slack — queda cargada en silencio para poder asignarle después los eventos a los que asistió mientras estuvo.</div>
-`+buildPersonaCompletaHTML({},true),
+`+buildPersonaCompletaHTML({},true,true),
     onMount:actualizarManagerOptions,
     save:async()=>{
       const fields=leerPersonaCompletaForm(false);
       if(!fields) return false;
+      delete fields['Nivel Loyalty']; // no aplica a alguien que ya no está — no se pide en este form
       if(!fields['Fecha de egreso']){toast('La fecha de egreso es obligatoria en una carga histórica',true);return false;}
       await atPost('Personas',fields);return true;
     }},

@@ -20,6 +20,7 @@ function showSection(name,btn){
   document.getElementById('page-title').textContent=TITLES[name]||name;
   const ab=document.getElementById('btn-add');
   const abf=document.getElementById('btn-add-full');
+  const abh=document.getElementById('btn-add-historico');
   if(ADD.includes(name)){
     ab.style.display='flex';
     document.getElementById('btn-label').textContent=LABELS[name];
@@ -29,13 +30,16 @@ function showSection(name,btn){
       const fullLabel=document.getElementById('btn-full-label');
       if(fullLabel) fullLabel.textContent='Ingreso completo';
       currentFormFull=FORMS['ingresos_full'];
+      if(abh) abh.style.display='flex';
     } else {
       abf.style.display='none';
       currentFormFull=null;
+      if(abh) abh.style.display='none';
     }
   } else {
     ab.style.display='none';
     abf.style.display='none';
+    if(abh) abh.style.display='none';
     currentForm=null;
     currentFormFull=null;
   }
@@ -45,6 +49,13 @@ function showSection(name,btn){
 function openModal(){
   if(!currentForm)return;
   _openFormModal(currentForm);
+}
+// Carga silenciosa de una persona que ya no está en BEON — a diferencia de
+// "Nuevo ingreso"/"HR rápido", no genera tarjeta de Kanban ni aviso de Slack
+// (ver sincronizarPersonasEnKanban), para no ensuciar el flujo activo con
+// gente que se cargó recién pero se fue hace tiempo.
+function openModalHistorico(){
+  _openFormModal(FORMS.historico);
 }
 // "Ingreso completo" — pre-llena con datos del último ingreso HR sin completar
 async function openModalFull(){

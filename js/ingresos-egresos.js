@@ -202,6 +202,13 @@ async function sincronizarPersonasEnKanban(personasRecs){
       continue;
     }
 
+    // Cargas históricas (formulario "Cargar persona histórica") ya traen la
+    // Fecha de egreso puesta desde que se crean — no hay nada que onboardear
+    // para alguien que ya se fue, así que no se crea tarjeta ni se avisa por
+    // Slack. Si más adelante se le carga un egreso real por el flujo normal,
+    // esta rama ya no aplica porque para entonces sí va a tener checklist.
+    if(p.fields['Fecha de egreso']) continue;
+
     // No tiene checklist todavía → creamos primero lo esencial, así la tarjeta
     // y el aviso de Slack no dependen de que Proyecto/Mail/País existan como
     // columnas en Airtable (eso se intenta aparte, es "nice to have").

@@ -377,6 +377,21 @@ const FORMS={
       await atPost('Personas',fields);return true;
     }},
 
+  // Carga silenciosa para gente que ya no está en BEON — mismo form que
+  // "Nueva persona" pero mostrando también Fecha de egreso, que es la que
+  // sincronizarPersonasEnKanban() usa para reconocer que es un alta histórica
+  // y así NO crear tarjeta de Kanban ni mandar el Slack de "Nuevo ingreso".
+  historico:{title:'Cargar persona histórica',html:()=>`
+<div class="field-hint" style="margin-bottom:14px">Para gente que ya no está en BEON. No se crea tarjeta en los Kanban de Ingresos/Egresos ni se avisa por Slack — queda cargada en silencio para poder asignarle después los eventos a los que asistió mientras estuvo.</div>
+`+buildPersonaCompletaHTML({},true),
+    onMount:actualizarManagerOptions,
+    save:async()=>{
+      const fields=leerPersonaCompletaForm(false);
+      if(!fields) return false;
+      if(!fields['Fecha de egreso']){toast('La fecha de egreso es obligatoria en una carga histórica',true);return false;}
+      await atPost('Personas',fields);return true;
+    }},
+
   egresos:{title:'Nuevo egreso',html:()=>{
     const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
     return`

@@ -134,7 +134,7 @@ function abrirEdicionPersona(nombre){
 const FORMS={
   actividades:{title:'Registrar actividad virtual',html:()=>`
 <div class="field-group"><label class="field-label">Evento *</label><input class="field-input" id="f-av-evento" placeholder="Ej: Bingo Halloween"></div>
-<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-av-fecha" type="date"></div>
+<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-av-fecha" type="date" onchange="renderListaAsistentesAV()"></div>
 <div class="field-group"><label class="field-label">Dirigido a *</label>
   <select class="field-input" id="f-av-grupo" onchange="renderListaAsistentesAV()">
     <option value="Todos">Todos</option>
@@ -145,6 +145,7 @@ const FORMS={
 </div>
 <div class="field-group">
   <label class="field-label">Asistentes *</label>
+  <div class="field-hint" style="margin-top:0;margin-bottom:8px">Solo se muestra a quienes ya estaban activos en BEON en la Fecha elegida.</div>
   <div class="search-wrap" style="margin-bottom:8px">
     <i class="ti ti-search search-icon"></i>
     <input class="search-input" id="f-av-buscar" placeholder="Buscar persona…" oninput="filtrarListaAsistentesAV()">

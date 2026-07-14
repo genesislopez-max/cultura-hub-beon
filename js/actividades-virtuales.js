@@ -274,7 +274,7 @@ function editarEventoAV(key){
     title:`Editar — ${evento}`,
     html:()=>`
 <div class="field-group"><label class="field-label">Evento *</label><input class="field-input" id="f-av-evento" value="${evento.replace(/"/g,'&quot;')}"></div>
-<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-av-fecha" type="date" value="${fecha}"></div>
+<div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-av-fecha" type="date" value="${fecha}" onchange="renderListaAsistentesAV()"></div>
 <div class="field-group"><label class="field-label">Dirigido a *</label>
   <select class="field-input" id="f-av-grupo" onchange="renderListaAsistentesAV()">
     <option value="Todos"${grupoActual==='Todos'?' selected':''}>Todos</option>
@@ -285,6 +285,7 @@ function editarEventoAV(key){
 </div>
 <div class="field-group">
   <label class="field-label">Asistentes *</label>
+  <div class="field-hint" style="margin-top:0;margin-bottom:8px">Solo se muestra a quienes ya estaban activos en BEON en la Fecha elegida.</div>
   <div class="search-wrap" style="margin-bottom:8px">
     <i class="ti ti-search search-icon"></i>
     <input class="search-input" id="f-av-buscar" placeholder="Buscar persona…" oninput="filtrarListaAsistentesAV()">
@@ -383,13 +384,19 @@ function renderAVMetricasQ(){
 // con checkboxes. avAsistentesPreseleccionados trae los nombres que ya
 // figuraban en el evento cuando se abre en modo edición (vacío al crear uno
 // nuevo) — se re-aplica cada vez que se re-renderiza la lista (ej. al cambiar
-// el grupo "Dirigido a").
+// el grupo "Dirigido a" o la Fecha). Con la Fecha puesta, solo se muestra a
+// quienes ya estaban activos en BEON ese día — clave ahora que hay personas
+// históricas cargadas que no tiene sentido ofrecer para cualquier fecha.
 function renderListaAsistentesAV(){
   const cont=document.getElementById('f-av-lista');
   if(!cont) return;
   const grupo=document.getElementById('f-av-grupo')?.value||'Todos';
+  const fecha=document.getElementById('f-av-fecha')?.value||'';
   const marcados=avAsistentesPreseleccionados||new Set();
-  const nombres=[...(cachePersonasRaw||[])].filter(p=>personaPerteneceAGrupoAV(p,grupo)).map(p=>p.fields.Nombre).filter(Boolean).sort();
+  const nombres=[...(cachePersonasRaw||[])]
+    .filter(p=>personaPerteneceAGrupoAV(p,grupo))
+    .filter(p=>!fecha||personaActivaEnFecha(p,fecha))
+    .map(p=>p.fields.Nombre).filter(Boolean).sort();
   cont.innerHTML=nombres.map(n=>`
     <label style="display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13px;cursor:pointer" data-nombre-lower="${n.toLowerCase()}">
       <input type="checkbox" class="av-asistente-chk" value="${n.replace(/"/g,'&quot;')}"${marcados.has(n)?' checked':''}> ${n}

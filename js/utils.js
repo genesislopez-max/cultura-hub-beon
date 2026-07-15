@@ -8,7 +8,7 @@ function setBanner(msg,type='info'){
 }
 function toast(msg,err=false){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.style.background=err?'#A32D2D':'#1E2235';
+  t.textContent=msg;t.style.background=err?'var(--red)':'var(--dark)';
   t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);
 }
 function fmt(d){if(!d)return'—';const dt=new Date(d+'T12:00:00');return dt.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});}

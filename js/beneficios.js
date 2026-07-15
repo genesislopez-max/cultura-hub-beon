@@ -241,7 +241,7 @@ function renderBenefCatalogo(){
   }
   if(coreTeam.length){
     html+=`<div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:var(--bg2);border-bottom:1px solid var(--border);border-top:2px solid var(--border);margin-top:22px">
-      <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#4A1FAA">Core Team</span>
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--purple)">Core Team</span>
       <span style="flex:1;height:1px;background:var(--border)"></span>
       <span class="badge badge-purple">${coreTeam.length} beneficio${coreTeam.length!==1?'s':''}</span>
     </div>`;

@@ -121,7 +121,7 @@ async function verBenefPersona(nombre, grupo, nivel){
       const pct=pctRaw2!=null?(pctRaw2<=1?Math.round(pctRaw2*100):Number(pctRaw2)):null;
       return`<div class="side-panel-row">
         <span>${edicion}</span>
-        <span style="font-size:12px;font-weight:600;color:${pct===50?'var(--blue)':pct===100?'#0F6E56':'var(--text2)'}">${pct!=null?pct+'% vuelo cubierto':'—'}</span>
+        <span style="font-size:12px;font-weight:600;color:${pct===50?'var(--blue)':pct===100?'var(--green)':'var(--text2)'}">${pct!=null?pct+'% vuelo cubierto':'—'}</span>
       </div>`;
     }).join(''):`<div class="sp-empty">Sin asistencias registradas</div>`}
   </div>`;

@@ -244,7 +244,7 @@ function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior, grupo){
       ${nivelAnterior&&nivelAnterior!=='Spark'?`<span style="color:var(--text3);font-weight:400"> (antes: ${nivelAnterior})</span>`:''}
       — Recordá enviar el mail de bienvenida desde Brevo
     </div>
-    <button onclick="this.closest('.nivel-pending-banner').remove()" style="background:none;border:none;cursor:pointer;color:#9a6700;font-size:18px;padding:2px;line-height:1;">×</button>`;
+    <button onclick="this.closest('.nivel-pending-banner').remove()" style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:18px;padding:2px;line-height:1;">×</button>`;
 
   // Insertar arriba de la tabla correspondiente
   const wrap=document.getElementById(grupo==='core'?'wrap-coreteam':'wrap-engineers');

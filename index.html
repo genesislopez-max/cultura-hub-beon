@@ -122,17 +122,17 @@
             <button class="sc-more" id="sc-more-aniv" onclick="showSection('aniversarios',document.querySelector('.sb-item[onclick*=aniversarios]'))" style="display:none">Ver todos →</button>
           </div>
           <div class="summary-card">
-            <div class="sc-icon" style="background:#FFF8E1;color:#9a6700"><i class="ti ti-brand-google"></i></div>
+            <div class="sc-icon" style="background:#FFF8E1;color:var(--amber)"><i class="ti ti-brand-google"></i></div>
             <div class="sc-label">Glassdoor</div>
-            <div class="sc-val" id="sc-glassdoor" style="color:#9a6700">—</div>
+            <div class="sc-val" id="sc-glassdoor" style="color:var(--amber)">—</div>
             <div class="sc-sub">pendientes</div>
             <div class="sc-list" id="sc-list-glassdoor"></div>
             <button class="sc-more" id="sc-more-glassdoor" onclick="showSection('reviews',document.querySelector('.sb-item[onclick*=reviews]'))" style="display:none">Ver todos →</button>
           </div>
           <div class="summary-card">
-            <div class="sc-icon" style="background:#FCEBEB;color:#A32D2D"><i class="ti ti-user-minus"></i></div>
+            <div class="sc-icon" style="background:#FCEBEB;color:var(--red)"><i class="ti ti-user-minus"></i></div>
             <div class="sc-label">Offboardings</div>
-            <div class="sc-val" id="sc-offboard" style="color:#A32D2D">—</div>
+            <div class="sc-val" id="sc-offboard" style="color:var(--red)">—</div>
             <div class="sc-sub" id="sc-offboard-sub">este mes</div>
             <div class="sc-list" id="sc-list-offboard"></div>
             <button class="sc-more" id="sc-more-offboard" onclick="showSection('egresos',document.querySelector('.sb-item[onclick*=egresos]'))" style="display:none">Ver todos →</button>
@@ -164,7 +164,7 @@
           </select>
         </div>
         <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-top:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;border-radius:13px 13px 0 0;">
+          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid var(--blue);border-radius:13px 13px 0 0;">
             <span class="table-head-title" style="color:var(--text-eng-accent)">Engineers & Tech</span>
             <span class="badge badge-blue" id="badge-personas-eng">—</span>
           </div>
@@ -216,7 +216,7 @@
           </select>
         </div>
         <div class="table-wrap" id="wrap-coreteam" style="border-radius:13px;margin-top:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid #7432FF;border-radius:13px 13px 0 0;">
+          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid var(--purple);border-radius:13px 13px 0 0;">
             <span class="table-head-title" style="color:var(--text-core-accent)">Core Team</span>
             <span class="badge badge-purple" id="badge-personas-core">—</span>
           </div>
@@ -249,14 +249,14 @@
           </div>
         </div>
         <div class="table-wrap" style="border-radius:13px;margin-bottom:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;border-radius:13px 13px 0 0;">
+          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid var(--blue);border-radius:13px 13px 0 0;">
             <span class="table-head-title" style="color:var(--text-eng-accent)">Engineers & Tech</span>
             <span class="badge badge-blue" id="badge-cumple-eng">—</span>
           </div>
           <div id="cumple-eng-container" class="table-scroll"></div>
         </div>
         <div class="table-wrap" style="border-radius:13px;">
-          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid #7432FF;border-radius:13px 13px 0 0;">
+          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid var(--purple);border-radius:13px 13px 0 0;">
             <span class="table-head-title" style="color:var(--text-core-accent)">Core Team</span>
             <span class="badge badge-purple" id="badge-cumple-core">—</span>
           </div>
@@ -323,8 +323,8 @@
       <!-- EGRESOS -->
       <div class="section-page" id="page-egresos">
         <div class="metrics-3">
-          <div class="metric"><div class="metric-label">Offboardings este mes</div><div class="metric-val" style="color:#A32D2D" id="me-offboard-mes">—</div><div class="metric-sub">en proceso o completados</div></div>
-          <div class="metric"><div class="metric-label">Promedio de estadía</div><div class="metric-val" style="color:#9a6700" id="me-estadia">—</div><div class="metric-sub">meses en la empresa</div></div>
+          <div class="metric"><div class="metric-label">Offboardings este mes</div><div class="metric-val" style="color:var(--red)" id="me-offboard-mes">—</div><div class="metric-sub">en proceso o completados</div></div>
+          <div class="metric"><div class="metric-label">Promedio de estadía</div><div class="metric-val" style="color:var(--amber)" id="me-estadia">—</div><div class="metric-sub">meses en la empresa</div></div>
           <div class="metric"><div class="metric-label">Total offboardings</div><div class="metric-val" id="me-offboard-total">—</div><div class="metric-sub">registrados</div></div>
         </div>
         <div class="search-bar" style="background:transparent;border:none;padding:0 0 14px;">
@@ -353,7 +353,7 @@
       <div class="section-page" id="page-reviews">
 
         <div class="metrics-2">
-          <div class="metric"><div class="metric-label">Glassdoor pendientes</div><div class="metric-val" style="color:#9a6700" id="rv-gd-pend">—</div><div class="metric-sub">para solicitar</div></div>
+          <div class="metric"><div class="metric-label">Glassdoor pendientes</div><div class="metric-val" style="color:var(--amber)" id="rv-gd-pend">—</div><div class="metric-sub">para solicitar</div></div>
           <div class="metric"><div class="metric-label">Próxima a solicitar</div><div class="metric-val" style="color:var(--blue);font-size:15px" id="rv-gd-prox">—</div><div class="metric-sub" id="rv-gd-prox-dias"></div></div>
         </div>
 
@@ -441,9 +441,9 @@
       <!-- TAREAS -->
       <div class="section-page" id="page-tareas">
         <div class="metrics-3">
-          <div class="metric"><div class="metric-label">Por hacer</div><div class="metric-val" style="color:#9a6700" id="mt-porhacer">—</div><div class="metric-sub">pendientes</div></div>
+          <div class="metric"><div class="metric-label">Por hacer</div><div class="metric-val" style="color:var(--amber)" id="mt-porhacer">—</div><div class="metric-sub">pendientes</div></div>
           <div class="metric"><div class="metric-label">Vencidas</div><div class="metric-val" style="color:#C62828" id="mt-vencidas">—</div><div class="metric-sub">sin completar</div></div>
-          <div class="metric"><div class="metric-label">Hechas</div><div class="metric-val" style="color:#0F6E56" id="mt-hechas">—</div><div class="metric-sub">completadas</div></div>
+          <div class="metric"><div class="metric-label">Hechas</div><div class="metric-val" style="color:var(--green)" id="mt-hechas">—</div><div class="metric-sub">completadas</div></div>
         </div>
 
         <div class="tab-bar" style="margin-bottom:0">
@@ -524,8 +524,8 @@
         <!-- Métricas -->
         <div class="metrics">
           <div class="metric"><div class="metric-label">Beneficios activos</div><div class="metric-val" style="color:var(--blue)" id="mb-activos">—</div><div class="metric-sub">en el catálogo</div></div>
-          <div class="metric"><div class="metric-label">Presupuesto total usado</div><div class="metric-val" style="color:#9a6700" id="mb-presupuesto">—</div><div class="metric-sub">suma de asignaciones</div></div>
-          <div class="metric"><div class="metric-label">Personas con beneficios</div><div class="metric-val" style="color:#0F6E56" id="mb-personas">—</div><div class="metric-sub" id="mb-personas-sub"></div></div>
+          <div class="metric"><div class="metric-label">Presupuesto total usado</div><div class="metric-val" style="color:var(--amber)" id="mb-presupuesto">—</div><div class="metric-sub">suma de asignaciones</div></div>
+          <div class="metric"><div class="metric-label">Personas con beneficios</div><div class="metric-val" style="color:var(--green)" id="mb-personas">—</div><div class="metric-sub" id="mb-personas-sub"></div></div>
           <div class="metric"><div class="metric-label">Sin beneficios asignados</div><div class="metric-val" style="color:#C62828" id="mb-sinbenef">—</div><div class="metric-sub">personas</div></div>
         </div>
 
@@ -635,8 +635,8 @@
             </div>
             <div class="metrics" style="padding:16px 18px 4px;">
               <div class="metric"><div class="metric-label">Altas en el Q</div><div class="metric-val" style="color:var(--blue)" id="bq-altas">—</div><div class="metric-sub" id="bq-altas-sub"></div></div>
-              <div class="metric"><div class="metric-label">Personas con alta nueva</div><div class="metric-val" style="color:#0F6E56" id="bq-personas">—</div><div class="metric-sub">distintas en el período</div></div>
-              <div class="metric"><div class="metric-label">Beneficio más usado</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="bq-top">—</div><div class="metric-sub" id="bq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">Personas con alta nueva</div><div class="metric-val" style="color:var(--green)" id="bq-personas">—</div><div class="metric-sub">distintas en el período</div></div>
+              <div class="metric"><div class="metric-label">Beneficio más usado</div><div class="metric-val" style="color:var(--amber);font-size:16px" id="bq-top">—</div><div class="metric-sub" id="bq-top-sub"></div></div>
               <div class="metric"><div class="metric-label">Sin fecha de activación</div><div class="metric-val" id="bq-sinfecha">—</div><div class="metric-sub">no se cuentan en ningún Q</div></div>
             </div>
             <div id="benefq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
@@ -649,9 +649,9 @@
 
         <div class="metrics">
           <div class="metric"><div class="metric-label">Total asistencias</div><div class="metric-val" style="color:var(--blue)" id="aw-total">—</div><div class="metric-sub">historial completo</div></div>
-          <div class="metric"><div class="metric-label">Ediciones realizadas</div><div class="metric-val" style="color:#9a6700" id="aw-vuelos">—</div><div class="metric-sub">distintas</div></div>
-          <div class="metric"><div class="metric-label">Personas que asistieron</div><div class="metric-val" style="color:#9a6700" id="aw-aloja">—</div><div class="metric-sub">únicas</div></div>
-          <div class="metric"><div class="metric-label">Personas que asistieron</div><div class="metric-val" style="color:#0F6E56" id="aw-personas">—</div><div class="metric-sub" id="aw-personas-sub"></div></div>
+          <div class="metric"><div class="metric-label">Ediciones realizadas</div><div class="metric-val" style="color:var(--amber)" id="aw-vuelos">—</div><div class="metric-sub">distintas</div></div>
+          <div class="metric"><div class="metric-label">Personas que asistieron</div><div class="metric-val" style="color:var(--amber)" id="aw-aloja">—</div><div class="metric-sub">únicas</div></div>
+          <div class="metric"><div class="metric-label">Personas que asistieron</div><div class="metric-val" style="color:var(--green)" id="aw-personas">—</div><div class="metric-sub" id="aw-personas-sub"></div></div>
         </div>
 
         <!-- Tab bar -->
@@ -731,8 +731,8 @@
             <div class="field-hint" style="padding:8px 18px 0;font-size:11px;color:var(--text3)">Ambassador Week no tiene un campo de fecha propio — el trimestre se infiere del texto de "Edición AW" (ej. "diciembre 2021"). Si no sigue ese formato, la asistencia no se puede ubicar en ningún Q.</div>
             <div class="metrics" style="padding:12px 18px 4px;">
               <div class="metric"><div class="metric-label">Asistencias en el Q</div><div class="metric-val" style="color:var(--blue)" id="awq-total">—</div><div class="metric-sub" id="awq-total-sub"></div></div>
-              <div class="metric"><div class="metric-label">Personas distintas</div><div class="metric-val" style="color:#0F6E56" id="awq-personas">—</div><div class="metric-sub">en el período</div></div>
-              <div class="metric"><div class="metric-label">Edición más frecuente</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="awq-top">—</div><div class="metric-sub" id="awq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">Personas distintas</div><div class="metric-val" style="color:var(--green)" id="awq-personas">—</div><div class="metric-sub">en el período</div></div>
+              <div class="metric"><div class="metric-label">Edición más frecuente</div><div class="metric-val" style="color:var(--amber);font-size:16px" id="awq-top">—</div><div class="metric-sub" id="awq-top-sub"></div></div>
               <div class="metric"><div class="metric-label">Sin edición reconocida</div><div class="metric-val" id="awq-sinfecha">—</div><div class="metric-sub">no se pueden ubicar en ningún Q</div></div>
             </div>
             <div id="awq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
@@ -746,8 +746,8 @@
 
         <div class="metrics">
           <div class="metric"><div class="metric-label">Total off sites</div><div class="metric-val" style="color:var(--blue)" id="os-total">—</div><div class="metric-sub">registros históricos</div></div>
-          <div class="metric"><div class="metric-label">Personas que viajaron</div><div class="metric-val" style="color:#0F6E56" id="os-personas">—</div><div class="metric-sub">únicas</div></div>
-          <div class="metric"><div class="metric-label">Proyectos con off site</div><div class="metric-val" style="color:#9a6700" id="os-proyectos">—</div><div class="metric-sub">distintos</div></div>
+          <div class="metric"><div class="metric-label">Personas que viajaron</div><div class="metric-val" style="color:var(--green)" id="os-personas">—</div><div class="metric-sub">únicas</div></div>
+          <div class="metric"><div class="metric-label">Proyectos con off site</div><div class="metric-val" style="color:var(--amber)" id="os-proyectos">—</div><div class="metric-sub">distintos</div></div>
           <div class="metric"><div class="metric-label">Días totales</div><div class="metric-val" id="os-dias">—</div><div class="metric-sub">suma de duraciones</div></div>
         </div>
 
@@ -844,8 +844,8 @@
             </div>
             <div class="metrics" style="padding:16px 18px 4px;">
               <div class="metric"><div class="metric-label">Off sites en el Q</div><div class="metric-val" style="color:var(--blue)" id="osq-total">—</div><div class="metric-sub" id="osq-total-sub"></div></div>
-              <div class="metric"><div class="metric-label">Personas que viajaron</div><div class="metric-val" style="color:#0F6E56" id="osq-personas">—</div><div class="metric-sub">distintas en el período</div></div>
-              <div class="metric"><div class="metric-label">Destino más visitado</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="osq-top">—</div><div class="metric-sub" id="osq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">Personas que viajaron</div><div class="metric-val" style="color:var(--green)" id="osq-personas">—</div><div class="metric-sub">distintas en el período</div></div>
+              <div class="metric"><div class="metric-label">Destino más visitado</div><div class="metric-val" style="color:var(--amber);font-size:16px" id="osq-top">—</div><div class="metric-sub" id="osq-top-sub"></div></div>
               <div class="metric"><div class="metric-label">Días totales</div><div class="metric-val" id="osq-dias">—</div><div class="metric-sub">suma de duraciones en el Q</div></div>
             </div>
             <div id="osq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
@@ -858,8 +858,8 @@
       <div class="section-page" id="page-gettogether">
         <div class="metrics">
           <div class="metric"><div class="metric-label">Total registros</div><div class="metric-val" style="color:var(--blue)" id="gt-total">—</div><div class="metric-sub">historial completo</div></div>
-          <div class="metric"><div class="metric-label">BEONers que se juntaron</div><div class="metric-val" style="color:#0F6E56" id="gt-personas">—</div><div class="metric-sub">únicos</div></div>
-          <div class="metric"><div class="metric-label">Encuentros</div><div class="metric-val" style="color:#9a6700" id="gt-encuentros">—</div><div class="metric-sub">ciudad + fecha únicos</div></div>
+          <div class="metric"><div class="metric-label">BEONers que se juntaron</div><div class="metric-val" style="color:var(--green)" id="gt-personas">—</div><div class="metric-sub">únicos</div></div>
+          <div class="metric"><div class="metric-label">Encuentros</div><div class="metric-val" style="color:var(--amber)" id="gt-encuentros">—</div><div class="metric-sub">ciudad + fecha únicos</div></div>
           <div class="metric"><div class="metric-label">Países</div><div class="metric-val" id="gt-paises">—</div><div class="metric-sub">distintos</div></div>
         </div>
         <div class="tab-bar" style="margin-bottom:0">
@@ -952,8 +952,8 @@
             </div>
             <div class="metrics" style="padding:16px 18px 4px;">
               <div class="metric"><div class="metric-label">Encuentros en el Q</div><div class="metric-val" style="color:var(--blue)" id="gtq-total">—</div><div class="metric-sub" id="gtq-total-sub"></div></div>
-              <div class="metric"><div class="metric-label">BEONers distintos</div><div class="metric-val" style="color:#0F6E56" id="gtq-personas">—</div><div class="metric-sub">en el período</div></div>
-              <div class="metric"><div class="metric-label">Ciudad más visitada</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="gtq-top">—</div><div class="metric-sub" id="gtq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">BEONers distintos</div><div class="metric-val" style="color:var(--green)" id="gtq-personas">—</div><div class="metric-sub">en el período</div></div>
+              <div class="metric"><div class="metric-label">Ciudad más visitada</div><div class="metric-val" style="color:var(--amber);font-size:16px" id="gtq-top">—</div><div class="metric-sub" id="gtq-top-sub"></div></div>
               <div class="metric"><div class="metric-label">Sin fecha</div><div class="metric-val" id="gtq-sinfecha">—</div><div class="metric-sub">no se cuentan en ningún Q</div></div>
             </div>
             <div id="gtq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
@@ -965,8 +965,8 @@
       <div class="section-page" id="page-actividades">
         <div class="metrics">
           <div class="metric"><div class="metric-label">Actividades realizadas</div><div class="metric-val" style="color:var(--blue)" id="av-total-eventos">—</div><div class="metric-sub">distintas</div></div>
-          <div class="metric"><div class="metric-label">Asistencias totales</div><div class="metric-val" style="color:#0F6E56" id="av-total-asistencias">—</div><div class="metric-sub">registradas</div></div>
-          <div class="metric"><div class="metric-label">Personas participantes</div><div class="metric-val" style="color:#9a6700" id="av-total-personas">—</div><div class="metric-sub">únicas</div></div>
+          <div class="metric"><div class="metric-label">Asistencias totales</div><div class="metric-val" style="color:var(--green)" id="av-total-asistencias">—</div><div class="metric-sub">registradas</div></div>
+          <div class="metric"><div class="metric-label">Personas participantes</div><div class="metric-val" style="color:var(--amber)" id="av-total-personas">—</div><div class="metric-sub">únicas</div></div>
           <div class="metric"><div class="metric-label">Asistencia promedio</div><div class="metric-val" id="av-prom-asistencia">—</div><div class="metric-sub">por actividad</div></div>
         </div>
         <div class="tab-bar" style="margin-bottom:0">
@@ -1037,12 +1037,12 @@
             </div>
             <div class="metrics-3" style="padding:16px 18px 4px;">
               <div class="metric"><div class="metric-label">Actividades en el Q</div><div class="metric-val" style="color:var(--blue)" id="avq-total">—</div><div class="metric-sub" id="avq-total-sub"></div></div>
-              <div class="metric"><div class="metric-label">Personas participantes</div><div class="metric-val" style="color:#0F6E56" id="avq-personas">—</div><div class="metric-sub">en el período</div></div>
-              <div class="metric"><div class="metric-label">Evento más popular</div><div class="metric-val" style="color:#9a6700;font-size:16px" id="avq-top">—</div><div class="metric-sub" id="avq-top-sub"></div></div>
+              <div class="metric"><div class="metric-label">Personas participantes</div><div class="metric-val" style="color:var(--green)" id="avq-personas">—</div><div class="metric-sub">en el período</div></div>
+              <div class="metric"><div class="metric-label">Evento más popular</div><div class="metric-val" style="color:var(--amber);font-size:16px" id="avq-top">—</div><div class="metric-sub" id="avq-top-sub"></div></div>
             </div>
             <div class="metrics-2" style="padding:0 18px 16px;">
-              <div class="metric"><div class="metric-label">Asistencia Core Team</div><div class="metric-val" style="color:#7432FF" id="avq-prom-core">—</div><div class="metric-sub">promedio por actividad</div></div>
-              <div class="metric"><div class="metric-label">Asistencia Engineers &amp; Tech</div><div class="metric-val" style="color:#3A69FF" id="avq-prom-eng">—</div><div class="metric-sub">promedio por actividad</div></div>
+              <div class="metric"><div class="metric-label">Asistencia Core Team</div><div class="metric-val" style="color:var(--purple)" id="avq-prom-core">—</div><div class="metric-sub">promedio por actividad</div></div>
+              <div class="metric"><div class="metric-label">Asistencia Engineers &amp; Tech</div><div class="metric-val" style="color:var(--blue)" id="avq-prom-eng">—</div><div class="metric-sub">promedio por actividad</div></div>
             </div>
             <div id="avq-ranking-container" class="table-scroll" style="margin-top:8px;"></div>
           </div>

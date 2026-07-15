@@ -11,6 +11,21 @@ function toggleTipoReminder(){
   {const _fg=document.getElementById('fg-rv-evento');if(_fg) _fg.style.display=esManual?'block':'none';}
 }
 
+// ─── TEMA (claro/oscuro) ─────────────────────────────────────────────────────
+function actualizarIconoTema(tema){
+  const icon=document.getElementById('sb-theme-icon');
+  const label=document.getElementById('sb-theme-label');
+  if(icon) icon.className=tema==='dark'?'ti ti-sun':'ti ti-moon';
+  if(label) label.textContent=tema==='dark'?'Modo claro':'Modo oscuro';
+}
+function toggleTheme(){
+  const actual=document.documentElement.getAttribute('data-theme')||'light';
+  const nuevo=actual==='dark'?'light':'dark';
+  document.documentElement.setAttribute('data-theme',nuevo);
+  localStorage.setItem('hub_theme',nuevo);
+  actualizarIconoTema(nuevo);
+}
+
 // ─── NAV ─────────────────────────────────────────────────────────────────────
 function showSection(name,btn){
   document.querySelectorAll('.section-page').forEach(p=>p.classList.remove('active'));
@@ -227,6 +242,7 @@ async function iniciarHub(){
 }
 
 async function init(){
+  actualizarIconoTema(document.documentElement.getAttribute('data-theme')||'light');
   if(!checkSesion()) return; // muestra la pantalla de login; onGoogleSignIn() llama a iniciarHub()
   await iniciarHub();
 }

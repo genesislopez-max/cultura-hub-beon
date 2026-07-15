@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cultura Hub · BEON.tech</title>
+<script>
+// Aplicar el tema antes de pintar la página, para no ver un flash del tema
+// contrario mientras cargan los estilos.
+(function(){
+  try{
+    var guardado=localStorage.getItem('hub_theme');
+    var tema=guardado||(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+    document.documentElement.setAttribute('data-theme',tema);
+  }catch(e){}
+})();
+</script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
 <link rel="stylesheet" href="css/styles.css">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -49,6 +60,9 @@
     <button class="sb-item" onclick="showSection('gettogether',this)"><i class="ti ti-users-group"></i>Get Together</button>
     <button class="sb-item" onclick="showSection('actividades',this)"><i class="ti ti-broadcast"></i>Asistencia a Actividades</button>
     <div class="sb-bottom">
+      <button class="sb-theme-toggle" id="sb-theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
+        <i class="ti ti-moon" id="sb-theme-icon"></i><span id="sb-theme-label">Modo oscuro</span>
+      </button>
       <div class="sb-user" id="sb-user" style="display:none">
         <img class="sb-user-pic" id="sb-user-pic" src="" alt="">
         <div class="sb-user-info">

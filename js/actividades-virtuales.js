@@ -122,7 +122,14 @@ function renderAVPersona(){
   // mientras esa persona estaba activa en la empresa y dentro de su grupo.
   const eventosUnicos=Object.values(agruparAVPorEvento(cacheAVRaw));
 
+  // "Por persona" es para consulta del día a día — solo gente activa hoy.
+  // Las personas históricas (con Fecha de egreso) se consultan desde "Por
+  // evento", que sí lista a todos los asistentes de cada actividad.
   const filas=Object.entries(mapa)
+    .filter(([nombre])=>{
+      const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+      return persona&&!yaEgreso(persona);
+    })
     .filter(([n])=>!q||n.toLowerCase().includes(q))
     .sort((a,b)=>b[1].ultFecha.localeCompare(a[1].ultFecha));
 

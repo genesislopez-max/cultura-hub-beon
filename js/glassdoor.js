@@ -77,7 +77,7 @@ function rowReminder(r,idx){
     <td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}</td>
     <td>
       <button onclick="toggleEventoEstado('${r.id}','${f.Estado||'Pendiente'}')"
-        style="border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;background:${completado?'#D1FAE5':'#FEF3C7'};color:${completado?'#065F46':'#92400E'};">
+        style="border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;background:${completado?'var(--chip-green-bg)':'var(--chip-amber-bg)'};color:${completado?'var(--chip-green-text)':'var(--chip-amber-text)'};"
         ${completado?'✓ Listo':'Pendiente'}
       </button>
     </td>
@@ -251,9 +251,9 @@ function filtrarGD(){
     const diasRestantes=f.Fecha?Math.round((new Date(f.Fecha+'T12:00:00')-hoy2)/86400000):null;
     let diasStr='';
     if(!solicitada&&diasRestantes!==null){
-      if(diasRestantes<0) diasStr='<span style="color:#C62828;font-size:11px"> · vencida</span>';
-      else if(diasRestantes===0) diasStr='<span style="color:#C62828;font-weight:600;font-size:11px"> · Hoy</span>';
-      else if(diasRestantes<=30) diasStr=`<span style="color:#E65100;font-size:11px"> · en ${diasRestantes}d</span>`;
+      if(diasRestantes<0) diasStr='<span style="color:var(--critical);font-size:11px"> · vencida</span>';
+      else if(diasRestantes===0) diasStr='<span style="color:var(--critical);font-weight:600;font-size:11px"> · Hoy</span>';
+      else if(diasRestantes<=30) diasStr=`<span style="color:var(--warning);font-size:11px"> · en ${diasRestantes}d</span>`;
     }
     const bg=idx%2===0?'background:var(--bg2)':'';
     const fechaSol=f['Fecha solicitada']||f['fecha_solicitada']||f['FechaSolicitada']||'';

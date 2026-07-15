@@ -144,7 +144,7 @@ function previewAWPct(){
     ?`✅ Le corresponde <strong>50% del vuelo</strong> cubierto por BEON (${vecesPrev} asistencia${vecesPrev!==1?'s':''} previas · nivel ${nivel})`
     :`ℹ️ Ya no tiene cobertura de vuelo disponible (${vecesPrev} asistencia${vecesPrev!==1?'s':''} previas · nivel ${nivel}). BEON cubre solo el alojamiento.`;
   preview.innerHTML=txt;
-  preview.style.color=pct===50?'#0F6E56':'#9a6700';
+  preview.style.color=pct===50?'var(--green)':'var(--amber)';
 }
 
 function openAWPerModal(nombre){
@@ -187,7 +187,7 @@ function openAWPerModal(nombre){
 
   let histHtml=`<div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px;display:flex;justify-content:space-between">
     <span>Asistencias (${asistencias.length})</span>
-    <span style="color:${nivel==='Storm'?'#0F6E56':asistencias.length<regla.asistenciasConVuelo?'var(--blue)':'#9a6700'}">${cobertura}</span>
+    <span style="color:${nivel==='Storm'?'var(--green)':asistencias.length<regla.asistenciasConVuelo?'var(--blue)':'var(--amber)'}">${cobertura}</span>
   </div>`;
 
   if(asistencias.length){
@@ -261,7 +261,7 @@ function renderAWPersonas(){
     let cobertura='', disponibles='';
     if(nivel==='Storm'){
       cobertura='50% vuelo + 100% alojamiento';
-      disponibles='<span style="color:#0F6E56;font-weight:600">Ilimitadas</span>';
+      disponibles='<span style="color:var(--green);font-weight:600">Ilimitadas</span>';
     } else {
       const maxConVuelo=regla.asistenciasConVuelo;
       if(veces<maxConVuelo){
@@ -270,7 +270,7 @@ function renderAWPersonas(){
         disponibles=`<span style="color:var(--blue);font-weight:600">${restantes} con vuelo</span>`;
       } else {
         cobertura='100% alojamiento únicamente';
-        disponibles='<span style="color:#9a6700">Sin cobertura de vuelo</span>';
+        disponibles='<span style="color:var(--amber)">Sin cobertura de vuelo</span>';
       }
     }
 

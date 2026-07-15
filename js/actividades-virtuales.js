@@ -393,8 +393,8 @@ function renderAVMetricasQ(){
       const pctCore=pctPorGrupoAV(e,'Core Team');
       const pctEng=pctPorGrupoAV(e,'Engineers & Tech');
       return`<tr><td>${e.evento}</td><td style="font-size:12px;color:var(--text2)">${fmt(e.fecha)}</td><td style="font-weight:600">${e.asistentes.length}</td>
-        <td>${barraPctAV(pctCore,'#7432FF')}</td>
-        <td>${barraPctAV(pctEng,'#3A69FF')}</td>
+        <td>${barraPctAV(pctCore,'var(--purple)')}</td>
+        <td>${barraPctAV(pctEng,'var(--blue)')}</td>
       </tr>`;
     }).join('')}
   </tbody></table>`;

@@ -134,8 +134,8 @@ function openMeetModal(proyectoId, nombre, focusForm=false){
   document.getElementById('meet-stats').innerHTML=`
     <div class="meet-stat"><div class="meet-stat-val">${pubs.length}</div><div class="meet-stat-label">Publicaciones</div></div>
     <div class="meet-stat"><div class="meet-stat-val" style="color:var(--purple)">${promDias}</div><div class="meet-stat-label">Días promedio entre pubs.</div></div>
-    <div class="meet-stat"><div class="meet-stat-val" style="color:#9a6700">${diasDesdeUltima==='—'?'—':diasDesdeUltima+'d'}</div><div class="meet-stat-label">Desde última publicación</div></div>
-    <div class="meet-stat"><div class="meet-stat-val" style="color:#C62828">${diasSinPub}</div><div class="meet-stat-label">Días sin publicar</div></div>`;
+    <div class="meet-stat"><div class="meet-stat-val" style="color:var(--amber)">${diasDesdeUltima==='—'?'—':diasDesdeUltima+'d'}</div><div class="meet-stat-label">Desde última publicación</div></div>
+    <div class="meet-stat"><div class="meet-stat-val" style="color:var(--critical)">${diasSinPub}</div><div class="meet-stat-label">Días sin publicar</div></div>`;
 
   // Lista de publicaciones
   const listEl=document.getElementById('meet-pub-list');

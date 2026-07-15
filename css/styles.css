@@ -6,6 +6,13 @@
      legible en modo oscuro, no colores fijos pensados solo para fondo blanco. */
   --tinte-eng:#EEF2FF;--tinte-core:#F3EEFF;--chip-eng:#D6DEFF;
   --text-eng-accent:#0026B0;--text-core-accent:#4A1FAA;
+  /* Fase 2 — resto de acentos/tintes hardcodeados barridos sección por sección */
+  --tinte-pink:#FEF0FB;--text-pink-accent:#c040a8;
+  --tinte-amber-icon:#FFF8E1;--tinte-red-icon:#FCEBEB;
+  --critical:#C62828;--critical-border:#FECACA;--warning:#E65100;--urgent:#E24B4A;
+  --chip-green-bg:#D1FAE5;--chip-green-text:#065F46;
+  --chip-blue-bg:#DBEAFE;--chip-blue-text:#1E40AF;
+  --chip-amber-bg:#FEF3C7;--chip-amber-text:#92400E;
 }
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
 ::-webkit-scrollbar{width:9px;height:9px;}
@@ -341,6 +348,12 @@ textarea.field-input{resize:vertical;min-height:80px;}
   --chip-eng:rgba(58,105,255,0.3);
   --text-eng-accent:#9FB4FF;
   --text-core-accent:#C3B2FF;
+  --tinte-pink:rgba(192,64,168,0.2);--text-pink-accent:#E39BD4;
+  --tinte-amber-icon:rgba(224,162,51,0.18);--tinte-red-icon:rgba(240,98,95,0.18);
+  --critical:#F0625F;--critical-border:rgba(240,98,95,0.4);--warning:#F0A15C;--urgent:#FF7876;
+  --chip-green-bg:rgba(47,190,143,0.18);--chip-green-text:#7BE0BE;
+  --chip-blue-bg:rgba(58,105,255,0.18);--chip-blue-text:#9FB4FF;
+  --chip-amber-bg:rgba(224,162,51,0.18);--chip-amber-text:#F0C382;
 }
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb{background-color:rgba(255,255,255,0.14);}
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover{background-color:rgba(255,255,255,0.22);}

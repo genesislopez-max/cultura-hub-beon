@@ -241,7 +241,7 @@ function renderBenefCatalogo(){
   }
   if(coreTeam.length){
     html+=`<div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:var(--bg2);border-bottom:1px solid var(--border);border-top:2px solid var(--border);margin-top:22px">
-      <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:#4A1FAA">Core Team</span>
+      <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--purple)">Core Team</span>
       <span style="flex:1;height:1px;background:var(--border)"></span>
       <span class="badge badge-purple">${coreTeam.length} beneficio${coreTeam.length!==1?'s':''}</span>
     </div>`;
@@ -435,7 +435,7 @@ function renderBenefPersonas(){
     });
 
     const pct=tope>0?Math.min(100,Math.round((usado/tope)*100)):0;
-    const barColor=pct>=90?'#C62828':pct>=70?'#E65100':'var(--blue)';
+    const barColor=pct>=90?'var(--critical)':pct>=70?'var(--warning)':'var(--blue)';
     const usadoStr=usado>0?`$${usado.toLocaleString('es-AR')}`:'$0';
     const topeStr=tope>0?`$${tope.toLocaleString('es-AR')}`:'Sin tope';
 
@@ -457,7 +457,7 @@ function renderBenefPersonas(){
           <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
             <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>
           </div>
-          <span style="font-size:12px;color:${pct>=90?'#C62828':pct>=70?'#E65100':'var(--text2)'};font-weight:${pct>=70?'600':'400'};white-space:nowrap">${usadoStr} / ${topeStr}</span>
+          <span style="font-size:12px;color:${pct>=90?'var(--critical)':pct>=70?'var(--warning)':'var(--text2)'};font-weight:${pct>=70?'600':'400'};white-space:nowrap">${usadoStr} / ${topeStr}</span>
         </div>
       </td>
       <td style="white-space:nowrap">

@@ -77,7 +77,7 @@ function rowReminder(r,idx){
     <td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}</td>
     <td>
       <button onclick="toggleEventoEstado('${r.id}','${f.Estado||'Pendiente'}')"
-        style="border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;background:${completado?'#D1FAE5':'#FEF3C7'};color:${completado?'#065F46':'#92400E'};">
+        style="border:none;border-radius:6px;padding:3px 10px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;background:${completado?'var(--chip-green-bg)':'var(--chip-amber-bg)'};color:${completado?'var(--chip-green-text)':'var(--chip-amber-text)'};"
         ${completado?'✓ Listo':'Pendiente'}
       </button>
     </td>

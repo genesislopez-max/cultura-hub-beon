@@ -987,6 +987,15 @@
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="av-search-evento" placeholder="Buscar evento…" oninput="filtrarAVEvento()">
               </div>
+              <select class="filter-select" id="av-evento-anio" onchange="filtrarAVEvento()">
+                <option value="">Todos los años</option>
+              </select>
+              <select class="filter-select" id="av-evento-grupo" onchange="filtrarAVEvento()">
+                <option value="">Todos los grupos</option>
+                <option value="Todos">Dirigido a Todos</option>
+                <option value="Engineers & Tech">Engineers &amp; Tech</option>
+                <option value="Core Team">Core Team</option>
+              </select>
             </div>
             <div class="table-scroll">
             <table class="data-table">

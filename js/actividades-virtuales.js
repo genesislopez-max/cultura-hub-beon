@@ -17,7 +17,16 @@ async function loadActividadesVirtuales(){
   });
   renderAVMetricas();
   renderAVPersona();
+  poblarAVEventoAnio();
   renderAVEvento();
+}
+
+function poblarAVEventoAnio(){
+  const sel=document.getElementById('av-evento-anio');
+  if(!sel) return;
+  const actual=sel.value;
+  const anios=[...new Set(cacheAVRaw.map(r=>r.fields.Fecha).filter(Boolean).map(f=>new Date(f+'T12:00:00').getFullYear()))].sort((a,b)=>b-a);
+  sel.innerHTML='<option value="">Todos los años</option>'+anios.map(a=>`<option value="${a}"${String(a)===actual?' selected':''}>${a}</option>`).join('');
 }
 
 function switchAVTab(tab,btn){
@@ -221,10 +230,14 @@ function renderAVPersonaCard(){
 
 function renderAVEvento(){
   const q=(document.getElementById('av-search-evento')?.value||'').toLowerCase();
+  const anio=document.getElementById('av-evento-anio')?.value||'';
+  const grupo=document.getElementById('av-evento-grupo')?.value||'';
   const mapa=agruparAVPorEvento(cacheAVRaw);
 
   const filas=Object.entries(mapa)
     .filter(([,d])=>!q||d.evento.toLowerCase().includes(q))
+    .filter(([,d])=>!anio||(d.fecha&&new Date(d.fecha+'T12:00:00').getFullYear()===Number(anio)))
+    .filter(([,d])=>!grupo||d.grupo===grupo)
     .sort((a,b)=>(b[1].fecha||'').localeCompare(a[1].fecha||''));
 
   document.getElementById('av-badge-evento').textContent=`${filas.length} evento${filas.length!==1?'s':''}`;

@@ -29,7 +29,7 @@
   <div class="config-card">
     <div class="config-title">Welcome</div>
     <div id="google-signin-btn" style="display:flex;justify-content:center;"></div>
-    <div class="config-hint" id="login-error" style="display:none;color:#C62828"></div>
+    <div class="config-hint" id="login-error" style="display:none;color:var(--critical)"></div>
     <div class="config-sub">Iniciá sesión con tu cuenta de Google de BEON.tech para entrar al Hub.</div>
   </div>
 </div>
@@ -239,7 +239,7 @@
         <div class="metrics">
           <div class="metric"><div class="metric-label">Este mes</div><div class="metric-val" style="color:var(--purple)" id="mc-este-mes">—</div><div class="metric-sub" id="mc-este-mes-sub">—</div></div>
           <div class="metric"><div class="metric-label">Próximo mes</div><div class="metric-val" style="color:#c040a8" id="mc-proximo-mes">—</div><div class="metric-sub" id="mc-proximo-mes-sub">—</div></div>
-          <div class="metric"><div class="metric-label">Próximos 7 días</div><div class="metric-val" style="color:#E24B4A" id="mc-proximos-7">—</div><div class="metric-sub">muy pronto</div></div>
+          <div class="metric"><div class="metric-label">Próximos 7 días</div><div class="metric-val" style="color:var(--urgent)" id="mc-proximos-7">—</div><div class="metric-sub">muy pronto</div></div>
           <div class="metric"><div class="metric-label">Total en el equipo</div><div class="metric-val" id="mc-total">—</div><div class="metric-sub">con fecha cargada</div></div>
         </div>
         <div class="search-bar" style="background:transparent;border:none;padding:0 0 14px;">
@@ -269,7 +269,7 @@
         <div class="metrics">
           <div class="metric"><div class="metric-label">Este mes</div><div class="metric-val" style="color:var(--purple)" id="ma-este-mes">—</div><div class="metric-sub" id="ma-este-mes-sub">—</div></div>
           <div class="metric"><div class="metric-label">Próximo mes</div><div class="metric-val" style="color:#c040a8" id="ma-proximo-mes">—</div><div class="metric-sub" id="ma-proximo-mes-sub">—</div></div>
-          <div class="metric"><div class="metric-label">Próximos 7 días</div><div class="metric-val" style="color:#E24B4A" id="ma-proximos-7">—</div><div class="metric-sub">muy pronto</div></div>
+          <div class="metric"><div class="metric-label">Próximos 7 días</div><div class="metric-val" style="color:var(--urgent)" id="ma-proximos-7">—</div><div class="metric-sub">muy pronto</div></div>
           <div class="metric"><div class="metric-label">Total en el equipo</div><div class="metric-val" id="ma-total">—</div><div class="metric-sub">con aniversario pendiente</div></div>
         </div>
         <div class="table-wrap">
@@ -366,7 +366,7 @@
               <button onclick="sincronizarGlassdoor()" id="btn-sync-reminders" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
                 <i class="ti ti-refresh"></i> Sincronizar Glassdoor
               </button>
-              <button onclick="limpiarGlassdoorCoreTeam()" id="btn-clean-reminders" style="background:none;border:1px solid #FECACA;border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:#C62828;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
+              <button onclick="limpiarGlassdoorCoreTeam()" id="btn-clean-reminders" style="background:none;border:1px solid var(--critical-border);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--critical);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
                 <i class="ti ti-trash"></i> Limpiar Core Team
               </button>
             </div>
@@ -442,7 +442,7 @@
       <div class="section-page" id="page-tareas">
         <div class="metrics-3">
           <div class="metric"><div class="metric-label">Por hacer</div><div class="metric-val" style="color:var(--amber)" id="mt-porhacer">—</div><div class="metric-sub">pendientes</div></div>
-          <div class="metric"><div class="metric-label">Vencidas</div><div class="metric-val" style="color:#C62828" id="mt-vencidas">—</div><div class="metric-sub">sin completar</div></div>
+          <div class="metric"><div class="metric-label">Vencidas</div><div class="metric-val" style="color:var(--critical)" id="mt-vencidas">—</div><div class="metric-sub">sin completar</div></div>
           <div class="metric"><div class="metric-label">Hechas</div><div class="metric-val" style="color:var(--green)" id="mt-hechas">—</div><div class="metric-sub">completadas</div></div>
         </div>
 
@@ -526,7 +526,7 @@
           <div class="metric"><div class="metric-label">Beneficios activos</div><div class="metric-val" style="color:var(--blue)" id="mb-activos">—</div><div class="metric-sub">en el catálogo</div></div>
           <div class="metric"><div class="metric-label">Presupuesto total usado</div><div class="metric-val" style="color:var(--amber)" id="mb-presupuesto">—</div><div class="metric-sub">suma de asignaciones</div></div>
           <div class="metric"><div class="metric-label">Personas con beneficios</div><div class="metric-val" style="color:var(--green)" id="mb-personas">—</div><div class="metric-sub" id="mb-personas-sub"></div></div>
-          <div class="metric"><div class="metric-label">Sin beneficios asignados</div><div class="metric-val" style="color:#C62828" id="mb-sinbenef">—</div><div class="metric-sub">personas</div></div>
+          <div class="metric"><div class="metric-label">Sin beneficios asignados</div><div class="metric-val" style="color:var(--critical)" id="mb-sinbenef">—</div><div class="metric-sub">personas</div></div>
         </div>
 
         <!-- Tab bar -->

@@ -63,7 +63,7 @@ function tarjetaTarea(r){
     <div class="kc-name">${f.Título||'—'}</div>
     <div class="kc-meta">
       ${f.Asignado?`${avH(f.Asignado)}${f.Asignado}<br>`:''}
-      ${f.Fecha?`<span style="${vencida?'color:#C62828;font-weight:700':''}">📅 ${fmt(f.Fecha)}${f.Hora?` · ${f.Hora}`:''}${vencida?' · vencida':''}</span>`:''}
+      ${f.Fecha?`<span style="${vencida?'color:var(--critical);font-weight:700':''}">📅 ${fmt(f.Fecha)}${f.Hora?` · ${f.Hora}`:''}${vencida?' · vencida':''}</span>`:''}
     </div>
     <div class="kc-actions">
       <button class="kc-btn-edit" title="Editar tarea" onclick="event.stopPropagation();abrirEdicionTarea('${r.id}')"><i class="ti ti-pencil"></i></button>

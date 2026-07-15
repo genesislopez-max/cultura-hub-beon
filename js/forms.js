@@ -504,7 +504,7 @@ const FORMS={
     <option value="">Seleccioná una persona…</option>
     ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
   </select>
-  ${!personas.length?'<div class="field-hint" style="color:#C62828">No hay nadie con Área = "People" cargado en Airtable todavía — completá ese campo en Personas para poder asignar tareas.</div>':''}
+  ${!personas.length?'<div class="field-hint" style="color:var(--critical)">No hay nadie con Área = "People" cargado en Airtable todavía — completá ese campo en Personas para poder asignar tareas.</div>':''}
 </div>
 <div class="field-group">
   <label class="field-label">Fecha límite *</label>

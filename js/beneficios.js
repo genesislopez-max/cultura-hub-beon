@@ -435,7 +435,7 @@ function renderBenefPersonas(){
     });
 
     const pct=tope>0?Math.min(100,Math.round((usado/tope)*100)):0;
-    const barColor=pct>=90?'#C62828':pct>=70?'#E65100':'var(--blue)';
+    const barColor=pct>=90?'var(--critical)':pct>=70?'var(--warning)':'var(--blue)';
     const usadoStr=usado>0?`$${usado.toLocaleString('es-AR')}`:'$0';
     const topeStr=tope>0?`$${tope.toLocaleString('es-AR')}`:'Sin tope';
 
@@ -457,7 +457,7 @@ function renderBenefPersonas(){
           <div style="flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden">
             <div style="width:${pct}%;height:100%;background:${barColor};border-radius:3px;transition:width 0.3s"></div>
           </div>
-          <span style="font-size:12px;color:${pct>=90?'#C62828':pct>=70?'#E65100':'var(--text2)'};font-weight:${pct>=70?'600':'400'};white-space:nowrap">${usadoStr} / ${topeStr}</span>
+          <span style="font-size:12px;color:${pct>=90?'var(--critical)':pct>=70?'var(--warning)':'var(--text2)'};font-weight:${pct>=70?'600':'400'};white-space:nowrap">${usadoStr} / ${topeStr}</span>
         </div>
       </td>
       <td style="white-space:nowrap">

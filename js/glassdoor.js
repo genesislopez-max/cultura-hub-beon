@@ -251,9 +251,9 @@ function filtrarGD(){
     const diasRestantes=f.Fecha?Math.round((new Date(f.Fecha+'T12:00:00')-hoy2)/86400000):null;
     let diasStr='';
     if(!solicitada&&diasRestantes!==null){
-      if(diasRestantes<0) diasStr='<span style="color:#C62828;font-size:11px"> · vencida</span>';
-      else if(diasRestantes===0) diasStr='<span style="color:#C62828;font-weight:600;font-size:11px"> · Hoy</span>';
-      else if(diasRestantes<=30) diasStr=`<span style="color:#E65100;font-size:11px"> · en ${diasRestantes}d</span>`;
+      if(diasRestantes<0) diasStr='<span style="color:var(--critical);font-size:11px"> · vencida</span>';
+      else if(diasRestantes===0) diasStr='<span style="color:var(--critical);font-weight:600;font-size:11px"> · Hoy</span>';
+      else if(diasRestantes<=30) diasStr=`<span style="color:var(--warning);font-size:11px"> · en ${diasRestantes}d</span>`;
     }
     const bg=idx%2===0?'background:var(--bg2)':'';
     const fechaSol=f['Fecha solicitada']||f['fecha_solicitada']||f['FechaSolicitada']||'';

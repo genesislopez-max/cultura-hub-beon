@@ -46,7 +46,7 @@ async function verBenefPersona(nombre, grupo, nivel){
   const topeCap=topeCapEntry?.fields['Tope anual capacitación']||0;
   const totalCap=caps.reduce((s,r)=>s+Number(r.fields.Monto||0),0);
   const capPct=topeCap>0?Math.min(100,Math.round((totalCap/topeCap)*100)):0;
-  const capBarColor=capPct>=90?'#C62828':capPct>=70?'#E65100':'var(--blue)';
+  const capBarColor=capPct>=90?'var(--critical)':capPct>=70?'var(--warning)':'var(--blue)';
 
   // AW — cuántas veces fue y cobertura
   const awVeces=awRecs.length;
@@ -77,7 +77,7 @@ async function verBenefPersona(nombre, grupo, nivel){
           ${valor?`<span style="font-size:12px;color:var(--text3)">${valor}</span>`:''}
           <span class="badge ${activo?'badge-green':'badge-amber'}" style="font-size:11px">${activo?'Activo':'Inactivo'}</span>
           <button onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;"><i class="ti ti-pencil"></i></button>
-          <button onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:#C62828;padding:2px;line-height:1;"><i class="ti ti-trash"></i></button>
+          <button onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--critical);padding:2px;line-height:1;"><i class="ti ti-trash"></i></button>
         </span>
       </div>`;
     }).join(''):`<div class="sp-empty">Sin beneficios asignados</div>`}
@@ -89,7 +89,7 @@ async function verBenefPersona(nombre, grupo, nivel){
     ${topeCap>0?`<div style="margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px">
         <span>Capacitación usada (anual)</span>
-        <span style="font-weight:600;color:${capPct>=90?'#C62828':capPct>=70?'#E65100':'var(--text)'}">$${totalCap.toLocaleString('es-AR')} / $${topeCap.toLocaleString('es-AR')}</span>
+        <span style="font-weight:600;color:${capPct>=90?'var(--critical)':capPct>=70?'var(--warning)':'var(--text)'}">$${totalCap.toLocaleString('es-AR')} / $${topeCap.toLocaleString('es-AR')}</span>
       </div>
       <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
         <div style="width:${capPct}%;height:100%;background:${capBarColor};border-radius:3px;transition:width 0.3s"></div>

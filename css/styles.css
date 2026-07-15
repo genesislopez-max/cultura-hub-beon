@@ -302,3 +302,67 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .cl-overlay-card{background:var(--bg);border-radius:16px;width:600px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--shadow-lg);}
 .cl-overlay-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .cl-overlay-body{overflow-y:auto;flex:1;padding:0 0 16px;}
+
+.sb-theme-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:8px 10px;margin-bottom:10px;border:none;border-radius:8px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background 0.15s,color 0.15s;}
+.sb-theme-toggle:hover{background:rgba(255,255,255,0.12);color:#fff;}
+.sb-theme-toggle i{font-size:15px;}
+
+/* ═══════════ MODO OSCURO ═══════════
+   La sidebar ya es oscura siempre (usa --dark), así que no cambia entre
+   temas. Acá solo se pisan: (1) la paleta base de variables, y (2) los
+   colores que en el resto del CSS están escritos en hex fijo en vez de
+   var(...) — tintes de badges/avatares/banners/kanban que asumían un fondo
+   blanco y quedarían mal si simplemente se invirtiera todo. */
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#14161F;
+  --bg2:#1C1F2B;
+  --border:#2E3245;
+  --text:#EDEEF3;
+  --text2:#9BA1B0;
+  --text3:#6E7486;
+  --blue:#5B84FF;
+  --purple:#9C7CFF;
+  --green:#2FBE8F;
+  --red:#F0625F;
+  --amber:#E0A233;
+  --shadow-xs:0 1px 2px rgba(0,0,0,0.35);
+  --shadow-sm:0 4px 14px rgba(0,0,0,0.45);
+  --shadow-md:0 10px 28px rgba(0,0,0,0.5);
+  --shadow-lg:0 24px 56px rgba(0,0,0,0.6);
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb{background-color:rgba(255,255,255,0.14);}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover{background-color:rgba(255,255,255,0.22);}
+:root[data-theme="dark"] .btn-secondary:hover{background:rgba(58,105,255,0.12);}
+:root[data-theme="dark"] .banner-info{background:rgba(58,105,255,0.15);color:#9FB4FF;}
+:root[data-theme="dark"] .banner-ok{background:rgba(47,190,143,0.15);color:#7BE0BE;}
+:root[data-theme="dark"] .banner-err{background:rgba(240,98,95,0.15);color:#F6A6A4;}
+:root[data-theme="dark"] .badge-blue{background:rgba(58,105,255,0.16);color:#9FB4FF;box-shadow:inset 0 0 0 1px rgba(159,180,255,0.25);}
+:root[data-theme="dark"] .badge-green{background:rgba(47,190,143,0.16);color:#7BE0BE;box-shadow:inset 0 0 0 1px rgba(123,224,190,0.25);}
+:root[data-theme="dark"] .badge-amber{background:rgba(224,162,51,0.16);color:#F0C382;box-shadow:inset 0 0 0 1px rgba(240,195,130,0.25);}
+:root[data-theme="dark"] .badge-red{background:rgba(240,98,95,0.16);color:#F6A6A4;box-shadow:inset 0 0 0 1px rgba(246,166,164,0.25);}
+:root[data-theme="dark"] .badge-purple{background:rgba(156,124,255,0.18);color:#C3B2FF;box-shadow:inset 0 0 0 1px rgba(195,178,255,0.25);}
+:root[data-theme="dark"] .badge-gray{background:rgba(155,161,176,0.16);color:#C4C9D4;box-shadow:inset 0 0 0 1px rgba(196,201,212,0.2);}
+:root[data-theme="dark"] .av-blue{background:rgba(58,105,255,0.18);color:#9FB4FF;}
+:root[data-theme="dark"] .av-purple{background:rgba(156,124,255,0.18);color:#C3B2FF;}
+:root[data-theme="dark"] .av-pink{background:rgba(192,64,168,0.2);color:#E39BD4;}
+:root[data-theme="dark"] .av-green{background:rgba(47,190,143,0.18);color:#7BE0BE;}
+:root[data-theme="dark"] .av-amber{background:rgba(224,162,51,0.18);color:#F0C382;}
+:root[data-theme="dark"] .kanban-col-head{background:rgba(255,255,255,0.04);}
+:root[data-theme="dark"] .kanban-col.drag-over{background:rgba(58,105,255,0.12);}
+:root[data-theme="dark"] .col-tarea-porhacer .kanban-col-head{background:linear-gradient(90deg,rgba(240,98,95,0.18) 0%,rgba(255,255,255,0.03) 100%);}
+:root[data-theme="dark"] .col-tarea-enproceso .kanban-col-head{background:linear-gradient(90deg,rgba(224,162,51,0.18) 0%,rgba(255,255,255,0.03) 100%);}
+:root[data-theme="dark"] .col-tarea-hecho .kanban-col-head{background:linear-gradient(90deg,rgba(47,190,143,0.18) 0%,rgba(255,255,255,0.03) 100%);}
+:root[data-theme="dark"] .kc-btn-del:hover{color:#F6A6A4;background:rgba(240,98,95,0.16);}
+:root[data-theme="dark"] .kc-btn-edit:hover{background:rgba(58,105,255,0.16);}
+:root[data-theme="dark"] .kc-btn-complete:hover{background:rgba(58,105,255,0.16);}
+:root[data-theme="dark"] .pubs-badge{background:rgba(58,105,255,0.16);color:#9FB4FF;}
+:root[data-theme="dark"] .pubs-badge:hover{background:rgba(58,105,255,0.26);}
+:root[data-theme="dark"] .meet-pub-num{background:rgba(58,105,255,0.18);}
+:root[data-theme="dark"] .form-simple-badge{background:rgba(58,105,255,0.15);color:#9FB4FF;}
+:root[data-theme="dark"] .nivel-pending-banner{background:rgba(224,162,51,0.15);color:#F0C382;}
+:root[data-theme="dark"] .nivel-Spark,:root[data-theme="dark"] .badge-nivel-Spark{background:rgba(155,14,137,0.28);color:#F0A8E5;}
+:root[data-theme="dark"] .nivel-Ray,:root[data-theme="dark"] .badge-nivel-Ray{background:rgba(168,48,0,0.28);color:#F4A97D;}
+:root[data-theme="dark"] .nivel-Lightning,:root[data-theme="dark"] .badge-nivel-Lightning{background:rgba(0,38,176,0.32);color:#A9BBFF;}
+:root[data-theme="dark"] .nivel-Thunder,:root[data-theme="dark"] .badge-nivel-Thunder{background:rgba(74,31,170,0.32);color:#CBB6FF;}
+:root[data-theme="dark"] .config-logo-img{filter:brightness(0) invert(1);}

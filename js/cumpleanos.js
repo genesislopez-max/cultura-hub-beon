@@ -66,7 +66,7 @@ function filaCumple(r,now){
 // Colores por grupo — mismos que ya usan las cards "Engineers & Tech"/"Core
 // Team" de arriba, para que el header de cada mes se lea como parte de ese
 // mismo grupo en vez de mezclarse con el header de columnas de la tabla.
-const CUMPLE_ACCENT={eng:{borde:'#3A69FF',tinte:'#EEF2FF'},core:{borde:'#7432FF',tinte:'#F3EEFF'}};
+const CUMPLE_ACCENT={eng:{borde:'#3A69FF',tinte:'var(--tinte-eng)'},core:{borde:'#7432FF',tinte:'var(--tinte-core)'}};
 
 function bloqueMesCumple(offset,rows,now,grupo){
   const delMes=rows.filter(r=>{

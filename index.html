@@ -92,13 +92,13 @@
       <!-- INICIO -->
       <div class="section-page active" id="page-inicio">
         <div class="metrics-3">
-          <div class="metric"><div class="metric-icon" style="background:#EEF2FF;color:var(--blue)"><i class="ti ti-users"></i></div><div class="metric-label">Total equipo</div><div class="metric-val" id="m-personas">—</div><div class="metric-sub">personas activas</div></div>
-          <div class="metric"><div class="metric-icon" style="background:#F3EEFF;color:var(--purple)"><i class="ti ti-building-skyscraper"></i></div><div class="metric-label">Core Team</div><div class="metric-val" id="m-coreteam" style="color:var(--purple)">—</div><div class="metric-sub">en el equipo</div></div>
-          <div class="metric"><div class="metric-icon" style="background:#EEF2FF;color:var(--blue)"><i class="ti ti-code"></i></div><div class="metric-label">Engineers</div><div class="metric-val" id="m-engineers" style="color:var(--blue)">—</div><div class="metric-sub">en proyectos</div></div>
+          <div class="metric"><div class="metric-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-users"></i></div><div class="metric-label">Total equipo</div><div class="metric-val" id="m-personas">—</div><div class="metric-sub">personas activas</div></div>
+          <div class="metric"><div class="metric-icon" style="background:var(--tinte-core);color:var(--purple)"><i class="ti ti-building-skyscraper"></i></div><div class="metric-label">Core Team</div><div class="metric-val" id="m-coreteam" style="color:var(--purple)">—</div><div class="metric-sub">en el equipo</div></div>
+          <div class="metric"><div class="metric-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-code"></i></div><div class="metric-label">Engineers</div><div class="metric-val" id="m-engineers" style="color:var(--blue)">—</div><div class="metric-sub">en proyectos</div></div>
         </div>
         <div class="summary-grid">
           <div class="summary-card primary">
-            <div class="sc-icon" style="background:#EEF2FF;color:var(--blue)"><i class="ti ti-user-plus"></i></div>
+            <div class="sc-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-user-plus"></i></div>
             <div class="sc-label">Ingresos</div>
             <div class="sc-val" id="sc-ingresos" style="color:var(--blue)">—</div>
             <div class="sc-sub" id="sc-ingresos-sub">este mes</div>
@@ -106,7 +106,7 @@
             <button class="sc-more" id="sc-more-ingresos" onclick="showSection('ingresos',document.querySelector('.sb-item[onclick*=ingresos]'))" style="display:none">Ver todos →</button>
           </div>
           <div class="summary-card">
-            <div class="sc-icon" style="background:#F3EEFF;color:var(--purple)"><i class="ti ti-cake"></i></div>
+            <div class="sc-icon" style="background:var(--tinte-core);color:var(--purple)"><i class="ti ti-cake"></i></div>
             <div class="sc-label">Cumpleaños</div>
             <div class="sc-val" id="sc-cumple" style="color:var(--purple)">—</div>
             <div class="sc-sub" id="sc-cumple-sub">este mes</div>
@@ -164,8 +164,8 @@
           </select>
         </div>
         <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-top:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;border-radius:13px 13px 0 0;">
-            <span class="table-head-title" style="color:#0026B0">Engineers & Tech</span>
+          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;border-radius:13px 13px 0 0;">
+            <span class="table-head-title" style="color:var(--text-eng-accent)">Engineers & Tech</span>
             <span class="badge badge-blue" id="badge-personas-eng">—</span>
           </div>
           <div class="table-scroll">
@@ -216,8 +216,8 @@
           </select>
         </div>
         <div class="table-wrap" id="wrap-coreteam" style="border-radius:13px;margin-top:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,#F3EEFF 0%,var(--bg2) 100%);border-left:3px solid #7432FF;border-radius:13px 13px 0 0;">
-            <span class="table-head-title" style="color:#4A1FAA">Core Team</span>
+          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid #7432FF;border-radius:13px 13px 0 0;">
+            <span class="table-head-title" style="color:var(--text-core-accent)">Core Team</span>
             <span class="badge badge-purple" id="badge-personas-core">—</span>
           </div>
           <div class="table-scroll">
@@ -249,15 +249,15 @@
           </div>
         </div>
         <div class="table-wrap" style="border-radius:13px;margin-bottom:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;border-radius:13px 13px 0 0;">
-            <span class="table-head-title" style="color:#0026B0">Engineers & Tech</span>
+          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid #3A69FF;border-radius:13px 13px 0 0;">
+            <span class="table-head-title" style="color:var(--text-eng-accent)">Engineers & Tech</span>
             <span class="badge badge-blue" id="badge-cumple-eng">—</span>
           </div>
           <div id="cumple-eng-container" class="table-scroll"></div>
         </div>
         <div class="table-wrap" style="border-radius:13px;">
-          <div class="table-head" style="background:linear-gradient(90deg,#F3EEFF 0%,var(--bg2) 100%);border-left:3px solid #7432FF;border-radius:13px 13px 0 0;">
-            <span class="table-head-title" style="color:#4A1FAA">Core Team</span>
+          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid #7432FF;border-radius:13px 13px 0 0;">
+            <span class="table-head-title" style="color:var(--text-core-accent)">Core Team</span>
             <span class="badge badge-purple" id="badge-cumple-core">—</span>
           </div>
           <div id="cumple-core-container" class="table-scroll"></div>

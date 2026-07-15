@@ -60,9 +60,9 @@ async function loadAniversarios(personas){
     let html='';
     Object.entries(grupos).sort(([a],[b])=>a.localeCompare(b)).forEach(([,{label,items,esActual}])=>{
       html+=`<div class="aniv-grupo-mes" style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin:0 14px 22px;">
-        <div style="padding:12px 18px;background:linear-gradient(90deg,#EEF2FF 0%,var(--bg2) 100%);border-left:3px solid var(--blue);display:flex;align-items:center;gap:10px;">
+        <div style="padding:12px 18px;background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid var(--blue);display:flex;align-items:center;gap:10px;">
           <span style="font-size:13px;font-weight:700;color:var(--blue)">${label.charAt(0).toUpperCase()+label.slice(1)}</span>
-          ${esActual?'<span style="font-size:11px;font-weight:600;color:var(--blue);background:#D6DEFF;padding:2px 8px;border-radius:20px">Este mes</span>':''}
+          ${esActual?'<span style="font-size:11px;font-weight:600;color:var(--blue);background:var(--chip-eng);padding:2px 8px;border-radius:20px">Este mes</span>':''}
           <span style="font-size:12px;color:var(--text3);margin-left:auto">${items.length} aniversario${items.length!==1?'s':''}</span>
         </div>
         <table class="data-table" style="border-radius:0">

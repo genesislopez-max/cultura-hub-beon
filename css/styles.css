@@ -1,6 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
-:root{--blue:#3A69FF;--purple:#7432FF;--dark:#1E2235;--bg:#F5F7FA;--bg2:#fff;--border:#E5E7EB;--text:#1E2235;--text2:#6B7280;--text3:#9CA3AF;--green:#0F6E56;--red:#A32D2D;--amber:#9a6700;--shadow-xs:0 1px 2px rgba(16,17,23,0.05);--shadow-sm:0 4px 12px rgba(16,17,23,0.07);--shadow-md:0 10px 28px rgba(16,17,23,0.10);--shadow-lg:0 24px 56px rgba(16,17,23,0.16);}
+:root{--blue:#3A69FF;--purple:#7432FF;--dark:#1E2235;--bg:#F5F7FA;--bg2:#fff;--border:#E5E7EB;--text:#1E2235;--text2:#6B7280;--text3:#9CA3AF;--green:#0F6E56;--red:#A32D2D;--amber:#9a6700;--shadow-xs:0 1px 2px rgba(16,17,23,0.05);--shadow-sm:0 4px 12px rgba(16,17,23,0.07);--shadow-md:0 10px 28px rgba(16,17,23,0.10);--shadow-lg:0 24px 56px rgba(16,17,23,0.16);
+  /* Tintes reutilizados en headers "Engineers & Tech"/"Core Team" (Personas,
+     Cumpleaños, Aniversarios) — variables para que el texto siga siendo
+     legible en modo oscuro, no colores fijos pensados solo para fondo blanco. */
+  --tinte-eng:#EEF2FF;--tinte-core:#F3EEFF;--chip-eng:#D6DEFF;
+  --text-eng-accent:#0026B0;--text-core-accent:#4A1FAA;
+}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
 ::-webkit-scrollbar{width:9px;height:9px;}
 ::-webkit-scrollbar-track{background:transparent;}
@@ -330,6 +336,11 @@ textarea.field-input{resize:vertical;min-height:80px;}
   --shadow-sm:0 4px 14px rgba(0,0,0,0.45);
   --shadow-md:0 10px 28px rgba(0,0,0,0.5);
   --shadow-lg:0 24px 56px rgba(0,0,0,0.6);
+  --tinte-eng:rgba(58,105,255,0.16);
+  --tinte-core:rgba(156,124,255,0.18);
+  --chip-eng:rgba(58,105,255,0.3);
+  --text-eng-accent:#9FB4FF;
+  --text-core-accent:#C3B2FF;
 }
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb{background-color:rgba(255,255,255,0.14);}
 :root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover{background-color:rgba(255,255,255,0.22);}

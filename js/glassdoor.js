@@ -2,7 +2,10 @@
 // sueltos viven los dos en la tabla Eventos — antes tenían una pestaña propia
 // ("Reminders") que terminaba duplicando esta, así que quedaron acá.
 async function loadReviews(){
-  const hoy=new Date();hoy.setHours(0,0,0,0);
+  // Ancla al mediodía (no medianoche) para que coincida con el T12:00:00 con el
+  // que se parsean las fechas de los eventos — si no, un evento de hoy queda a
+  // 12hs de diferencia y Math.round() lo redondea a "en 1 día" en vez de "Hoy".
+  const hoy=new Date();hoy.setHours(12,0,0,0);
 
   const d=await atGet('Eventos','&sort[0][field]=Fecha&sort[0][direction]=asc');
   const allRecs=d.records||[];
@@ -243,7 +246,7 @@ function filtrarGD(){
   }).sort((a,b)=>(a.fields.Fecha||'').localeCompare(b.fields.Fecha||''));
   const tb=document.getElementById('tbody-glassdoor');
   if(!tb) return;
-  const hoy2=new Date();hoy2.setHours(0,0,0,0);
+  const hoy2=new Date();hoy2.setHours(12,0,0,0); // ver comentario en loadReviews()
   tb.innerHTML=filtrados.map((r,idx)=>{
     const f=r.fields;
     const nombre=(f.Evento||'').replace(/[^—]+—\s*/,'').trim()||f.Evento||'—';

@@ -36,7 +36,7 @@ async function loadReviews(){
   cacheOtrosReminders=recs.filter(r=>r.fields.Tipo!=='Glassdoor');
 
   // Métricas
-  const pendientes=gdRecs.filter(r=>r.fields.Estado!=='Completado'&&r.fields.Estado!=='Solicitada');
+  const pendientes=gdRecs.filter(r=>!['Completado','Solicitada','No aplica'].includes(r.fields.Estado));
   document.getElementById('rv-gd-pend').textContent=pendientes.length;
   document.getElementById('rv-badge-gd').textContent=`${gdRecs.length} engineers`;
   const badgeOtros=document.getElementById('badge-otros-reminders');
@@ -240,7 +240,7 @@ function filtrarGD(){
     const nombre=(r.fields.Evento||'').toLowerCase();
     const estado=(r.fields.Estado||'Pendiente').toLowerCase();
     const matchQ=!q||nombre.includes(q);
-    const matchE=!estadoFil||(estadoFil==='pendiente'&&estado!=='completado')||(estadoFil==='solicitada'&&estado==='completado');
+    const matchE=!estadoFil||(estadoFil==='pendiente'&&estado!=='completado'&&estado!=='no aplica')||(estadoFil==='solicitada'&&estado==='completado')||(estadoFil==='no-aplica'&&estado==='no aplica');
     const matchM=!managerFil||managerDeEventoGD(r.fields)===managerFil;
     return matchQ&&matchE&&matchM;
   }).sort((a,b)=>(a.fields.Fecha||'').localeCompare(b.fields.Fecha||''));
@@ -251,21 +251,38 @@ function filtrarGD(){
     const f=r.fields;
     const nombre=(f.Evento||'').replace(/[^—]+—\s*/,'').trim()||f.Evento||'—';
     const solicitada=f.Estado==='Completado'||f.Estado==='Solicitada';
+    const noAplica=f.Estado==='No aplica';
     const diasRestantes=f.Fecha?Math.round((new Date(f.Fecha+'T12:00:00')-hoy2)/86400000):null;
     let diasStr='';
-    if(!solicitada&&diasRestantes!==null){
+    if(!solicitada&&!noAplica&&diasRestantes!==null){
       if(diasRestantes<0) diasStr='<span style="color:var(--critical);font-size:11px"> · vencida</span>';
       else if(diasRestantes===0) diasStr='<span style="color:var(--critical);font-weight:600;font-size:11px"> · Hoy</span>';
       else if(diasRestantes<=30) diasStr=`<span style="color:var(--warning);font-size:11px"> · en ${diasRestantes}d</span>`;
     }
     const bg=idx%2===0?'background:var(--bg2)':'';
     const fechaSol=f['Fecha solicitada']||f['fecha_solicitada']||f['FechaSolicitada']||'';
-    return`<tr class="tr-clickable" style="${bg};opacity:${solicitada?'0.65':'1'}" onclick="openGDModal('${r.id}')">
+    // La fecha sugerida se puede reprogramar mientras el reminder siga activo
+    // (todavía no se solicitó ni se marcó "No aplica") — una vez resuelto no
+    // tiene sentido seguir corriéndola.
+    const fechaTd=(!solicitada&&!noAplica)
+      ?`<td style="font-size:12px;color:var(--text2)" onclick="event.stopPropagation()"><input type="date" class="field-input" value="${f.Fecha||''}" onchange="cambiarFechaGD('${r.id}',this.value)" style="width:auto;padding:4px 6px;font-size:12px;">${diasStr}</td>`
+      :`<td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}${diasStr}</td>`;
+    const estadoTd=noAplica
+      ?'<td><span class="badge badge-red">No aplica</span></td>'
+      :`<td><span class="badge ${solicitada?'badge-green':'badge-amber'}">${solicitada?'Solicitada':'Pendiente'}</span></td>`;
+    let acciones='';
+    if(noAplica){
+      acciones=`<button onclick="revertirGDNoAplica('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Revertir</button>`;
+    } else if(!solicitada){
+      acciones=`<button onclick="marcarGDSolicitada('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Solicitada</button>
+      <button onclick="marcarGDNoAplica('${r.id}')" title="Se va de la empresa u otro motivo por el que no corresponde pedirla" style="background:none;border:1px solid var(--critical-border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--critical);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">No aplica</button>`;
+    }
+    return`<tr class="tr-clickable" style="${bg};opacity:${solicitada||noAplica?'0.65':'1'}" onclick="openGDModal('${r.id}')">
       <td>${avH(nombre)}${nombre}</td>
-      <td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}${diasStr}</td>
-      <td><span class="badge ${solicitada?'badge-green':'badge-amber'}">${solicitada?'Solicitada':'Pendiente'}</span></td>
+      ${fechaTd}
+      ${estadoTd}
       <td style="font-size:12px;color:var(--text2)">${fechaSol?fmt(fechaSol):'—'}</td>
-      <td onclick="event.stopPropagation()">${!solicitada?`<button onclick="marcarGDSolicitada('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Solicitada</button>`:''}</td>
+      <td onclick="event.stopPropagation()">${acciones}</td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
 }
@@ -339,5 +356,53 @@ async function marcarGDSolicitada(id){
   const rec=cacheGDRecs.find(r=>r.id===id);
   if(rec){ rec.fields.Estado='Completado'; rec.fields['Fecha solicitada']=hoy; }
   toast('✅ Glassdoor review marcada como solicitada');
+  filtrarGD();
+}
+
+// Reprograma la fecha sugerida cuando el momento original no es bueno
+// (ej. la persona está en medio de una entrega) — patchea directo el campo
+// Fecha del reminder, sin tocar el Estado.
+async function cambiarFechaGD(id,nuevaFecha){
+  if(!nuevaFecha) return;
+  try{
+    await atPatch(`Eventos/${id}`,{Fecha:nuevaFecha});
+  }catch(e){
+    toast(`⚠️ Error: ${e.message}`,true);
+    return;
+  }
+  const rec=cacheGDRecs.find(r=>r.id===id);
+  if(rec) rec.fields.Fecha=nuevaFecha;
+  toast('✅ Fecha actualizada');
+  filtrarGD();
+}
+
+// "No aplica": para cuando avisan que no corresponde pedir la review (ej. la
+// persona se va de la empresa) — saca el reminder de "pendientes" sin
+// eliminarlo, y queda reversible por si la situación cambia.
+async function marcarGDNoAplica(id){
+  const rec=cacheGDRecs.find(r=>r.id===id);
+  const nombre=rec?(rec.fields.Evento||'').replace(/.*—\s*/,'').trim():'';
+  if(!confirm(`¿Marcar como "No aplica" el reminder de Glassdoor de ${nombre||'esta persona'}?`)) return;
+  try{
+    await atPatch(`Eventos/${id}`,{Estado:'No aplica'});
+  }catch(e){
+    toast(`⚠️ Error: ${e.message}`,true);
+    return;
+  }
+  if(rec) rec.fields.Estado='No aplica';
+  toast('✅ Marcado como "No aplica"');
+  filtrarGD();
+}
+
+async function revertirGDNoAplica(id){
+  try{
+    await atPatch(`Eventos/${id}`,{Estado:'Pendiente'});
+  }catch(e){
+    toast(`⚠️ Error: ${e.message}`,true);
+    return;
+  }
+  const rec=cacheGDRecs.find(r=>r.id===id);
+  if(rec) rec.fields.Estado='Pendiente';
+  toast('✅ Reminder reactivado');
   filtrarGD();
 }

@@ -1,7 +1,7 @@
 async function loadCumpleanos(personas){
   const now=new Date();now.setHours(0,0,0,0);
   const mesActual=now.getMonth(),mesProximo=(now.getMonth()+1)%12;
-  const rows=(personas||[]).filter(r=>r.fields['Fecha de cumpleaños']).map(r=>{
+  const rows=(personas||[]).filter(r=>!yaEgreso(r)&&r.fields['Fecha de cumpleaños']).map(r=>{
     const f=r.fields;
     const rol=(f['Rol en empresa']||'').trim();
     const fecha=f['Fecha de cumpleaños'];

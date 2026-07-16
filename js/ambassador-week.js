@@ -240,7 +240,7 @@ function renderAWPersonas(){
     const nivel=p.fields['Nivel Loyalty']||'Spark';
     const matchQ=!q||nombre.includes(q);
     const matchL=!loyaltyFil||nivel===loyaltyFil;
-    return matchQ&&matchL;
+    return !yaEgreso(p)&&matchQ&&matchL;
   });
 
   document.getElementById('aw-badge-personas').textContent=`${personas.length} personas`;

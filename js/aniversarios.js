@@ -1,7 +1,7 @@
 async function loadAniversarios(personas){
   const now=new Date();now.setHours(0,0,0,0);
   const mesActual=now.getMonth(),mesProximo=(now.getMonth()+1)%12;
-  const rows=(personas||[]).filter(r=>r.fields['Fecha de ingreso']).map(r=>{
+  const rows=(personas||[]).filter(r=>!yaEgreso(r)&&r.fields['Fecha de ingreso']).map(r=>{
     const f=r.fields;
     const ing=new Date(f['Fecha de ingreso']+'T12:00:00');
     const añosAct=now.getFullYear()-ing.getFullYear();

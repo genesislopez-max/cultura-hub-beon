@@ -187,6 +187,10 @@ function verAVPersona(nombre){
     <div class="side-panel-section">
       <div class="side-panel-section-title">Actividades</div>
       <div id="sp-av-lista"></div>
+    </div>
+    <div class="side-panel-section">
+      <div class="side-panel-section-title" id="sp-av-titulo-no"></div>
+      <div id="sp-av-lista-no"></div>
     </div>`;
   panel.classList.add('open');
   overlay.classList.add('open');
@@ -216,8 +220,17 @@ function renderAVPersonaCard(){
   // dentro de su grupo.
   const eventosUnicosEnRango=Object.values(agruparAVPorEvento(cacheAVRaw)).filter(e=>dentroDelRango(e.fecha));
   const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
-  const elegibles=persona?eventosUnicosEnRango.filter(e=>personaActivaEnFecha(persona,e.fecha)&&personaPerteneceAGrupoAV(persona,e.grupo)).length:eventosUnicosEnRango.length;
+  const eventosElegibles=persona?eventosUnicosEnRango.filter(e=>personaActivaEnFecha(persona,e.fecha)&&personaPerteneceAGrupoAV(persona,e.grupo)):eventosUnicosEnRango;
+  const elegibles=eventosElegibles.length;
   const pct=elegibles?Math.round(eventosPersona.length/elegibles*100):null;
+
+  // Lo que le faltó: eventos elegibles para esta persona (activa + su grupo)
+  // en los que no hay un registro de asistencia a su nombre.
+  const asistioKeys=new Set(eventosPersona.map(e=>`${e.evento}|${e.fecha}`));
+  const eventosNoAsistio=eventosElegibles
+    .filter(e=>!asistioKeys.has(`${e.evento}|${e.fecha}`))
+    .map(e=>({evento:e.evento,fecha:e.fecha}))
+    .sort((a,b)=>b.fecha.localeCompare(a.fecha));
 
   document.getElementById('sp-av-resumen').innerHTML=`
     <div class="metric"><div class="metric-label">Asistió</div><div class="metric-val" style="color:var(--blue)">${eventosPersona.length}</div><div class="metric-sub">actividad${eventosPersona.length!==1?'es':''}</div></div>
@@ -226,6 +239,11 @@ function renderAVPersonaCard(){
   document.getElementById('sp-av-lista').innerHTML=eventosPersona.length
     ?eventosPersona.map(e=>`<div class="side-panel-row"><span>${e.evento}</span><span style="font-size:12px;color:var(--text2)">${fmt(e.fecha)}</span></div>`).join('')
     :'<div class="sp-empty">Sin actividades en este período</div>';
+
+  document.getElementById('sp-av-titulo-no').textContent=`No asistió (${eventosNoAsistio.length})`;
+  document.getElementById('sp-av-lista-no').innerHTML=eventosNoAsistio.length
+    ?eventosNoAsistio.map(e=>`<div class="side-panel-row"><span style="color:var(--text3)">${e.evento}</span><span style="font-size:12px;color:var(--text3)">${fmt(e.fecha)}</span></div>`).join('')
+    :'<div class="sp-empty">Asistió a todas las actividades elegibles en este período</div>';
 }
 
 function renderAVEvento(){

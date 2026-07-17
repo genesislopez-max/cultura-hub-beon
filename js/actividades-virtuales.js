@@ -183,6 +183,9 @@ function verAVPersona(nombre){
         <option value="4">Q4 · Oct-Dic</option>
       </select>
     </div>
+    <button onclick="exportarAVPersonaExcel()" style="width:100%;margin-bottom:18px;padding:9px 14px;background:none;border:1px solid var(--border);border-radius:9px;font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;">
+      <i class="ti ti-download"></i> Descargar historial completo (Excel)
+    </button>
     <div class="metrics-2" id="sp-av-resumen" style="margin-bottom:20px"></div>
     <div class="side-panel-section">
       <div class="side-panel-section-title">Actividades</div>
@@ -244,6 +247,45 @@ function renderAVPersonaCard(){
   document.getElementById('sp-av-lista-no').innerHTML=eventosNoAsistio.length
     ?eventosNoAsistio.map(e=>`<div class="side-panel-row"><span style="color:var(--text3)">${e.evento}</span><span style="font-size:12px;color:var(--text3)">${fmt(e.fecha)}</span></div>`).join('')
     :'<div class="sp-empty">Asistió a todas las actividades elegibles en este período</div>';
+}
+
+// Descarga el historial COMPLETO (sin el filtro de año/trimestre de la
+// tarjeta, que es solo para la vista en pantalla) de asistencia/no-asistencia
+// de la persona abierta en el panel: una fila por cada actividad en la que
+// era elegible (activa en BEON + su grupo), diga si fue o no.
+function exportarAVPersonaExcel(){
+  const nombre=avPanelPersona;
+  if(!nombre) return;
+  if(typeof XLSX==='undefined'){ toast('No se pudo cargar el generador de Excel',true); return; }
+
+  const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+  const eventosPersona=cacheAVRaw.filter(r=>r.fields.Persona===nombre)
+    .map(r=>({evento:r.fields.Evento||'—',fecha:r.fields.Fecha||''}));
+  const asistioKeys=new Set(eventosPersona.map(e=>`${e.evento}|${e.fecha}`));
+
+  const eventosTodos=Object.values(agruparAVPorEvento(cacheAVRaw));
+  const eventosElegibles=persona
+    ?eventosTodos.filter(e=>personaActivaEnFecha(persona,e.fecha)&&personaPerteneceAGrupoAV(persona,e.grupo))
+    :eventosTodos;
+
+  if(!eventosElegibles.length){ toast('No hay actividades registradas para exportar',true); return; }
+
+  const filas=eventosElegibles
+    .slice()
+    .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))
+    .map(e=>({
+      Evento:e.evento,
+      Fecha:e.fecha?fmt(e.fecha):'',
+      Grupo:e.grupo||'Todos',
+      Estado:asistioKeys.has(`${e.evento}|${e.fecha}`)?'Asistió':'No asistió',
+    }));
+
+  const ws=XLSX.utils.json_to_sheet(filas);
+  ws['!cols']=[{wch:34},{wch:14},{wch:18},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Asistencia');
+  const nombreArchivo=`Asistencia - ${nombre}.xlsx`.replace(/[\\/:*?"<>|]/g,'');
+  XLSX.writeFile(wb,nombreArchivo);
 }
 
 function renderAVEvento(){

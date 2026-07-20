@@ -464,7 +464,15 @@
       <!-- PROYECTOS -->
       <div class="section-page" id="page-proyectos">
         <div class="table-wrap">
-          <div class="table-head"><span class="table-head-title">Proyectos</span><span class="badge badge-blue" id="badge-proyectos-h">—</span></div>
+          <div class="table-head">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="table-head-title">Proyectos</span>
+              <span class="badge badge-blue" id="badge-proyectos-h">—</span>
+            </div>
+            <button id="btn-sugerencia-proyecto" onclick="abrirSugerenciaProyecto()" style="display:none;align-items:center;gap:6px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);border:none;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">
+              <i class="ti ti-bulb"></i> Sugerencia para el próximo Meet
+            </button>
+          </div>
           <div class="search-bar">
             <div class="search-wrap">
               <i class="ti ti-search search-icon"></i>
@@ -1307,6 +1315,23 @@
         <button class="confirm-cancel" onclick="closeMeetModal()">Cancelar</button>
         <button class="btn-save" id="meet-save-btn" onclick="saveMeetPublicacion()"><i class="ti ti-device-floppy"></i> Guardar publicación</button>
       </div>
+    </div>
+  </div>
+</div>
+<!-- SUGERENCIA DE PROYECTO PARA EL PRÓXIMO MEET OUR TEAMS -->
+<div class="confirm-overlay" id="sugerencia-proyecto-overlay" onclick="cerrarSugerenciaProyecto(event)">
+  <div class="confirm-box" style="width:420px;" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+      <div style="width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);flex-shrink:0;">
+        <i class="ti ti-bulb" style="color:#fff;font-size:18px"></i>
+      </div>
+      <div class="confirm-title" style="margin-bottom:0">Sugerencia para el próximo Meet our Teams</div>
+    </div>
+    <div class="confirm-msg" id="sugerencia-proyecto-msg" style="margin-bottom:14px"></div>
+    <div id="sugerencia-proyecto-stats" style="display:flex;gap:10px;margin-bottom:20px;"></div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" onclick="cerrarSugerenciaProyecto()">Ahora no</button>
+      <button class="confirm-ok" id="sugerencia-proyecto-ver-btn" style="background:var(--blue)" onclick="verSugerenciaProyecto()"><i class="ti ti-arrow-right"></i> Ver proyecto</button>
     </div>
   </div>
 </div>

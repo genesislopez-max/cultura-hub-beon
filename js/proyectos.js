@@ -104,6 +104,98 @@ async function loadProyectos(){
     </tr>`;
   }).join(''):'<tr class="empty-row"><td colspan="8">No hay proyectos cargados</td></tr>';
   filtrarProyectos();
+  calcularSugerenciaProyecto();
+}
+
+// ─── SUGERENCIA PARA EL PRÓXIMO MEET OUR TEAMS ────────────────────────────────
+// Elegible: activo hace al menos 1 año Y (nunca se publicó sobre él O la
+// última publicación fue hace más de 1 año) — no tiene sentido sugerir algo
+// nuevo o que ya se habló hace poco. Entre los elegibles, se prioriza el que
+// lleva más tiempo sin mencionarse (o nunca mencionado) y, como desempate,
+// el que tiene más BEONers.
+function calcularSugerenciaProyecto(){
+  const hoy=new Date();hoy.setHours(12,0,0,0);
+  const unAñoMs=365*86400000;
+
+  const devs={};
+  cachePersonasRaw.forEach(p=>{const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
+
+  const candidatos=cacheProyectosRaw
+    .filter(r=>(r.fields.Estado||'')!=='De Baja')
+    .map(r=>{
+      const f=r.fields;
+      const nombre=f.Proyecto||'';
+      const fechaInicioVal=f['Fecha de Inicio']||f['Fecha de inicio']||'';
+      if(!nombre||!fechaInicioVal) return null;
+      const tiempoActivoMs=hoy-new Date(fechaInicioVal+'T12:00:00');
+      if(tiempoActivoMs<unAñoMs) return null;
+
+      const pubs=(cacheMeetByProyecto[nombre]||[]).slice().sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
+      const ultimaPub=pubs.length?pubs[pubs.length-1]:null;
+      const msDesdeUltima=ultimaPub?hoy-new Date(ultimaPub.fecha+'T12:00:00'):Infinity;
+      if(msDesdeUltima<unAñoMs) return null;
+
+      return{
+        id:r.id, nombre,
+        devCount:devs[nombre]||0,
+        ultimaPub:ultimaPub?ultimaPub.fecha:null,
+        diasDesdeUltima:msDesdeUltima===Infinity?Infinity:Math.round(msDesdeUltima/86400000),
+        añosActivo:Math.floor(tiempoActivoMs/unAñoMs),
+      };
+    })
+    .filter(Boolean)
+    .sort((a,b)=>(b.diasDesdeUltima===a.diasDesdeUltima)?b.devCount-a.devCount:(b.diasDesdeUltima-a.diasDesdeUltima));
+
+  sugerenciaProyectoActual=candidatos[0]||null;
+
+  const btn=document.getElementById('btn-sugerencia-proyecto');
+  if(btn) btn.style.display=sugerenciaProyectoActual?'flex':'none';
+
+  // Se auto-abre una sola vez por sesión — si ya se mostró (se haya
+  // interactuado o no), no vuelve a saltar sola en cada recarga; el botón
+  // de arriba sigue disponible para volver a verla cuando quieras.
+  if(sugerenciaProyectoActual&&!sugerenciaProyectoMostrada){
+    sugerenciaProyectoMostrada=true;
+    abrirSugerenciaProyecto();
+  }
+}
+
+function abrirSugerenciaProyecto(){
+  const s=sugerenciaProyectoActual;
+  if(!s) return;
+  const nuncaPublico=s.ultimaPub===null;
+  const añosSinHablar=nuncaPublico?null:Math.floor(s.diasDesdeUltima/365);
+  document.getElementById('sugerencia-proyecto-msg').innerHTML=
+    `<strong>${s.nombre}</strong> lleva ${s.añosActivo} año${s.añosActivo!==1?'s':''} activo en BEON`
+    +(nuncaPublico
+      ?' y todavía no se habló de él en ningún Meet our Teams.'
+      :` y hace ${añosSinHablar} año${añosSinHablar!==1?'s':''} que no se habla de él en un Meet our Teams.`)
+    +' ¿Lo sumamos a la agenda del próximo?';
+  document.getElementById('sugerencia-proyecto-stats').innerHTML=`
+    <div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--bg);">
+      <div style="font-size:20px;font-weight:800;color:var(--blue)">${s.devCount}</div>
+      <div style="font-size:11px;color:var(--text3)">BEONer${s.devCount!==1?'s':''}</div>
+    </div>
+    <div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--bg);">
+      <div style="font-size:20px;font-weight:800;color:var(--purple)">${s.añosActivo}</div>
+      <div style="font-size:11px;color:var(--text3)">año${s.añosActivo!==1?'s':''} activo</div>
+    </div>
+    <div style="flex:1;text-align:center;padding:10px;border-radius:10px;background:var(--bg);">
+      <div style="font-size:15px;font-weight:800;color:var(--amber)">${nuncaPublico?'Nunca':fmt(s.ultimaPub)}</div>
+      <div style="font-size:11px;color:var(--text3)">última publicación</div>
+    </div>`;
+  document.getElementById('sugerencia-proyecto-overlay').classList.add('open');
+}
+
+function cerrarSugerenciaProyecto(e){
+  if(!e||e.target===document.getElementById('sugerencia-proyecto-overlay'))
+    document.getElementById('sugerencia-proyecto-overlay').classList.remove('open');
+}
+
+function verSugerenciaProyecto(){
+  if(!sugerenciaProyectoActual) return;
+  cerrarSugerenciaProyecto();
+  openMeetModal(sugerenciaProyectoActual.id,sugerenciaProyectoActual.nombre,true);
 }
 
 // Abre el modal de Meet our Teams para un proyecto

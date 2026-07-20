@@ -197,9 +197,19 @@ function openMeetModal(proyectoId, nombre, focusForm=false){
   meetProyectoActual={id:proyectoId, nombre};
   document.getElementById('meet-title').textContent=nombre;
 
-  const devCount=(cachePersonasRaw.filter(p=>(p.fields.Proyecto||'').trim()===nombre)).length;
+  const asignados=cachePersonasRaw.filter(p=>(p.fields.Proyecto||'').trim()===nombre);
+  const devCount=asignados.length;
   document.getElementById('meet-devs-label').textContent=
     devCount>0?`${devCount} dev${devCount===1?'':'s'} asignado${devCount===1?'':'s'}`:'Sin devs asignados';
+
+  // TEM del proyecto: el Manager de sus devs asignados (campo "Manager" en
+  // Personas, cargado como "TEM / Manager a cargo" en el form) — normalmente
+  // todos comparten el mismo TEM, pero si hay más de uno se listan todos.
+  const temLabel=document.getElementById('meet-tem-label');
+  if(temLabel){
+    const tems=[...new Set(asignados.map(p=>(p.fields.Manager||'').trim()).filter(Boolean))];
+    temLabel.textContent=tems.length?`TEM: ${tems.join(', ')}`:'Sin TEM asignado';
+  }
 
   const pubs=(cacheMeetByProyecto[nombre]||[]).slice().sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
 

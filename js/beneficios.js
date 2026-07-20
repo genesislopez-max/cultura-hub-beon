@@ -407,7 +407,7 @@ function renderBenefPersonas(){
     const matchQ=!q||nombre.includes(q);
     const matchG=!grupoFil||grupo===grupoFil;
     const matchL=!loyaltyFil||nivel===loyaltyFil;
-    return matchQ&&matchG&&matchL;
+    return !yaEgreso(p)&&matchQ&&matchG&&matchL;
   });
 
   document.getElementById('badge-benef-personas').textContent=`${personas.length} personas`;

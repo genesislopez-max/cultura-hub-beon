@@ -13,9 +13,13 @@ async function loadReviews(){
   // Cumpleaños/Aniversarios tienen su propia sección — acá quedan Glassdoor y manuales
   const recs=allRecs.filter(r=>!['Cumpleaños','Aniversario'].includes(r.fields.Tipo));
 
-  // Auto-completar si la fecha ya pasó
+  // Auto-completar si la fecha ya pasó — solo para reminders manuales (no
+  // Glassdoor). Un Glassdoor vencido NO se marca solo como "Completado"
+  // (Solicitada): que la fecha sugerida haya pasado no significa que se haya
+  // pedido — para eso ya está el indicador "· vencida" en filtrarGD(), y la
+  // persona sigue en "pendientes" hasta que alguien la marque a mano.
   for(const r of recs){
-    if(r.fields.Estado==='Pendiente'&&r.fields.Fecha){
+    if(r.fields.Tipo!=='Glassdoor'&&r.fields.Estado==='Pendiente'&&r.fields.Fecha){
       if(new Date(r.fields.Fecha+'T12:00:00')<hoy){
         await atPatch(`Eventos/${r.id}`,{Estado:'Completado'}).catch(()=>{});
         r.fields.Estado='Completado';
@@ -261,19 +265,18 @@ function filtrarGD(){
     }
     const bg=idx%2===0?'background:var(--bg2)':'';
     const fechaSol=f['Fecha solicitada']||f['fecha_solicitada']||f['FechaSolicitada']||'';
-    // La fecha sugerida se puede reprogramar mientras el reminder siga activo
-    // (todavía no se solicitó ni se marcó "No aplica") — una vez resuelto no
-    // tiene sentido seguir corriéndola.
-    const fechaTd=(!solicitada&&!noAplica)
-      ?`<td style="font-size:12px;color:var(--text2)" onclick="event.stopPropagation()"><input type="date" class="field-input" value="${f.Fecha||''}" onchange="cambiarFechaGD('${r.id}',this.value)" style="width:auto;padding:4px 6px;font-size:12px;">${diasStr}</td>`
-      :`<td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}${diasStr}</td>`;
+    // La fecha sugerida se puede reprogramar siempre (incluso ya solicitada o
+    // marcada "No aplica"), para poder corregir un error de carga.
+    const fechaTd=`<td style="font-size:12px;color:var(--text2)" onclick="event.stopPropagation()"><input type="date" class="field-input" value="${f.Fecha||''}" onchange="cambiarFechaGD('${r.id}',this.value)" style="width:auto;padding:4px 6px;font-size:12px;">${diasStr}</td>`;
     const estadoTd=noAplica
       ?'<td><span class="badge badge-red">No aplica</span></td>'
       :`<td><span class="badge ${solicitada?'badge-green':'badge-amber'}">${solicitada?'Solicitada':'Pendiente'}</span></td>`;
     let acciones='';
     if(noAplica){
       acciones=`<button onclick="revertirGDNoAplica('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Revertir</button>`;
-    } else if(!solicitada){
+    } else if(solicitada){
+      acciones=`<button onclick="revertirGDSolicitada('${r.id}')" title="Volver a Pendiente y borrar la fecha en que se marcó como solicitada" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Revertir a Pendiente</button>`;
+    } else {
       acciones=`<button onclick="marcarGDSolicitada('${r.id}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Solicitada</button>
       <button onclick="marcarGDNoAplica('${r.id}')" title="Se va de la empresa u otro motivo por el que no corresponde pedirla" style="background:none;border:1px solid var(--critical-border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--critical);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">No aplica</button>`;
     }
@@ -404,5 +407,22 @@ async function revertirGDNoAplica(id){
   const rec=cacheGDRecs.find(r=>r.id===id);
   if(rec) rec.fields.Estado='Pendiente';
   toast('✅ Reminder reactivado');
+  filtrarGD();
+}
+
+// Para corregir un "Solicitada" que no correspondía (ej. quedó así por el
+// auto-completado de fecha vencida, o un click de más) — vuelve a Pendiente
+// y borra la Fecha solicitada, ya que no fue algo que realmente se hizo.
+async function revertirGDSolicitada(id){
+  if(!confirm('¿Volver a "Pendiente"? Se borra la fecha en que se había marcado como solicitada.')) return;
+  try{
+    await atPatch(`Eventos/${id}`,{Estado:'Pendiente','Fecha solicitada':null});
+  }catch(e){
+    toast(`⚠️ Error: ${e.message}`,true);
+    return;
+  }
+  const rec=cacheGDRecs.find(r=>r.id===id);
+  if(rec){ rec.fields.Estado='Pendiente'; rec.fields['Fecha solicitada']=null; }
+  toast('✅ Reminder vuelto a "Pendiente"');
   filtrarGD();
 }

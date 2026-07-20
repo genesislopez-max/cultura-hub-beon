@@ -10,6 +10,7 @@ let cachePersonasPorRol={};
 let cacheProyectos=[], cacheProyectosRaw=[];
 let cachePersonasRaw=[];
 let pagState={eng:{page:0,data:[]},core:{page:0,data:[]}};
+let pagBenefPersonas={page:0};
 
 let cacheBeneficiosRaw=[];
 let beneficiosFiltro='Todos';

@@ -386,7 +386,13 @@ function abrirAsignarBeneficioPara(nombre){
   });
 }
 
-function filtrarBenefPersonas(){ renderBenefPersonas(); }
+function filtrarBenefPersonas(){ pagBenefPersonas.page=0; renderBenefPersonas(); }
+
+function cambiarPaginaBenefPersonas(dir){
+  pagBenefPersonas.page=Math.max(0,pagBenefPersonas.page+dir);
+  renderBenefPersonas();
+  document.getElementById('benef-tab-personas')?.scrollIntoView({behavior:'smooth',block:'start'});
+}
 
 function renderBenefPersonas(){
   const q=(document.getElementById('benef-persona-search')?.value||'').toLowerCase();
@@ -412,13 +418,34 @@ function renderBenefPersonas(){
 
   document.getElementById('badge-benef-personas').textContent=`${personas.length} personas`;
 
+  const bar=document.getElementById('pag-bar-benef-personas');
   const tb=document.getElementById('tbody-benef-personas');
   if(!personas.length){
     tb.innerHTML='<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
+    if(bar) bar.style.display='none';
     return;
   }
 
-  tb.innerHTML=personas.map((p,idx)=>{
+  // Con el historial cargado, "Por persona" puede tener cientos de filas —
+  // se pagina de a PAG_SIZE, mismo criterio que Engineers & Tech/Core Team.
+  const totalPags=Math.ceil(personas.length/PAG_SIZE);
+  if(pagBenefPersonas.page>=totalPags) pagBenefPersonas.page=totalPags-1;
+  const inicio=pagBenefPersonas.page*PAG_SIZE, fin=Math.min(inicio+PAG_SIZE,personas.length);
+  const personasPagina=personas.slice(inicio,fin);
+
+  if(totalPags>1){
+    if(bar) bar.style.display='flex';
+    const info=document.getElementById('pag-info-benef-personas');
+    if(info) info.textContent=`${inicio+1}–${fin} de ${personas.length} personas`;
+    const btnPrev=document.getElementById('pag-prev-benef-personas');
+    const btnNext=document.getElementById('pag-next-benef-personas');
+    if(btnPrev) btnPrev.disabled=pagBenefPersonas.page===0;
+    if(btnNext) btnNext.disabled=pagBenefPersonas.page>=totalPags-1;
+  } else {
+    if(bar) bar.style.display='none';
+  }
+
+  tb.innerHTML=personasPagina.map((p,idx)=>{
     const f=p.fields;
     const nombre=f.Nombre||'—';
     const grupo=getRolGroup(f['Rol en empresa']||'');

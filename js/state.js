@@ -30,7 +30,6 @@ let gdModalId=null;
 let cacheMeetByProyecto={};  // { 'NombreProyecto': [{id, fecha, link, notas}] }
 let meetProyectoActual=null; // {id: recordId, nombre: string}
 let sugerenciaProyectoActual=null; // proyecto recomendado para el próximo Meet our Teams (o null)
-let sugerenciaProyectoMostrada=false; // para no auto-abrir la ventana más de una vez por sesión
 
 // Beneficios
 let cacheBenefAsignados=[], cachePresupuestoLoyalty=[];

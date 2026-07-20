@@ -148,16 +148,10 @@ function calcularSugerenciaProyecto(){
 
   sugerenciaProyectoActual=candidatos[0]||null;
 
+  // No se auto-abre sola — queda disponible solo a demanda con el botón de
+  // arriba, sin interrumpir apenas se carga el Hub/la pestaña de Proyectos.
   const btn=document.getElementById('btn-sugerencia-proyecto');
   if(btn) btn.style.display=sugerenciaProyectoActual?'flex':'none';
-
-  // Se auto-abre una sola vez por sesión — si ya se mostró (se haya
-  // interactuado o no), no vuelve a saltar sola en cada recarga; el botón
-  // de arriba sigue disponible para volver a verla cuando quieras.
-  if(sugerenciaProyectoActual&&!sugerenciaProyectoMostrada){
-    sugerenciaProyectoMostrada=true;
-    abrirSugerenciaProyecto();
-  }
 }
 
 function abrirSugerenciaProyecto(){

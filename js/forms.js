@@ -356,6 +356,7 @@ const FORMS={
 <div class="field-group"><label class="field-label">Estado</label>
   <select class="field-input" id="f-proy-estado">
     <option value="Activo">Activo</option>
+    <option value="Inactivo">Inactivo</option>
     <option value="De Baja">De Baja</option>
   </select>
 </div>`,

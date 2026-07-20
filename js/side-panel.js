@@ -71,14 +71,19 @@ async function verBenefPersona(nombre, grupo, nivel){
       const valor=r.fields.Monto?`$${Number(r.fields.Monto).toLocaleString('es-AR')}/año`:benef?.fields.Valor?`$${Number(benef.fields.Valor).toLocaleString('es-AR')}/año`:'';
       const activo=(r.fields.Estado||'Activo')==='Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
-      return`<div class="side-panel-row">
-        <span>${bNombre}</span>
-        <span style="display:flex;gap:6px;align-items:center">
-          ${valor?`<span style="font-size:12px;color:var(--text3)">${valor}</span>`:''}
-          <span class="badge ${activo?'badge-green':'badge-amber'}" style="font-size:11px">${activo?'Activo':'Inactivo'}</span>
-          <button onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;"><i class="ti ti-pencil"></i></button>
-          <button onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--critical);padding:2px;line-height:1;"><i class="ti ti-trash"></i></button>
-        </span>
+      const fechaAct=r.fields['Fecha activación'];
+      const fechaLabel=fechaAct?`${activo?'Activo':'Usado'} desde ${fmt(fechaAct)}`:'Sin fecha registrada';
+      return`<div class="side-panel-row" style="flex-direction:column;align-items:flex-start;gap:3px">
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+          <span>${bNombre}</span>
+          <span style="display:flex;gap:6px;align-items:center">
+            ${valor?`<span style="font-size:12px;color:var(--text3)">${valor}</span>`:''}
+            <span class="badge ${activo?'badge-green':'badge-amber'}" style="font-size:11px">${activo?'Activo':'Inactivo'}</span>
+            <button onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;"><i class="ti ti-pencil"></i></button>
+            <button onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--critical);padding:2px;line-height:1;"><i class="ti ti-trash"></i></button>
+          </span>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:var(--text3)">${fechaLabel}</span>
       </div>`;
     }).join(''):`<div class="sp-empty">Sin beneficios asignados</div>`}
   </div>`;

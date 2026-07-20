@@ -461,7 +461,7 @@ function renderBenefPersonas(){
     const nivelEmoji={'Spark':'⚡','Ray':'☀️','Lightning':'🌩','Thunder':'🌪','Storm':'🌊'};
     const bg=idx%2===0?'background:var(--bg2)':'';
 
-    return`<tr style="${bg}">
+    return`<tr class="tr-clickable" style="${bg}" onclick="verBenefPersona('${nombre.replace(/'/g,"\\'")}','${grupo}','${nivel}')">
       <td>${avH(nombre)}${nombre}</td>
       <td><span class="badge ${grupoBadge}">${grupo}</span></td>
       <td><span class="badge ${nivelColors[nivel]||'badge-gray'}">${nivel}</span></td>
@@ -478,7 +478,7 @@ function renderBenefPersonas(){
         </div>
       </td>
       <td style="white-space:nowrap">
-        <button onclick="verBenefPersona('${nombre.replace(/'/g,"\'")}','${grupo}','${nivel}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button>
+        <button onclick="event.stopPropagation();verBenefPersona('${nombre.replace(/'/g,"\'")}','${grupo}','${nivel}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button>
         <button onclick="event.stopPropagation();abrirAsignarBeneficioPara('${nombre.replace(/'/g,"\'")}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-left:6px;">+ Asignar</button>
       </td>
     </tr>`;

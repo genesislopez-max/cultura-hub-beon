@@ -155,11 +155,14 @@ function renderBenefMetricas(){
   });
   document.getElementById('mb-presupuesto').textContent=totalUsado>0?`$${totalUsado.toLocaleString('es-AR')}`:'—';
 
-  // Personas con/sin beneficios
+  // Personas con/sin beneficios — solo sobre el equipo activo hoy, igual
+  // criterio (yaEgreso) que el resto de las vistas de Beneficios.
+  const nombresActivos=new Set(cachePersonasRaw.filter(p=>!yaEgreso(p)).map(p=>(p.fields.Nombre||'').trim()));
   const personasConBenef=new Set(cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo').map(a=>{
-    return Array.isArray(a.fields.Persona)?a.fields.Persona[0]:a.fields.Persona;
-  }));
-  const totalPersonas=cachePersonasRaw.length;
+    const nombre=Array.isArray(a.fields.Persona)?a.fields.Persona[0]:a.fields.Persona;
+    return (nombre||'').trim();
+  }).filter(nombre=>nombresActivos.has(nombre)));
+  const totalPersonas=nombresActivos.size;
   document.getElementById('mb-personas').textContent=personasConBenef.size;
   document.getElementById('mb-personas-sub').textContent=`de ${totalPersonas} en el equipo`;
   document.getElementById('mb-sinbenef').textContent=Math.max(0,totalPersonas-personasConBenef.size);

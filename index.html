@@ -78,10 +78,13 @@
   <div class="main">
     <div class="topbar">
       <div>
+        <div class="topbar-eyebrow" id="page-eyebrow" style="display:none">Panel del equipo</div>
         <div class="topbar-title" id="page-title">Inicio</div>
         <div class="topbar-date" id="page-date"></div>
       </div>
       <div class="topbar-actions">
+        <button class="btn-secondary" id="btn-inicio-exportar" onclick="exportarRosterExcel()" style="display:none"><i class="ti ti-download"></i><span>Exportar</span></button>
+        <button class="btn-primary" id="btn-inicio-agregar" onclick="_openFormModal(FORMS['ingresos'])" style="display:none;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%)"><i class="ti ti-user-plus"></i><span>Añadir persona</span></button>
         <button class="btn-secondary" id="btn-add-historico" onclick="openModalHistorico()" style="display:none"><i class="ti ti-history"></i><span>Carga histórica</span></button>
         <button class="btn-secondary" id="btn-add-full" onclick="openModalHR()" style="display:none"><i class="ti ti-bolt"></i><span>HR rápido</span></button>
         <button class="btn-primary" id="btn-add" onclick="openModal()" style="display:none"><i class="ti ti-plus"></i><span id="btn-label">Agregar</span></button>
@@ -92,51 +95,93 @@
 
       <!-- INICIO -->
       <div class="section-page active" id="page-inicio">
-        <div class="metrics-3">
-          <div class="metric"><div class="metric-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-users"></i></div><div class="metric-label">Total equipo</div><div class="metric-val" id="m-personas">—</div><div class="metric-sub">personas activas</div></div>
-          <div class="metric"><div class="metric-icon" style="background:var(--tinte-core);color:var(--purple)"><i class="ti ti-building-skyscraper"></i></div><div class="metric-label">Core Team</div><div class="metric-val" id="m-coreteam" style="color:var(--purple)">—</div><div class="metric-sub">en el equipo</div></div>
-          <div class="metric"><div class="metric-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-code"></i></div><div class="metric-label">Engineers</div><div class="metric-val" id="m-engineers" style="color:var(--blue)">—</div><div class="metric-sub">en proyectos</div></div>
+        <div class="inicio-hero-grid">
+          <div class="inicio-hero-primary">
+            <div class="inicio-hero-glow"></div>
+            <div class="inicio-hero-top">
+              <span class="inicio-hero-label">Total equipo</span>
+              <div class="inicio-hero-icon"><i class="ti ti-users"></i></div>
+            </div>
+            <div class="inicio-hero-val" id="m-personas">—</div>
+            <div class="inicio-hero-sub">personas activas</div>
+            <div class="inicio-hero-trend" id="m-personas-trend" style="display:none"><i class="ti ti-trending-up"></i><span id="m-personas-trend-txt"></span></div>
+          </div>
+          <div class="inicio-kpi-card">
+            <div class="inicio-kpi-top">
+              <span class="inicio-kpi-label">Core Team</span>
+              <div class="inicio-kpi-icon" style="background:var(--tinte-core);color:var(--purple)"><i class="ti ti-briefcase"></i></div>
+            </div>
+            <div class="inicio-kpi-val" id="m-coreteam">—</div>
+            <div class="inicio-kpi-sub">en el equipo</div>
+            <div class="inicio-kpi-bar"><div class="inicio-kpi-bar-fill" id="m-coreteam-bar" style="width:0%;background:var(--purple)"></div></div>
+            <div class="inicio-kpi-bar-label" id="m-coreteam-barlabel"></div>
+          </div>
+          <div class="inicio-kpi-card">
+            <div class="inicio-kpi-top">
+              <span class="inicio-kpi-label">Engineers</span>
+              <div class="inicio-kpi-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-code"></i></div>
+            </div>
+            <div class="inicio-kpi-val" id="m-engineers">—</div>
+            <div class="inicio-kpi-sub">en proyectos</div>
+            <div class="inicio-kpi-bar"><div class="inicio-kpi-bar-fill" id="m-engineers-bar" style="width:0%;background:var(--blue)"></div></div>
+            <div class="inicio-kpi-bar-label" id="m-engineers-barlabel"></div>
+          </div>
         </div>
         <div class="summary-grid">
-          <div class="summary-card primary">
-            <div class="sc-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-user-plus"></i></div>
-            <div class="sc-label">Ingresos</div>
+          <div class="summary-card">
+            <div class="sc-accent" style="background:var(--blue)"></div>
+            <div class="sc-top">
+              <div class="sc-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-user-plus"></i></div>
+              <div class="sc-label">Ingresos</div>
+            </div>
             <div class="sc-val" id="sc-ingresos" style="color:var(--blue)">—</div>
             <div class="sc-sub" id="sc-ingresos-sub">este mes</div>
             <div class="sc-list" id="sc-list-ingresos"></div>
-            <button class="sc-more" id="sc-more-ingresos" onclick="showSection('ingresos',document.querySelector('.sb-item[onclick*=ingresos]'))" style="display:none">Ver todos →</button>
+            <button class="sc-more" id="sc-more-ingresos" onclick="showSection('ingresos',document.querySelector('.sb-item[onclick*=ingresos]'))" style="display:none">Ver todos <i class="ti ti-arrow-right"></i></button>
           </div>
           <div class="summary-card">
-            <div class="sc-icon" style="background:var(--tinte-core);color:var(--purple)"><i class="ti ti-cake"></i></div>
-            <div class="sc-label">Cumpleaños</div>
+            <div class="sc-accent" style="background:var(--purple)"></div>
+            <div class="sc-top">
+              <div class="sc-icon" style="background:var(--tinte-core);color:var(--purple)"><i class="ti ti-cake"></i></div>
+              <div class="sc-label">Cumpleaños</div>
+            </div>
             <div class="sc-val" id="sc-cumple" style="color:var(--purple)">—</div>
             <div class="sc-sub" id="sc-cumple-sub">este mes</div>
             <div class="sc-list" id="sc-list-cumple"></div>
-            <button class="sc-more" id="sc-more-cumple" onclick="showSection('cumpleanos',document.querySelector('.sb-item[onclick*=cumpleanos]'))" style="display:none">Ver todos →</button>
+            <button class="sc-more" id="sc-more-cumple" onclick="showSection('cumpleanos',document.querySelector('.sb-item[onclick*=cumpleanos]'))" style="display:none">Ver todos <i class="ti ti-arrow-right"></i></button>
           </div>
           <div class="summary-card">
-            <div class="sc-icon" style="background:var(--tinte-pink);color:var(--text-pink-accent)"><i class="ti ti-star"></i></div>
-            <div class="sc-label">Aniversarios</div>
+            <div class="sc-accent" style="background:var(--text-pink-accent)"></div>
+            <div class="sc-top">
+              <div class="sc-icon" style="background:var(--tinte-pink);color:var(--text-pink-accent)"><i class="ti ti-star"></i></div>
+              <div class="sc-label">Aniversarios</div>
+            </div>
             <div class="sc-val" id="sc-aniv" style="color:var(--text-pink-accent)">—</div>
             <div class="sc-sub" id="sc-aniv-sub">este mes</div>
             <div class="sc-list" id="sc-list-aniv"></div>
-            <button class="sc-more" id="sc-more-aniv" onclick="showSection('aniversarios',document.querySelector('.sb-item[onclick*=aniversarios]'))" style="display:none">Ver todos →</button>
+            <button class="sc-more" id="sc-more-aniv" onclick="showSection('aniversarios',document.querySelector('.sb-item[onclick*=aniversarios]'))" style="display:none">Ver todos <i class="ti ti-arrow-right"></i></button>
           </div>
           <div class="summary-card">
-            <div class="sc-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-brand-google"></i></div>
-            <div class="sc-label">Glassdoor</div>
+            <div class="sc-accent" style="background:var(--amber)"></div>
+            <div class="sc-top">
+              <div class="sc-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-brand-google"></i></div>
+              <div class="sc-label">Glassdoor</div>
+            </div>
             <div class="sc-val" id="sc-glassdoor" style="color:var(--amber)">—</div>
             <div class="sc-sub">pendientes</div>
             <div class="sc-list" id="sc-list-glassdoor"></div>
-            <button class="sc-more" id="sc-more-glassdoor" onclick="showSection('reviews',document.querySelector('.sb-item[onclick*=reviews]'))" style="display:none">Ver todos →</button>
+            <button class="sc-more" id="sc-more-glassdoor" onclick="showSection('reviews',document.querySelector('.sb-item[onclick*=reviews]'))" style="display:none">Ver todos <i class="ti ti-arrow-right"></i></button>
           </div>
           <div class="summary-card">
-            <div class="sc-icon" style="background:var(--tinte-red-icon);color:var(--red)"><i class="ti ti-user-minus"></i></div>
-            <div class="sc-label">Offboardings</div>
+            <div class="sc-accent" style="background:var(--text3)"></div>
+            <div class="sc-top">
+              <div class="sc-icon" style="background:var(--tinte-red-icon);color:var(--red)"><i class="ti ti-user-minus"></i></div>
+              <div class="sc-label">Offboardings</div>
+            </div>
             <div class="sc-val" id="sc-offboard" style="color:var(--red)">—</div>
             <div class="sc-sub" id="sc-offboard-sub">este mes</div>
             <div class="sc-list" id="sc-list-offboard"></div>
-            <button class="sc-more" id="sc-more-offboard" onclick="showSection('egresos',document.querySelector('.sb-item[onclick*=egresos]'))" style="display:none">Ver todos →</button>
+            <button class="sc-more" id="sc-more-offboard" onclick="showSection('egresos',document.querySelector('.sb-item[onclick*=egresos]'))" style="display:none">Ver todos <i class="ti ti-arrow-right"></i></button>
           </div>
         </div>
       </div>

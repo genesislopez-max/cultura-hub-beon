@@ -33,6 +33,12 @@ function showSection(name,btn){
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
   document.getElementById('page-title').textContent=TITLES[name]||name;
+  const eyebrow=document.getElementById('page-eyebrow');
+  if(eyebrow) eyebrow.style.display=name==='inicio'?'block':'none';
+  const btnExportar=document.getElementById('btn-inicio-exportar');
+  const btnAgregarPersona=document.getElementById('btn-inicio-agregar');
+  if(btnExportar) btnExportar.style.display=name==='inicio'?'flex':'none';
+  if(btnAgregarPersona) btnAgregarPersona.style.display=name==='inicio'?'flex':'none';
   const ab=document.getElementById('btn-add');
   const abf=document.getElementById('btn-add-full');
   const abh=document.getElementById('btn-add-historico');
@@ -219,7 +225,16 @@ async function loadAll(){
 }
 
 async function iniciarHub(){
-  document.getElementById('page-date').textContent=new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const fechaHoy=new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('page-date').innerHTML=`<i class="ti ti-calendar"></i><span>${fechaHoy}</span>`;
+  // Inicio ya arranca "active" en el HTML (no pasa por showSection()), así que
+  // hay que prender acá su eyebrow/botones del header por única vez.
+  const eyebrow=document.getElementById('page-eyebrow');
+  if(eyebrow) eyebrow.style.display='block';
+  const btnExportar=document.getElementById('btn-inicio-exportar');
+  const btnAgregarPersona=document.getElementById('btn-inicio-agregar');
+  if(btnExportar) btnExportar.style.display='flex';
+  if(btnAgregarPersona) btnAgregarPersona.style.display='flex';
   try{
     await cargarSeccionesIniciales();
     setBanner('Hub conectado ✓','ok');

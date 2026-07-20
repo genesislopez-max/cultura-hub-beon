@@ -61,9 +61,9 @@ async function loadReviews(){
   const moreEl=document.getElementById('sc-more-glassdoor');
   listEl.innerHTML=proximasOrd.slice(0,5).map(r=>{
     const nombre=(r.fields.Evento||'').replace(/.*—\s*/,'').trim()||r.fields.Evento||'—';
-    return `<div class="sc-list-item">• ${nombre}</div>`;
+    return `<div class="sc-list-item">${avH(nombre)}<span class="sc-list-item-name">${nombre}</span></div>`;
   }).join('');
-  moreEl.style.display=pendientes.length>5?'block':'none';
+  moreEl.style.display=pendientes.length>5?'flex':'none';
 
   poblarGDManagers();
   filtrarGD();

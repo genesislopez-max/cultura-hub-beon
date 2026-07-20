@@ -323,9 +323,9 @@ async function loadKanbanIngresos(){
   const listEl=document.getElementById('sc-list-ingresos');
   const moreEl=document.getElementById('sc-more-ingresos');
   const top5=ingresosDelMes.slice(0,5);
-  listEl.innerHTML=top5.map(r=>`<div class="sc-list-item">• ${r.fields.Persona||'—'}</div>`).join('');
-  moreEl.style.display=ingresosDelMes.length>5?'block':'none';
-  if(ingresosDelMes.length>5) moreEl.textContent=`Ver los ${ingresosDelMes.length} →`;
+  listEl.innerHTML=top5.map(r=>`<div class="sc-list-item">${avH(r.fields.Persona||'—')}<span class="sc-list-item-name">${r.fields.Persona||'—'}</span></div>`).join('');
+  moreEl.style.display=ingresosDelMes.length>5?'flex':'none';
+  if(ingresosDelMes.length>5) moreEl.innerHTML=`Ver los ${ingresosDelMes.length} <i class="ti ti-arrow-right"></i>`;
 }
 
 async function loadKanbanEgresos(){
@@ -398,8 +398,8 @@ async function loadKanbanEgresos(){
   document.getElementById('sc-offboard-sub').textContent=esteM.length===1?'offboarding este mes':'offboardings este mes';
   const listEl=document.getElementById('sc-list-offboard');
   const moreEl=document.getElementById('sc-more-offboard');
-  listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">• ${r.fields.Persona||'—'}</div>`).join('');
-  moreEl.style.display=esteM.length>5?'block':'none';
+  listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">${avH(r.fields.Persona||'—')}<span class="sc-list-item-name">${r.fields.Persona||'—'}</span></div>`).join('');
+  moreEl.style.display=esteM.length>5?'flex':'none';
 }
 
 // ─── CHECKLIST DETAIL ─────────────────────────────────────────────────────────

@@ -162,6 +162,35 @@ async function loadPersonas(){
   document.getElementById('m-coreteam').textContent=coreTeam.length;
   document.getElementById('m-engineers').textContent=engineers.length;
 
+  // Tendencia del hero "Total equipo": activos hoy vs. activos hace un mes
+  // (personaActivaEnFecha ya existe para esto — mismo criterio que usan
+  // Off Sites/Asistencia a Actividades para "quién estaba activo" en una
+  // fecha dada).
+  const haceUnMes=new Date();haceUnMes.setMonth(haceUnMes.getMonth()-1);
+  const haceUnMesStr=`${haceUnMes.getFullYear()}-${String(haceUnMes.getMonth()+1).padStart(2,'0')}-${String(haceUnMes.getDate()).padStart(2,'0')}`;
+  const activosHaceUnMes=recs.filter(r=>personaActivaEnFecha(r,haceUnMesStr)).length;
+  const delta=activos.length-activosHaceUnMes;
+  const trendEl=document.getElementById('m-personas-trend');
+  const trendTxt=document.getElementById('m-personas-trend-txt');
+  if(trendEl&&trendTxt){
+    if(delta!==0){
+      trendEl.style.display='flex';
+      trendEl.querySelector('i').className=delta>0?'ti ti-trending-up':'ti ti-trending-down';
+      trendTxt.textContent=`${delta>0?'+':''}${delta} vs. mes anterior`;
+    } else {
+      trendEl.style.display='none';
+    }
+  }
+  const barCoreteam=document.getElementById('m-coreteam-bar'), barEng=document.getElementById('m-engineers-bar');
+  const lblCoreteam=document.getElementById('m-coreteam-barlabel'), lblEng=document.getElementById('m-engineers-barlabel');
+  if(activos.length){
+    const pctCore=Math.round(coreTeam.length/activos.length*100), pctEng=Math.round(engineers.length/activos.length*100);
+    if(barCoreteam) barCoreteam.style.width=`${pctCore}%`;
+    if(lblCoreteam) lblCoreteam.textContent=`${pctCore}% del total del equipo`;
+    if(barEng) barEng.style.width=`${pctEng}%`;
+    if(lblEng) lblEng.textContent=`${pctEng}% del total del equipo`;
+  }
+
   // Tabla Engineers & Tech
   document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;
   pagState.eng={page:0,data:allEng,all:allEng};
@@ -174,6 +203,37 @@ async function loadPersonas(){
 
   poblarFiltrosPersonas();
   return recs;
+}
+
+// Descarga el roster completo del equipo activo hoy — botón "Exportar" del
+// header de Inicio. Mismo mecanismo que exportarAVPersonaExcel() en
+// actividades-virtuales.js (SheetJS por CDN, se arma todo en el navegador).
+function exportarRosterExcel(){
+  if(typeof XLSX==='undefined'){ toast('No se pudo cargar el generador de Excel',true); return; }
+  const activos=(cachePersonasRaw||[]).filter(p=>!yaEgreso(p));
+  if(!activos.length){ toast('No hay personas activas para exportar',true); return; }
+
+  const filas=activos
+    .slice()
+    .sort((a,b)=>(a.fields.Nombre||'').localeCompare(b.fields.Nombre||''))
+    .map(p=>{
+      const f=p.fields;
+      return {
+        Nombre:f.Nombre||'—',
+        Rol:f['Rol en empresa']||'—',
+        Grupo:getRolGroup(f['Rol en empresa']||''),
+        Proyecto:f.Proyecto||'—',
+        Manager:f.Manager||'—',
+        Antigüedad:calcAntiguedad(f['Fecha de ingreso']),
+        'Nivel Loyalty':f['Nivel Loyalty']||'Spark',
+      };
+    });
+
+  const ws=XLSX.utils.json_to_sheet(filas);
+  ws['!cols']=[{wch:28},{wch:16},{wch:12},{wch:20},{wch:20},{wch:16},{wch:14}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Roster');
+  XLSX.writeFile(wb,'Roster del equipo.xlsx');
 }
 
 // Cierra todos los dropdowns de nivel abiertos al hacer click fuera

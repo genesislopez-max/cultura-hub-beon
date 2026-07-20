@@ -28,8 +28,8 @@ async function loadAniversarios(personas){
   const listEl=document.getElementById('sc-list-aniv');
   const moreEl=document.getElementById('sc-more-aniv');
   const e=r=>r.años>=5?'🏆':r.años>=3?'🎉':'⭐';
-  listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">• ${r.nombre} ${e(r)} ${r.años}a</div>`).join('');
-  moreEl.style.display=esteM.length>5?'block':'none';
+  listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">${avH(r.nombre)}<span class="sc-list-item-name">${r.nombre}</span><span class="sc-list-item-badge" style="background:var(--tinte-pink);color:var(--text-pink-accent)">${e(r)} ${r.años}a</span></div>`).join('');
+  moreEl.style.display=esteM.length>5?'flex':'none';
   const container=document.getElementById('aniv-container');
   if(!rows.length){
     container.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">Se calculan desde la fecha de ingreso</div>';

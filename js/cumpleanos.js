@@ -27,8 +27,8 @@ async function loadCumpleanos(personas){
   document.getElementById('sc-cumple-sub').textContent=mesNombre;
   const listEl=document.getElementById('sc-list-cumple');
   const moreEl=document.getElementById('sc-more-cumple');
-  listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">• ${r.nombre} (${fmt(r.fecha)})</div>`).join('');
-  moreEl.style.display=esteM.length>5?'block':'none';
+  listEl.innerHTML=esteM.slice(0,5).map(r=>`<div class="sc-list-item">${avH(r.nombre)}<span class="sc-list-item-name">${r.nombre}</span><span class="sc-list-item-meta">${fmt(r.fecha)}</span></div>`).join('');
+  moreEl.style.display=esteM.length>5?'flex':'none';
 
   filtrarCumpleanos();
 

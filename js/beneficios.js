@@ -176,7 +176,36 @@ function tieneAccesoBeneficio(nivelPersona, nivelBeneficio){
   const idxBenef=LOYALTY_ORDER.indexOf(nivelBeneficio);
   return idxPersona>=idxBenef;
 }
+// Color + ícono por categoría, para que las tarjetas del catálogo se
+// distingan de un vistazo (ver diseño "Catálogo de beneficios" en
+// claude.ai/design). "Otro" usa un tinte neutro fijo porque no tiene un par
+// de variables temáticas propio como el resto.
+const CATEGORIA_ESTILO={
+  'Salud':{tinte:'var(--tinte-eng)',accent:'var(--blue)',icon:'ti-heart'},
+  'Bienestar':{tinte:'var(--tinte-core)',accent:'var(--purple)',icon:'ti-brain'},
+  'Aprendizaje':{tinte:'var(--tinte-teal)',accent:'var(--text-teal-accent)',icon:'ti-school'},
+  'Tiempo':{tinte:'var(--tinte-pink)',accent:'var(--text-pink-accent)',icon:'ti-beach'},
+};
+const CATEGORIA_OTRO={tinte:'rgba(139,147,167,0.14)',accent:'var(--text3)',icon:'ti-package'};
+function estiloCategoria(cat){ return CATEGORIA_ESTILO[cat]||CATEGORIA_OTRO; }
+
 function filtrarBeneficios(){
+  renderBenefCatalogo();
+}
+
+// Limpiar un filtro puntual desde su chip, o todos de una con "Limpiar todo"
+// (no toca el buscador de texto libre ni el filtro de "Beneficio" puntual,
+// que ya dejan el catálogo reducido por su cuenta).
+function limpiarFiltroBenefCatalogo(campo){
+  const el=document.getElementById(`benef-${campo}`);
+  if(el) el.value='';
+  renderBenefCatalogo();
+}
+function limpiarTodosFiltrosBenefCatalogo(){
+  ['grupo','cat','loyalty','estado'].forEach(campo=>{
+    const el=document.getElementById(`benef-${campo}`);
+    if(el) el.value='';
+  });
   renderBenefCatalogo();
 }
 
@@ -202,34 +231,62 @@ function renderBenefCatalogo(){
   });
 
   document.getElementById('badge-beneficios-h').textContent=`${recs.length} beneficios`;
-  const grupoBadge={Engineers:'badge-blue','Core Team':'badge-purple',Ambos:'badge-gray'};
-  const loyaltyColors={'Spark':'badge-nivel-Spark','Ray':'badge-nivel-Ray','Lightning':'badge-nivel-Lightning','Thunder':'badge-nivel-Thunder','Storm':'badge-nivel-Storm'};
+
+  const chipsCont=document.getElementById('benef-chips-container');
+  if(chipsCont){
+    const chips=[];
+    if(grupo) chips.push({campo:'grupo',label:grupo});
+    if(cat) chips.push({campo:'cat',label:cat});
+    if(loyalty) chips.push({campo:'loyalty',label:`Nivel: ${loyalty}`});
+    if(estado) chips.push({campo:'estado',label:estado});
+    if(chips.length){
+      chipsCont.style.display='flex';
+      chipsCont.innerHTML=`<span style="font-size:12px;color:var(--text3);font-weight:500">Filtros activos:</span>`
+        +chips.map(c=>`<button onclick="limpiarFiltroBenefCatalogo('${c.campo}')" style="display:flex;align-items:center;gap:6px;padding:5px 8px 5px 12px;border-radius:999px;border:1px solid var(--chip-eng);background:var(--tinte-eng);color:var(--text-eng-accent);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;">${c.label}<i class="ti ti-x" style="font-size:12px"></i></button>`).join('')
+        +`<button onclick="limpiarTodosFiltrosBenefCatalogo()" style="background:none;border:none;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px;">Limpiar todo</button>`;
+    } else {
+      chipsCont.style.display='none';
+      chipsCont.innerHTML='';
+    }
+  }
 
   // Agrupar por grupo para render dividido
   const engineers=recs.filter(r=>{const g=r.fields.Grupo||'Ambos';return g==='Engineers'||g==='Ambos';});
   const coreTeam=recs.filter(r=>{const g=r.fields.Grupo||'Ambos';return g==='Core Team'||g==='Ambos';});
 
-  // seccionGrupo es el grupo de la sección donde se está pintando esta fila
-  // (Engineers o Core Team) — un beneficio "Ambos" aparece en las dos
-  // secciones, así que la lista de gente de cada una se acota a su propio
-  // grupo. Si no, un beneficio "Ambos" mostraba el mismo listado completo
-  // (los dos grupos mezclados) duplicado debajo de cada sección.
-  function benefRow(r,seccionGrupo){
+  // seccionGrupo es el grupo de la sección donde se está pintando esta
+  // tarjeta (Engineers o Core Team) — un beneficio "Ambos" aparece en las
+  // dos secciones, así que el modal de "quién lo tiene" de cada una se
+  // acota a su propio grupo (si no, mostraría los dos grupos mezclados).
+  function benefCard(r,seccionGrupo){
     const f=r.fields;
     const g=f.Grupo||'Ambos';
     const nivel=f['Nivel Loyalty']||'';
-    const valor=f.Valor?`$${Number(f.Valor).toLocaleString('es-AR')}/mes`:'—';
-    const fila=`<tr class="tr-clickable" onclick="toggleBenefDetalle('${r.id}')">
-      <td><strong>${f.Beneficio||'—'}</strong><div style="font-size:11px;color:var(--text3);margin-top:2px">${f.Descripción||''}</div></td>
-      <td><span class="badge ${grupoBadge[g]||'badge-gray'}">${g}</span></td>
-      <td><span class="badge badge-blue">${f.Categoría||'—'}</span></td>
-      <td>${(!nivel||nivel==='Todos')?'<span style="color:var(--text3);font-size:12px">Todos los niveles</span>':`<span class="badge ${loyaltyColors[nivel]||'badge-gray'}">desde ${nivel}</span>`}</td>
-      <td style="font-size:13px;font-weight:500">${valor}</td>
-      <td><span class="badge ${(f.Estado||'Activo')==='Activo'?'badge-green':'badge-amber'}">${f.Estado||'Activo'}</span></td>
-    </tr>`;
-    // Con el filtro "Beneficio" puntual elegido, no hace falta además
-    // clickear la fila para ver quién lo tiene — se despliega sola.
-    return(benefExpandido===r.id||(nombreFil&&f.Beneficio===nombreFil))?fila+filaDetalleBeneficio(r,seccionGrupo):fila;
+    const valor=f.Valor?`$${Number(f.Valor).toLocaleString('es-AR')}/mes`:'';
+    const activo=(f.Estado||'Activo')==='Activo';
+    const est=estiloCategoria(f.Categoría);
+    const statusBg=activo?'var(--chip-green-bg)':'var(--chip-amber-bg)';
+    const statusFg=activo?'var(--chip-green-text)':'var(--chip-amber-text)';
+    const statusDot=activo?'var(--green)':'var(--amber)';
+    return`<div class="tr-clickable" onclick="abrirBenefDetalleModal('${r.id}','${seccionGrupo}')" style="position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:16px;overflow:hidden;">
+      <div style="position:absolute;inset:0 auto 0 0;width:3px;background:${est.accent}"></div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px">
+        <div style="width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:${est.tinte}">
+          <i class="ti ${est.icon}" style="font-size:19px;color:${est.accent}"></i>
+        </div>
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:600;background:${statusBg};color:${statusFg}">
+          <span style="width:6px;height:6px;border-radius:999px;background:${statusDot}"></span>${activo?'Activo':'Inactivo'}
+        </span>
+      </div>
+      <div style="font-size:14.5px;font-weight:700;color:var(--text);margin-bottom:4px">${f.Beneficio||'—'}</div>
+      <div style="font-size:12px;line-height:1.5;color:var(--text3);margin-bottom:12px;min-height:32px">${f.Descripción||''}</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding-top:12px;border-top:1px solid var(--border)">
+        <span style="font-size:11px;font-weight:600;color:${est.accent};padding:3px 8px;border-radius:6px;background:${est.tinte}">${f.Categoría||'—'}</span>
+        <span style="font-size:11px;font-weight:500;color:var(--text2);padding:3px 8px;border-radius:6px;background:var(--bg)">${(!nivel||nivel==='Todos')?'Todos los niveles':`desde ${nivel}`}</span>
+        <span style="font-size:11px;font-weight:500;color:var(--text2);padding:3px 8px;border-radius:6px;background:var(--bg)">${g}</span>
+        ${valor?`<span style="margin-left:auto;font-size:12px;font-weight:600;color:var(--text2)">${valor}</span>`:''}
+      </div>
+    </div>`;
   }
 
   const container=document.getElementById('benef-catalogo-container');
@@ -238,11 +295,11 @@ function renderBenefCatalogo(){
     return;
   }
 
-  const tableHead=`<table class="data-table" style="border-radius:0"><thead><tr><th>Beneficio</th><th>Grupo</th><th>Categoría</th><th>Nivel mínimo</th><th>Valor</th><th>Estado</th></tr></thead><tbody>`;
+  const gridOpen='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px;padding:16px 18px">';
 
   // Mismo tratamiento visual (tarjeta redondeada + header en degradado) que
-  // ya usan los grupos de mes en Cumpleaños/Aniversarios, para que se lea
-  // como el mismo lenguaje del resto del Hub en vez de un separador plano.
+  // ya usan los grupos de mes en Cumpleaños/Aniversarios — adentro, en vez de
+  // una tabla, ahora va una grilla de tarjetas de beneficio.
   let html='';
   if(engineers.length){
     html+=`<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin:14px 14px 22px;">
@@ -251,7 +308,7 @@ function renderBenefCatalogo(){
         <span style="flex:1;height:1px;background:var(--border)"></span>
         <span class="badge badge-blue">${engineers.length} beneficio${engineers.length!==1?'s':''}</span>
       </div>
-      ${tableHead}${engineers.map(r=>benefRow(r,'Engineers')).join('')}</tbody></table>
+      ${gridOpen}${engineers.map(r=>benefCard(r,'Engineers')).join('')}</div>
     </div>`;
   }
   if(coreTeam.length){
@@ -261,21 +318,16 @@ function renderBenefCatalogo(){
         <span style="flex:1;height:1px;background:var(--border)"></span>
         <span class="badge badge-purple">${coreTeam.length} beneficio${coreTeam.length!==1?'s':''}</span>
       </div>
-      ${tableHead}${coreTeam.map(r=>benefRow(r,'Core Team')).join('')}</tbody></table>
+      ${gridOpen}${coreTeam.map(r=>benefCard(r,'Core Team')).join('')}</div>
     </div>`;
   }
   container.innerHTML=html;
 }
 
-// Click en una fila del catálogo despliega/oculta debajo la lista de
-// personas que tienen ese beneficio activo (Beneficios Asignados).
-function toggleBenefDetalle(id){
-  benefExpandido=benefExpandido===id?null:id;
-  renderBenefCatalogo();
-}
 // grupoFiltro acota la lista de personas a Engineers/Core Team — clave para
 // un beneficio "Ambos" (ej. clase de inglés), donde el catálogo tiene una
-// sola fila pero conviene poder ver solo quiénes de cada grupo lo usan.
+// sola tarjeta por grupo pero conviene poder ver solo quiénes de cada uno
+// lo usan.
 function personasActivasBeneficio(nombreBeneficio,grupoFiltro){
   return cacheBenefAsignados.filter(a=>{
     const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
@@ -288,19 +340,34 @@ function personasActivasBeneficio(nombreBeneficio,grupoFiltro){
     return true;
   });
 }
-function filaDetalleBeneficio(r,grupoFiltro){
+
+// Clickear una tarjeta del catálogo abre este modal con la lista de personas
+// que tienen ese beneficio activo (Beneficios Asignados) — reemplaza el
+// expand-inline que tenía la vista de tabla, que no tiene dónde "empujar"
+// contenido en una grilla de tarjetas.
+function abrirBenefDetalleModal(id,seccionGrupo){
+  const r=cacheBeneficiosRaw.find(b=>b.id===id);
+  if(!r) return;
+  document.getElementById('benef-detalle-titulo').textContent=r.fields.Beneficio||'—';
+  document.getElementById('benef-detalle-body').innerHTML=contenidoBenefDetalle(r,seccionGrupo);
+  document.getElementById('benef-detalle-overlay').style.display='flex';
+}
+function cerrarBenefDetalleModal(){
+  document.getElementById('benef-detalle-overlay').style.display='none';
+}
+function contenidoBenefDetalle(r,grupoFiltro){
   const activos=personasActivasBeneficio(r.fields.Beneficio,grupoFiltro);
   if(!activos.length){
     const sufijoGrupo=(grupoFiltro==='Engineers'||grupoFiltro==='Core Team')?` de ${grupoFiltro}`:'';
-    return `<tr class="benef-detalle-row"><td colspan="6"><div style="padding:14px 18px;color:var(--text3);font-size:12px;">Nadie${sufijoGrupo} tiene este beneficio activo en este momento.</div></td></tr>`;
+    return `<div style="color:var(--text3);font-size:12px;">Nadie${sufijoGrupo} tiene este beneficio activo en este momento.</div>`;
   }
   const items=activos.map(a=>{
     const nombre=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'—');
     const monto=a.fields.Monto?`$${Number(a.fields.Monto).toLocaleString('es-AR')}`:'';
     const extra=[a.fields.Frecuencia,a.fields['Profesional Asignado'],a.fields.Curso,a.fields.Quarter].filter(Boolean).join(' · ');
-    return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;">${avH(nombre)}<span style="font-size:13px">${nombre}</span>${extra?`<span style="font-size:11px;color:var(--text3)">(${extra})</span>`:''}${monto?`<span style="margin-left:auto;font-size:12px;color:var(--text3)">${monto}</span>`:''}</div>`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">${avH(nombre)}<span style="font-size:13px">${nombre}</span>${extra?`<span style="font-size:11px;color:var(--text3)">(${extra})</span>`:''}${monto?`<span style="margin-left:auto;font-size:12px;color:var(--text3)">${monto}</span>`:''}</div>`;
   }).join('');
-  return `<tr class="benef-detalle-row" onclick="event.stopPropagation()"><td colspan="6"><div style="padding:12px 18px;background:var(--bg2);border-radius:8px;margin:4px 0;"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:6px;">${activos.length} persona${activos.length!==1?'s':''} usando este beneficio</div>${items}</div></td></tr>`;
+  return `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">${activos.length} persona${activos.length!==1?'s':''} usando este beneficio</div>${items}`;
 }
 
 // Filtra en vivo el select de Persona del form de asignación a medida que se

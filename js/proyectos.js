@@ -180,6 +180,8 @@ function calcularSugerenciaProyecto(){
     .filter(Boolean)
     .sort((a,b)=>(b.diasDesdeUltima===a.diasDesdeUltima)?b.devCount-a.devCount:(b.diasDesdeUltima-a.diasDesdeUltima));
 
+  sugerenciaProyectosCandidatos=candidatos;
+  sugerenciaProyectoIndex=0;
   sugerenciaProyectoActual=candidatos[0]||null;
 
   // No se auto-abre sola — queda disponible solo a demanda con el botón de
@@ -189,6 +191,25 @@ function calcularSugerenciaProyecto(){
 }
 
 function abrirSugerenciaProyecto(){
+  sugerenciaProyectoIndex=0;
+  sugerenciaProyectoActual=sugerenciaProyectosCandidatos[0]||null;
+  renderSugerenciaProyecto();
+}
+
+// Avanza al siguiente candidato elegible cuando el usuario descarta la
+// sugerencia actual con "Ahora no" — si no hay otro candidato, simplemente
+// cierra el modal.
+function descartarSugerenciaProyecto(){
+  if(sugerenciaProyectosCandidatos.length>1){
+    sugerenciaProyectoIndex=(sugerenciaProyectoIndex+1)%sugerenciaProyectosCandidatos.length;
+    sugerenciaProyectoActual=sugerenciaProyectosCandidatos[sugerenciaProyectoIndex];
+    renderSugerenciaProyecto();
+  }else{
+    cerrarSugerenciaProyecto();
+  }
+}
+
+function renderSugerenciaProyecto(){
   const s=sugerenciaProyectoActual;
   if(!s) return;
   const nuncaPublico=s.ultimaPub===null;

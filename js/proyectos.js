@@ -58,7 +58,7 @@ async function loadProyectos(){
   });
 
   const devs={};
-  cachePersonasRaw.forEach(p=>{const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
+  cachePersonasRaw.forEach(p=>{if(yaEgreso(p))return;const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
 
   const tb=document.getElementById('tbody-proyectos');
   tb.innerHTML=todosRecs.length?todosRecs.map(r=>{
@@ -118,7 +118,7 @@ function calcularSugerenciaProyecto(){
   const unAñoMs=365*86400000;
 
   const devs={};
-  cachePersonasRaw.forEach(p=>{const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
+  cachePersonasRaw.forEach(p=>{if(yaEgreso(p))return;const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
 
   const candidatos=cacheProyectosRaw
     .filter(r=>(r.fields.Estado||'')!=='De Baja')
@@ -197,7 +197,7 @@ function openMeetModal(proyectoId, nombre, focusForm=false){
   meetProyectoActual={id:proyectoId, nombre};
   document.getElementById('meet-title').textContent=nombre;
 
-  const asignados=cachePersonasRaw.filter(p=>(p.fields.Proyecto||'').trim()===nombre);
+  const asignados=cachePersonasRaw.filter(p=>!yaEgreso(p)&&(p.fields.Proyecto||'').trim()===nombre);
   const devCount=asignados.length;
   document.getElementById('meet-devs-label').textContent=
     devCount>0?`${devCount} dev${devCount===1?'':'s'} asignado${devCount===1?'':'s'}`:'Sin devs asignados';

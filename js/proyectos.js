@@ -9,7 +9,7 @@ function filtrarProyectos(){
     const texto=tr.textContent.toLowerCase();
     const estado=tr.dataset.estado||'';
     const matchQ=!q||texto.includes(q);
-    const matchEstado=!estadoFil?true:estadoFil==='activos'?estado!=='De Baja':estado===estadoFil;
+    const matchEstado=!estadoFil?true:estadoFil==='activos'?(estado!=='De Baja'&&estado!=='Inactivo'):estado===estadoFil;
     const visible=matchQ&&matchEstado;
     tr.style.display=visible?'':'none';
     if(visible) count++;
@@ -25,8 +25,8 @@ async function loadProyectos(){
   const todosRecs=d.records||[];
   console.log('Proyectos cargados:', todosRecs.length, todosRecs.map(r=>r.fields.Proyecto+' ['+r.fields.Estado+']'));
 
-  // Mostrar todos excepto los dados de baja
-  const recs=todosRecs.filter(r=>(r.fields.Estado||'')!=='De Baja');
+  // Mostrar todos excepto los dados de baja e inactivos
+  const recs=todosRecs.filter(r=>!['De Baja','Inactivo'].includes(r.fields.Estado||''));
 
   // Cache para selects — mismos proyectos visibles
   cacheProyectos=recs.map(r=>r.fields.Proyecto||'').filter(Boolean);
@@ -65,7 +65,7 @@ async function loadProyectos(){
     const f=r.fields;
     const nombre=f.Proyecto||'—';
     const estado=f.Estado||'';
-    const estadoBadge=estado==='De Baja'?'<span class="badge badge-red">De Baja</span>':estado?`<span class="badge badge-green">${estado}</span>`:'<span style="color:var(--text3);font-size:12px">—</span>';
+    const estadoBadge=estado==='De Baja'?'<span class="badge badge-red">De Baja</span>':estado==='Inactivo'?'<span class="badge badge-amber">Inactivo</span>':estado?`<span class="badge badge-green">${estado}</span>`:'<span style="color:var(--text3);font-size:12px">—</span>';
     const c=devs[nombre]||0;
     const devBadge=c>0
       ?`<span class="badge badge-blue"><i class="ti ti-users" style="font-size:11px"></i> ${c}</span>`
@@ -100,11 +100,45 @@ async function loadProyectos(){
       <td>${pubBadge}</td>
       <td style="font-size:12px;color:var(--text2)">${ultimaFecha}</td>
       <td style="font-size:12px;color:var(--text2)">${promDias}</td>
-      <td><button onclick="event.stopPropagation();openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}',true)" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button></td>
+      <td style="white-space:nowrap">
+        <button onclick="event.stopPropagation();openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}',true)" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button>
+        <button onclick="event.stopPropagation();editarProyecto('${r.id}')" title="Editar proyecto" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 8px;font-size:12px;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-left:6px;"><i class="ti ti-pencil"></i></button>
+      </td>
     </tr>`;
   }).join(''):'<tr class="empty-row"><td colspan="8">No hay proyectos cargados</td></tr>';
   filtrarProyectos();
   calcularSugerenciaProyecto();
+}
+
+// Editar un proyecto ya existente (Nombre/Fecha de inicio/Estado) — antes solo
+// se podía cargar uno nuevo, no había forma de pasar uno a "Inactivo" (ni
+// corregir nada) sin ir directo a Airtable.
+function editarProyecto(id){
+  const r=cacheProyectosRaw.find(p=>p.id===id);
+  if(!r) return;
+  const f=r.fields;
+  const fechaInicioVal=f['Fecha de Inicio']||f['Fecha de inicio']||'';
+  _openFormModal({
+    title:`Editar — ${f.Proyecto||'proyecto'}`,
+    html:()=>`
+<div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-ep-nombre" value="${(f.Proyecto||'').replace(/"/g,'&quot;')}"></div>
+<div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-ep-fecha" type="date" value="${fechaInicioVal}"></div>
+<div class="field-group"><label class="field-label">Estado</label>
+  <select class="field-input" id="f-ep-estado">
+    <option value="Activo"${(f.Estado||'Activo')==='Activo'?' selected':''}>Activo</option>
+    <option value="Inactivo"${f.Estado==='Inactivo'?' selected':''}>Inactivo</option>
+    <option value="De Baja"${f.Estado==='De Baja'?' selected':''}>De Baja</option>
+  </select>
+</div>`,
+    save:async()=>{
+      const v=id2=>document.getElementById(id2)?.value||'';
+      if(!v('f-ep-nombre')){toast('El nombre es obligatorio',true);return false;}
+      const fields={Proyecto:v('f-ep-nombre'),Estado:v('f-ep-estado')||'Activo'};
+      fields['Fecha de Inicio']=v('f-ep-fecha')||null;
+      await atPatch(`Proyectos/${id}`,fields);
+      return true;
+    },
+  });
 }
 
 // ─── SUGERENCIA PARA EL PRÓXIMO MEET OUR TEAMS ────────────────────────────────
@@ -121,7 +155,7 @@ function calcularSugerenciaProyecto(){
   cachePersonasRaw.forEach(p=>{if(yaEgreso(p))return;const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
 
   const candidatos=cacheProyectosRaw
-    .filter(r=>(r.fields.Estado||'')!=='De Baja')
+    .filter(r=>!['De Baja','Inactivo'].includes(r.fields.Estado||''))
     .map(r=>{
       const f=r.fields;
       const nombre=f.Proyecto||'';

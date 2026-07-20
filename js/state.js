@@ -30,6 +30,8 @@ let gdModalId=null;
 let cacheMeetByProyecto={};  // { 'NombreProyecto': [{id, fecha, link, notas}] }
 let meetProyectoActual=null; // {id: recordId, nombre: string}
 let sugerenciaProyectoActual=null; // proyecto recomendado para el próximo Meet our Teams (o null)
+let sugerenciaProyectosCandidatos=[]; // lista completa de candidatos elegibles, ordenados por prioridad
+let sugerenciaProyectoIndex=0; // índice del candidato mostrado actualmente en sugerenciaProyectosCandidatos
 
 // Beneficios
 let cacheBenefAsignados=[], cachePresupuestoLoyalty=[];

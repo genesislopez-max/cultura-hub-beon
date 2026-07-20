@@ -276,9 +276,12 @@ function renderBenefCatalogo(){
         <div style="width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:${est.tinte}">
           <i class="ti ${est.icon}" style="font-size:19px;color:${est.accent}"></i>
         </div>
-        <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:600;background:${statusBg};color:${statusFg}">
-          <span style="width:6px;height:6px;border-radius:999px;background:${statusDot}"></span>${activo?'Activo':'Inactivo'}
-        </span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:600;background:${statusBg};color:${statusFg}">
+            <span style="width:6px;height:6px;border-radius:999px;background:${statusDot}"></span>${activo?'Activo':'Inactivo'}
+          </span>
+          <button onclick="event.stopPropagation();editarBeneficio('${r.id}')" title="Editar beneficio" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;flex-shrink:0;"><i class="ti ti-pencil" style="font-size:15px"></i></button>
+        </div>
       </div>
       <div style="font-size:14.5px;font-weight:700;color:var(--text);margin-bottom:4px">${f.Beneficio||'—'}</div>
       <div style="font-size:12px;line-height:1.5;color:var(--text3);margin-bottom:12px;min-height:32px">${f.Descripción||''}</div>
@@ -370,6 +373,66 @@ function contenidoBenefDetalle(r,grupoFiltro){
     return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">${avH(nombre)}<span style="font-size:13px">${nombre}</span>${extra?`<span style="font-size:11px;color:var(--text3)">(${extra})</span>`:''}${monto?`<span style="margin-left:auto;font-size:12px;color:var(--text3)">${monto}</span>`:''}</div>`;
   }).join('');
   return `<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text3);margin-bottom:8px;">${activos.length} persona${activos.length!==1?'s':''} usando este beneficio</div>${items}`;
+}
+
+// Editar un beneficio ya existente en el catálogo (no una asignación puntual
+// a una persona — para eso está editarBenefAsignado en side-panel.js). Mismos
+// campos que "Nuevo beneficio" (FORMS['beneficios']) más el Estado, que ahí
+// se fuerza a "Activo" al crear y acá sí se puede pasar a "Inactivo".
+function editarBeneficio(id){
+  const r=cacheBeneficiosRaw.find(b=>b.id===id);
+  if(!r) return;
+  const f=r.fields;
+  _openFormModal({
+    title:`Editar — ${f.Beneficio||'beneficio'}`,
+    html:()=>`
+<div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-eb-nombre" value="${(f.Beneficio||'').replace(/"/g,'&quot;')}"></div>
+<div class="field-group"><label class="field-label">Grupo</label>
+  <select class="field-input" id="f-eb-grupo">
+    <option value="Ambos"${(f.Grupo||'Ambos')==='Ambos'?' selected':''}>Ambos grupos</option>
+    <option value="Engineers"${f.Grupo==='Engineers'?' selected':''}>Engineers</option>
+    <option value="Core Team"${f.Grupo==='Core Team'?' selected':''}>Core Team</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Categoría</label>
+  <select class="field-input" id="f-eb-cat">
+    ${['Salud','Bienestar','Aprendizaje','Tiempo','Equipamiento','Otro'].map(c=>`<option${f.Categoría===c?' selected':''}>${c}</option>`).join('')}
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Nivel mínimo Loyalty</label>
+  <select class="field-input" id="f-eb-loyalty">
+    <option value=""${!f['Nivel Loyalty']||f['Nivel Loyalty']==='Todos'?' selected':''}>Todos los niveles</option>
+    <option value="Spark"${f['Nivel Loyalty']==='Spark'?' selected':''}>⚡ Spark</option>
+    <option value="Ray"${f['Nivel Loyalty']==='Ray'?' selected':''}>☀️ Ray</option>
+    <option value="Lightning"${f['Nivel Loyalty']==='Lightning'?' selected':''}>🌩 Lightning</option>
+    <option value="Thunder"${f['Nivel Loyalty']==='Thunder'?' selected':''}>🌪 Thunder</option>
+    <option value="Storm"${f['Nivel Loyalty']==='Storm'?' selected':''}>🌊 Storm</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Valor mensual ($)</label><input class="field-input" id="f-eb-valor" type="number" min="0" value="${f.Valor||''}" placeholder="Dejá vacío si no tiene valor fijo"></div>
+<div class="field-group"><label class="field-label">Descripción</label><textarea class="field-input" id="f-eb-desc" placeholder="Breve descripción del beneficio">${f.Descripción||''}</textarea></div>
+<div class="field-group"><label class="field-label">Estado</label>
+  <select class="field-input" id="f-eb-estado">
+    <option value="Activo"${(f.Estado||'Activo')==='Activo'?' selected':''}>Activo</option>
+    <option value="Inactivo"${f.Estado==='Inactivo'?' selected':''}>Inactivo</option>
+  </select>
+</div>`,
+    save:async()=>{
+      const v=id2=>document.getElementById(id2)?.value||'';
+      if(!v('f-eb-nombre')){toast('El nombre es obligatorio',true);return false;}
+      const fields={
+        Beneficio:v('f-eb-nombre'),
+        Grupo:v('f-eb-grupo'),
+        Categoría:v('f-eb-cat'),
+        Descripción:v('f-eb-desc'),
+        Estado:v('f-eb-estado')||'Activo',
+        'Nivel Loyalty':v('f-eb-loyalty')||null,
+        Valor:v('f-eb-valor')?Number(v('f-eb-valor')):null,
+      };
+      await atPatch(`Beneficios/${id}`,fields);
+      return true;
+    },
+  });
 }
 
 // Filtra en vivo el select de Persona del form de asignación a medida que se

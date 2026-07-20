@@ -220,8 +220,10 @@ function renderBenefCatalogo(){
       <td><span class="badge ${(f.Estado||'Activo')==='Activo'?'badge-green':'badge-amber'}">${f.Estado||'Activo'}</span></td>
     </tr>`;
     // Con el filtro "Beneficio" puntual elegido, no hace falta además
-    // clickear la fila para ver quién lo tiene — se despliega sola.
-    return(benefExpandido===r.id||(nombreFil&&f.Beneficio===nombreFil))?fila+filaDetalleBeneficio(r):fila;
+    // clickear la fila para ver quién lo tiene — se despliega sola. El
+    // filtro "Grupo" de arriba también acota esa lista de personas (clave
+    // para un beneficio "Ambos", que solo tiene una fila para los dos grupos).
+    return(benefExpandido===r.id||(nombreFil&&f.Beneficio===nombreFil))?fila+filaDetalleBeneficio(r,grupo):fila;
   }
 
   const container=document.getElementById('benef-catalogo-container');
@@ -258,16 +260,26 @@ function toggleBenefDetalle(id){
   benefExpandido=benefExpandido===id?null:id;
   renderBenefCatalogo();
 }
-function personasActivasBeneficio(nombreBeneficio){
+// grupoFiltro acota la lista de personas a Engineers/Core Team — clave para
+// un beneficio "Ambos" (ej. clase de inglés), donde el catálogo tiene una
+// sola fila pero conviene poder ver solo quiénes de cada grupo lo usan.
+function personasActivasBeneficio(nombreBeneficio,grupoFiltro){
   return cacheBenefAsignados.filter(a=>{
     const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
-    return bNombre===nombreBeneficio&&(a.fields.Estado||'Activo')==='Activo';
+    if(bNombre!==nombreBeneficio||(a.fields.Estado||'Activo')!=='Activo') return false;
+    if(grupoFiltro==='Engineers'||grupoFiltro==='Core Team'){
+      const nombrePersona=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'');
+      const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===(nombrePersona||'').trim());
+      if(!persona||getRolGroup(persona.fields['Rol en empresa']||'')!==grupoFiltro) return false;
+    }
+    return true;
   });
 }
-function filaDetalleBeneficio(r){
-  const activos=personasActivasBeneficio(r.fields.Beneficio);
+function filaDetalleBeneficio(r,grupoFiltro){
+  const activos=personasActivasBeneficio(r.fields.Beneficio,grupoFiltro);
   if(!activos.length){
-    return `<tr class="benef-detalle-row"><td colspan="6"><div style="padding:14px 18px;color:var(--text3);font-size:12px;">Nadie tiene este beneficio activo en este momento.</div></td></tr>`;
+    const sufijoGrupo=(grupoFiltro==='Engineers'||grupoFiltro==='Core Team')?` de ${grupoFiltro}`:'';
+    return `<tr class="benef-detalle-row"><td colspan="6"><div style="padding:14px 18px;color:var(--text3);font-size:12px;">Nadie${sufijoGrupo} tiene este beneficio activo en este momento.</div></td></tr>`;
   }
   const items=activos.map(a=>{
     const nombre=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'—');

@@ -238,24 +238,31 @@ function renderBenefCatalogo(){
     return;
   }
 
-  const tableHead=`<table class="data-table"><thead><tr><th>Beneficio</th><th>Grupo</th><th>Categoría</th><th>Nivel mínimo</th><th>Valor</th><th>Estado</th></tr></thead><tbody>`;
+  const tableHead=`<table class="data-table" style="border-radius:0"><thead><tr><th>Beneficio</th><th>Grupo</th><th>Categoría</th><th>Nivel mínimo</th><th>Valor</th><th>Estado</th></tr></thead><tbody>`;
 
+  // Mismo tratamiento visual (tarjeta redondeada + header en degradado) que
+  // ya usan los grupos de mes en Cumpleaños/Aniversarios, para que se lea
+  // como el mismo lenguaje del resto del Hub en vez de un separador plano.
   let html='';
   if(engineers.length){
-    html+=`<div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:var(--bg2);border-bottom:1px solid var(--border)">
-      <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--blue)">Engineers & Tech</span>
-      <span style="flex:1;height:1px;background:var(--border)"></span>
-      <span class="badge badge-blue">${engineers.length} beneficio${engineers.length!==1?'s':''}</span>
+    html+=`<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin:14px 14px 22px;">
+      <div style="padding:14px 18px;background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid var(--blue);display:flex;align-items:center;gap:12px;">
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--blue)">Engineers & Tech</span>
+        <span style="flex:1;height:1px;background:var(--border)"></span>
+        <span class="badge badge-blue">${engineers.length} beneficio${engineers.length!==1?'s':''}</span>
+      </div>
+      ${tableHead}${engineers.map(r=>benefRow(r,'Engineers')).join('')}</tbody></table>
     </div>`;
-    html+=tableHead+engineers.map(r=>benefRow(r,'Engineers')).join('')+'</tbody></table>';
   }
   if(coreTeam.length){
-    html+=`<div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:var(--bg2);border-bottom:1px solid var(--border);border-top:2px solid var(--border);margin-top:22px">
-      <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--purple)">Core Team</span>
-      <span style="flex:1;height:1px;background:var(--border)"></span>
-      <span class="badge badge-purple">${coreTeam.length} beneficio${coreTeam.length!==1?'s':''}</span>
+    html+=`<div style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin:0 14px 14px;">
+      <div style="padding:14px 18px;background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid var(--purple);display:flex;align-items:center;gap:12px;">
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--purple)">Core Team</span>
+        <span style="flex:1;height:1px;background:var(--border)"></span>
+        <span class="badge badge-purple">${coreTeam.length} beneficio${coreTeam.length!==1?'s':''}</span>
+      </div>
+      ${tableHead}${coreTeam.map(r=>benefRow(r,'Core Team')).join('')}</tbody></table>
     </div>`;
-    html+=tableHead+coreTeam.map(r=>benefRow(r,'Core Team')).join('')+'</tbody></table>';
   }
   container.innerHTML=html;
 }

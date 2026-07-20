@@ -206,7 +206,12 @@ function renderBenefCatalogo(){
   const engineers=recs.filter(r=>{const g=r.fields.Grupo||'Ambos';return g==='Engineers'||g==='Ambos';});
   const coreTeam=recs.filter(r=>{const g=r.fields.Grupo||'Ambos';return g==='Core Team'||g==='Ambos';});
 
-  function benefRow(r){
+  // seccionGrupo es el grupo de la sección donde se está pintando esta fila
+  // (Engineers o Core Team) — un beneficio "Ambos" aparece en las dos
+  // secciones, así que la lista de gente de cada una se acota a su propio
+  // grupo. Si no, un beneficio "Ambos" mostraba el mismo listado completo
+  // (los dos grupos mezclados) duplicado debajo de cada sección.
+  function benefRow(r,seccionGrupo){
     const f=r.fields;
     const g=f.Grupo||'Ambos';
     const nivel=f['Nivel Loyalty']||'';
@@ -220,10 +225,8 @@ function renderBenefCatalogo(){
       <td><span class="badge ${(f.Estado||'Activo')==='Activo'?'badge-green':'badge-amber'}">${f.Estado||'Activo'}</span></td>
     </tr>`;
     // Con el filtro "Beneficio" puntual elegido, no hace falta además
-    // clickear la fila para ver quién lo tiene — se despliega sola. El
-    // filtro "Grupo" de arriba también acota esa lista de personas (clave
-    // para un beneficio "Ambos", que solo tiene una fila para los dos grupos).
-    return(benefExpandido===r.id||(nombreFil&&f.Beneficio===nombreFil))?fila+filaDetalleBeneficio(r,grupo):fila;
+    // clickear la fila para ver quién lo tiene — se despliega sola.
+    return(benefExpandido===r.id||(nombreFil&&f.Beneficio===nombreFil))?fila+filaDetalleBeneficio(r,seccionGrupo):fila;
   }
 
   const container=document.getElementById('benef-catalogo-container');
@@ -241,7 +244,7 @@ function renderBenefCatalogo(){
       <span style="flex:1;height:1px;background:var(--border)"></span>
       <span class="badge badge-blue">${engineers.length} beneficio${engineers.length!==1?'s':''}</span>
     </div>`;
-    html+=tableHead+engineers.map(benefRow).join('')+'</tbody></table>';
+    html+=tableHead+engineers.map(r=>benefRow(r,'Engineers')).join('')+'</tbody></table>';
   }
   if(coreTeam.length){
     html+=`<div style="display:flex;align-items:center;gap:12px;padding:14px 18px 12px;background:var(--bg2);border-bottom:1px solid var(--border);border-top:2px solid var(--border);margin-top:22px">
@@ -249,7 +252,7 @@ function renderBenefCatalogo(){
       <span style="flex:1;height:1px;background:var(--border)"></span>
       <span class="badge badge-purple">${coreTeam.length} beneficio${coreTeam.length!==1?'s':''}</span>
     </div>`;
-    html+=tableHead+coreTeam.map(benefRow).join('')+'</tbody></table>';
+    html+=tableHead+coreTeam.map(r=>benefRow(r,'Core Team')).join('')+'</tbody></table>';
   }
   container.innerHTML=html;
 }

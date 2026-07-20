@@ -26,6 +26,8 @@ async function loadBeneficios(){
     }
     return {...r, fields:f};
   });
+  const tabCount=document.getElementById('benef-tab-count-catalogo');
+  if(tabCount) tabCount.textContent=cacheBeneficiosRaw.length;
   poblarFiltroBeneficioNombre();
   renderBenefCatalogo();
   renderBenefPersonas();
@@ -45,7 +47,7 @@ function poblarFiltroBeneficioNombre(){
 // persona puntual en "Por persona" (FORMS['beneficios-asignados'] ya existía
 // pero no estaba conectado a ningún botón).
 function switchBenefTab(tab, btn){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.benef-tab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   document.getElementById('benef-tab-catalogo').style.display=tab==='catalogo'?'':'none';
   document.getElementById('benef-tab-personas').style.display=tab==='personas'?'':'none';

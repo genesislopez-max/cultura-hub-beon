@@ -223,10 +223,19 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .cl-text{font-size:13px;line-height:1.5;}
 .cl-text.done{color:var(--text3);text-decoration:line-through;}
 
-/* BENEFICIOS TABS */
+/* TABS (compartido por el resto de las secciones con pestañas) */
 .tab-bar{display:flex;gap:4px;margin-bottom:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:4px;}
 .tab-btn{flex:1;padding:7px 12px;border-radius:7px;border:none;background:none;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.15s;}
 .tab-btn.active{background:var(--bg2);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+
+/* BENEFICIOS — tab bar propia (diseño "Catálogo de beneficios"), no reusa
+   .tab-bar/.tab-btn de arriba para no cambiar el look de otras secciones. */
+.benef-tabbar{display:flex;gap:6px;padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:16px;}
+.benef-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:9px;padding:12px 18px;border-radius:11px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:600;letter-spacing:-0.01em;color:var(--text2);background:transparent;transition:all 0.2s cubic-bezier(0.22,1,0.36,1);}
+.benef-tab i{font-size:17px;}
+.benef-tab.active{color:#fff;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);box-shadow:0 8px 22px -8px rgba(58,105,255,0.5);}
+.benef-tab-count{padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;background:var(--bg2);color:var(--text2);}
+.benef-tab.active .benef-tab-count{background:rgba(255,255,255,0.25);color:#fff;}
 
 /* TAREAS — calendario */
 .tareas-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}

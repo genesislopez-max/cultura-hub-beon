@@ -219,7 +219,9 @@ function renderBenefCatalogo(){
       <td style="font-size:13px;font-weight:500">${valor}</td>
       <td><span class="badge ${(f.Estado||'Activo')==='Activo'?'badge-green':'badge-amber'}">${f.Estado||'Activo'}</span></td>
     </tr>`;
-    return benefExpandido===r.id?fila+filaDetalleBeneficio(r):fila;
+    // Con el filtro "Beneficio" puntual elegido, no hace falta además
+    // clickear la fila para ver quién lo tiene — se despliega sola.
+    return(benefExpandido===r.id||(nombreFil&&f.Beneficio===nombreFil))?fila+filaDetalleBeneficio(r):fila;
   }
 
   const container=document.getElementById('benef-catalogo-container');

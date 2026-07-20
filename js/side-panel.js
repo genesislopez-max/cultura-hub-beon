@@ -71,14 +71,27 @@ async function verBenefPersona(nombre, grupo, nivel){
       const valor=r.fields.Monto?`$${Number(r.fields.Monto).toLocaleString('es-AR')}/año`:benef?.fields.Valor?`$${Number(benef.fields.Valor).toLocaleString('es-AR')}/año`:'';
       const activo=(r.fields.Estado||'Activo')==='Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
-      return`<div class="side-panel-row">
-        <span>${bNombre}</span>
-        <span style="display:flex;gap:6px;align-items:center">
-          ${valor?`<span style="font-size:12px;color:var(--text3)">${valor}</span>`:''}
-          <span class="badge ${activo?'badge-green':'badge-amber'}" style="font-size:11px">${activo?'Activo':'Inactivo'}</span>
-          <button onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;"><i class="ti ti-pencil"></i></button>
-          <button onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--critical);padding:2px;line-height:1;"><i class="ti ti-trash"></i></button>
-        </span>
+      const fechaAct=r.fields['Fecha activación'];
+      const fechaBaja=r.fields['Fecha de baja'];
+      const motivoBaja=r.fields['Motivo de baja'];
+      let fechaLabel;
+      if(activo){
+        fechaLabel=fechaAct?`Activo desde ${fmt(fechaAct)}`:'Sin fecha registrada';
+      } else {
+        const partes=[fechaAct?`Usado desde ${fmt(fechaAct)}`:'',fechaBaja?`Baja: ${fmt(fechaBaja)}`:''].filter(Boolean);
+        fechaLabel=partes.length?partes.join(' · '):'Sin fecha registrada';
+      }
+      return`<div class="side-panel-row" style="flex-direction:column;align-items:flex-start;gap:3px">
+        <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
+          <span>${bNombre}</span>
+          <span style="display:flex;gap:6px;align-items:center">
+            ${valor?`<span style="font-size:12px;color:var(--text3)">${valor}</span>`:''}
+            <span class="badge ${activo?'badge-green':'badge-amber'}" style="font-size:11px">${activo?'Activo':'Inactivo'}</span>
+            <button onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;"><i class="ti ti-pencil"></i></button>
+            <button onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--critical);padding:2px;line-height:1;"><i class="ti ti-trash"></i></button>
+          </span>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:var(--text3)">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}</span>
       </div>`;
     }).join(''):`<div class="sp-empty">Sin beneficios asignados</div>`}
   </div>`;
@@ -153,6 +166,11 @@ async function verBenefPersona(nombre, grupo, nivel){
   document.getElementById('sp-body').innerHTML=html;
 }
 
+function toggleCampoMotivoBaja(){
+  const fg=document.getElementById('fg-eba-motivo');
+  if(fg) fg.style.display=document.getElementById('f-eba-estado')?.value==='Inactivo'?'block':'none';
+}
+
 // Editar Monto/Fecha activación/Estado de un beneficio ya asignado — el
 // registro se busca en spBenefAsigActual (cargado por verBenefPersona) en
 // vez de volver a pedirlo a Airtable.
@@ -171,10 +189,15 @@ function editarBenefAsignado(id,nombre,grupo,nivel){
 <div class="field-group"><label class="field-label">Monto ($)</label><input class="field-input" id="f-eba-monto" type="number" min="0" value="${f.Monto||''}" placeholder="Valor del catálogo si se deja vacío"></div>
 <div class="field-group"><label class="field-label">Fecha activación</label><input class="field-input" id="f-eba-fecha" type="date" value="${f['Fecha activación']||''}"></div>
 <div class="field-group"><label class="field-label">Estado</label>
-  <select class="field-input" id="f-eba-estado">
+  <select class="field-input" id="f-eba-estado" onchange="toggleCampoMotivoBaja()">
     <option value="Activo"${(f.Estado||'Activo')==='Activo'?' selected':''}>Activo</option>
     <option value="Inactivo"${f.Estado==='Inactivo'?' selected':''}>Inactivo</option>
   </select>
+</div>
+<div class="field-group" id="fg-eba-motivo" style="display:${f.Estado==='Inactivo'?'block':'none'}">
+  <label class="field-label">Motivo de la baja</label>
+  <textarea class="field-input" id="f-eba-motivo" placeholder="Ej: dejó de usarlo, cambió de beneficio…">${f['Motivo de baja']||''}</textarea>
+  ${f['Fecha de baja']?`<div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">Dado de baja el ${fmt(f['Fecha de baja'])}</div>`:''}
 </div>
 ${esTerapia?`
 <div class="field-group"><label class="field-label">Frecuencia</label>
@@ -193,11 +216,22 @@ ${esUdemy?`
     save:async()=>{
       const v=id2=>document.getElementById(id2)?.value||'';
       const fecha=v('f-eba-fecha');
+      const nuevoEstado=v('f-eba-estado')||'Activo';
       const fields={
-        Estado:v('f-eba-estado')||'Activo',
+        Estado:nuevoEstado,
         'Fecha activación':fecha||null,
         Monto:v('f-eba-monto')?Number(v('f-eba-monto')):null,
       };
+      if(nuevoEstado==='Inactivo'){
+        fields['Motivo de baja']=v('f-eba-motivo')||null;
+        // Solo se pisa la Fecha de baja al momento en que PASA a Inactivo —
+        // si ya estaba Inactivo y se reabre el form para otra cosa (ej.
+        // corregir el motivo), no hace falta correr la fecha a hoy de nuevo.
+        if(f.Estado!=='Inactivo') fields['Fecha de baja']=new Date().toISOString().slice(0,10);
+      } else {
+        fields['Motivo de baja']=null;
+        fields['Fecha de baja']=null;
+      }
       if(esTerapia){
         fields.Frecuencia=v('f-eba-frecuencia')||null;
         fields['Profesional Asignado']=v('f-eba-profesional')||null;

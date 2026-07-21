@@ -159,6 +159,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .os-dest-chip i{font-size:12px;color:var(--text3);}
 .os-bar-track{flex:1;max-width:80px;height:5px;border-radius:999px;background:var(--border);overflow:hidden;}
 .os-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--purple));}
+.os-count-chip{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:800;color:var(--blue);background:var(--tinte-eng);}
 
 .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-xs);}
 .table-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}

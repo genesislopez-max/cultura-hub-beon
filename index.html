@@ -941,17 +941,46 @@
 
     <!-- GET TOGETHER -->
       <div class="section-page" id="page-gettogether">
-        <div class="metrics">
-          <div class="metric"><div class="metric-label">Total registros</div><div class="metric-val" style="color:var(--blue)" id="gt-total">—</div><div class="metric-sub">historial completo</div></div>
-          <div class="metric"><div class="metric-label">BEONers que se juntaron</div><div class="metric-val" style="color:var(--green)" id="gt-personas">—</div><div class="metric-sub">únicos</div></div>
-          <div class="metric"><div class="metric-label">Encuentros</div><div class="metric-val" style="color:var(--amber)" id="gt-encuentros">—</div><div class="metric-sub">ciudad + fecha únicos</div></div>
-          <div class="metric"><div class="metric-label">Países</div><div class="metric-val" id="gt-paises">—</div><div class="metric-sub">distintos</div></div>
+        <div class="gt-hero-grid">
+          <div class="gt-hero-primary">
+            <div class="gt-hero-glow"></div>
+            <div class="gt-hero-top">
+              <span class="gt-hero-label">Total registros</span>
+              <div class="gt-hero-icon"><i class="ti ti-history"></i></div>
+            </div>
+            <div class="gt-hero-val" id="gt-total">—</div>
+            <div class="gt-hero-sub">historial completo</div>
+          </div>
+          <div class="gt-kpi-card">
+            <div class="gt-kpi-top">
+              <span class="gt-kpi-label">BEONers</span>
+              <div class="gt-kpi-icon" style="background:var(--tinte-green-icon);color:var(--green)"><i class="ti ti-users"></i></div>
+            </div>
+            <div class="gt-kpi-val" id="gt-personas">—</div>
+            <div class="gt-kpi-sub">únicos</div>
+          </div>
+          <div class="gt-kpi-card">
+            <div class="gt-kpi-top">
+              <span class="gt-kpi-label">Encuentros</span>
+              <div class="gt-kpi-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-map-pin"></i></div>
+            </div>
+            <div class="gt-kpi-val" id="gt-encuentros">—</div>
+            <div class="gt-kpi-sub">ciudad + fecha únicos</div>
+          </div>
+          <div class="gt-kpi-card">
+            <div class="gt-kpi-top">
+              <span class="gt-kpi-label">Países</span>
+              <div class="gt-kpi-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-world"></i></div>
+            </div>
+            <div class="gt-kpi-val" id="gt-paises">—</div>
+            <div class="gt-kpi-sub">distintos</div>
+          </div>
         </div>
-        <div class="tab-bar" style="margin-bottom:0">
-          <button class="tab-btn active" onclick="switchGTTab('persona',this)">Por persona</button>
-          <button class="tab-btn" onclick="switchGTTab('ciudad',this)">Por ciudad</button>
-          <button class="tab-btn" onclick="switchGTTab('historial',this)">Historial completo</button>
-          <button class="tab-btn" onclick="switchGTTab('metricas',this)">Métricas</button>
+        <div class="gt-tabbar">
+          <button class="gt-tab active" onclick="switchGTTab('persona',this)"><i class="ti ti-user"></i><span>Por persona</span></button>
+          <button class="gt-tab" onclick="switchGTTab('ciudad',this)"><i class="ti ti-building"></i><span>Por ciudad</span></button>
+          <button class="gt-tab" onclick="switchGTTab('historial',this)"><i class="ti ti-history"></i><span>Historial completo</span></button>
+          <button class="gt-tab" onclick="switchGTTab('metricas',this)"><i class="ti ti-chart-bar"></i><span>Métricas</span></button>
         </div>
 
         <!-- POR PERSONA -->
@@ -962,9 +991,12 @@
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="gt-search-persona" placeholder="Buscar BEONer…" oninput="filtrarGTPersona()">
               </div>
-              <select class="filter-select" id="gt-filter-pais-per" onchange="filtrarGTPersona()">
-                <option value="">Todos los países</option>
-              </select>
+              <div style="position:relative">
+                <i class="ti ti-world" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="gt-filter-pais-per" onchange="filtrarGTPersona()" style="padding-left:28px">
+                  <option value="">Todos los países</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -983,9 +1015,12 @@
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="gt-search-ciudad" placeholder="Buscar ciudad o país…" oninput="filtrarGTCiudad()">
               </div>
-              <select class="filter-select" id="gt-filter-pais-ciu" onchange="filtrarGTCiudad()">
-                <option value="">Todos los países</option>
-              </select>
+              <div style="position:relative">
+                <i class="ti ti-world" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="gt-filter-pais-ciu" onchange="filtrarGTCiudad()" style="padding-left:28px">
+                  <option value="">Todos los países</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -1004,12 +1039,18 @@
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="gt-search-hist" placeholder="Buscar BEONer, ciudad o proyecto…" oninput="filtrarGTHistorial()">
               </div>
-              <select class="filter-select" id="gt-filter-pais" onchange="filtrarGTHistorial()">
-                <option value="">Todos los países</option>
-              </select>
-              <select class="filter-select" id="gt-filter-proyecto" onchange="filtrarGTHistorial()">
-                <option value="">Todos los proyectos</option>
-              </select>
+              <div style="position:relative">
+                <i class="ti ti-world" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="gt-filter-pais" onchange="filtrarGTHistorial()" style="padding-left:28px">
+                  <option value="">Todos los países</option>
+                </select>
+              </div>
+              <div style="position:relative">
+                <i class="ti ti-briefcase" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="gt-filter-proyecto" onchange="filtrarGTHistorial()" style="padding-left:28px">
+                  <option value="">Todos los proyectos</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">

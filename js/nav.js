@@ -34,7 +34,11 @@ function showSection(name,btn){
   if(btn)btn.classList.add('active');
   document.getElementById('page-title').textContent=TITLES[name]||name;
   const eyebrow=document.getElementById('page-eyebrow');
-  if(eyebrow) eyebrow.style.display=name==='inicio'?'block':'none';
+  if(eyebrow){
+    const texto=EYEBROWS[name];
+    eyebrow.style.display=texto?'block':'none';
+    eyebrow.textContent=texto||'';
+  }
   const btnExportar=document.getElementById('btn-inicio-exportar');
   const btnAgregarPersona=document.getElementById('btn-inicio-agregar');
   if(btnExportar) btnExportar.style.display=name==='inicio'?'flex':'none';

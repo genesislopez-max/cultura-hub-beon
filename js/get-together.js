@@ -81,7 +81,7 @@ function closeGTCityModal(){
 }
 
 function switchGTTab(tab,btn){
-  document.querySelectorAll('#page-gettogether .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-gettogether .gt-tab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   document.getElementById('gt-tab-persona').style.display=tab==='persona'?'':'none';
   document.getElementById('gt-tab-ciudad').style.display=tab==='ciudad'?'':'none';
@@ -178,6 +178,17 @@ function poblarGTFiltros(){
   if(selProy) selProy.innerHTML='<option value="">Todos los proyectos</option>'+proyectos.map(p=>`<option value="${p}">${p}</option>`).join('');
 }
 
+// Píldora de color por país — hash determinístico sobre las 5 clases badge-*
+// ya existentes (mismo enfoque que av() en utils.js, pero local a este
+// archivo para no acoplarlo a la semántica de avatares).
+const GT_BADGE_COLORS=['blue','green','amber','purple','red'];
+function paisBadge(pais){
+  if(!pais) return '—';
+  const hash=[...pais].reduce((a,c)=>a+c.charCodeAt(0),0);
+  const color=GT_BADGE_COLORS[hash%GT_BADGE_COLORS.length];
+  return`<span class="badge badge-${color}"><span style="width:6px;height:6px;border-radius:999px;background:currentColor"></span>${pais}</span>`;
+}
+
 function filtrarGTPersona(){ renderGTPersona(); }
 function filtrarGTCiudad(){ renderGTCiudad(); }
 function filtrarGTHistorial(){ renderGTHistorial(); }
@@ -202,16 +213,22 @@ function renderGTPersona(){
     .filter(([n])=>!q||n.toLowerCase().includes(q))
     .sort((a,b)=>b[1].count-a[1].count); // Ordenar por más encuentros
   document.getElementById('gt-badge-persona').textContent=`${filas.length} BEONers`;
+  const soloRankingNatural=!q&&!paisFil; // medallas solo tienen sentido sobre el ranking sin filtrar
+  const max=filas.length?filas[0][1].count:0;
   const tb=document.getElementById('gt-tbody-persona');
   tb.innerHTML=filas.map(([nombre,d],i)=>{
     const bg=i%2===0?'background:var(--bg2)':'';
-    const medal=i===0?'🥇':i===1?'🥈':i===2?'🥉':'';
-    const paisesStr=[...d.paises].join(', ')||'—';
+    const esMedalla=soloRankingNatural&&i<3;
+    const rankHtml=esMedalla
+      ?`<div class="gt-medal gt-medal-${i+1}">${i+1}</div>`
+      :`<span style="font-size:12px;color:var(--text3)">${i+1}</span>`;
+    const barW=max?Math.round(d.count/max*100):0;
+    const paisesHtml=[...d.paises].map(paisBadge).join(' ')||'—';
     return`<tr style="${bg}">
-      <td style="font-size:16px;text-align:center;width:40px">${medal||`<span style="font-size:12px;color:var(--text3)">${i+1}</span>`}</td>
+      <td style="text-align:center;width:40px">${rankHtml}</td>
       <td>${avH(nombre)}${nombre}</td>
-      <td><span style="font-weight:700;font-size:18px;color:var(--blue)">${d.count}</span></td>
-      <td style="font-size:12px;color:var(--text2)">${paisesStr}</td>
+      <td><div style="display:flex;align-items:center;gap:10px"><span style="font-weight:700;font-size:18px;color:var(--blue);min-width:14px">${d.count}</span><div class="gt-bar-track"><div class="gt-bar-fill" style="width:${barW}%"></div></div></div></td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:4px">${paisesHtml}</div></td>
       <td style="font-size:12px;color:var(--text3)">${fmt(d.primerFecha)}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
     </tr>`;
@@ -241,7 +258,7 @@ function renderGTCiudad(){
   tb.innerHTML=filas.map((d,idx)=>{
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr class="tr-clickable" style="${bg}" onclick="openGTCityModal(this.dataset.pais,this.dataset.ciudad)" data-pais="${d.pais}" data-ciudad="${d.ciudad}">
-      <td style="font-size:12px"><span class="badge badge-blue">${d.pais}</span></td>
+      <td style="font-size:12px">${paisBadge(d.pais)}</td>
       <td><strong>${d.ciudad}</strong></td>
       <td style="font-weight:600;color:var(--blue)">${d.encuentros.size}</td>
       <td style="font-size:12px;color:var(--text2)">${d.personas.size} BEONers</td>
@@ -266,7 +283,7 @@ function renderGTHistorial(){
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr style="${bg}">
       <td>${avH(f.BEONer||'')}${f.BEONer||'—'}</td>
-      <td style="font-size:12px"><span class="badge badge-blue">${f.País||'—'}</span></td>
+      <td style="font-size:12px">${paisBadge(f.País)}</td>
       <td style="font-size:12px">${f.Ciudad||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${f.Proyecto||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}</td>

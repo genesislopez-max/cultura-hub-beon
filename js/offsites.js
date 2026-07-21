@@ -293,7 +293,7 @@ function renderOSPersona(){
     const barW=maxDias?Math.round(d.dias/maxDias*100):0;
     return`<tr class="tr-clickable" style="${bg}" onclick="openOSPerModal(this.dataset.nombre)" data-nombre="${nombre.replace(/"/g,'&quot;')}">
       <td>${avH(nombre)}${nombre}</td>
-      <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.count}</td>
+      <td><span class="os-count-chip">${d.count}</span></td>
       <td>${destChipsOS(d.destinos)}</td>
       <td><div style="display:flex;align-items:center;gap:11px"><span style="font-size:13px;font-weight:700;min-width:48px">${d.dias||0} días</span><div class="os-bar-track"><div class="os-bar-fill" style="width:${barW}%"></div></div></div></td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
@@ -317,7 +317,7 @@ function renderOSProyecto(){
     const barW=maxDias?Math.round((d.diasUnicos||0)/maxDias*100):0;
     return`<tr class="tr-clickable" style="${bg}" onclick="openOSProyModal(this.dataset.proy)" data-proy="${proy.replace(/"/g,'&quot;')}">
       <td><strong>${proy}</strong></td>
-      <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.viajesCount||d.viajesUnicos?.size||'—'}</td>
+      <td><span class="os-count-chip">${d.viajesCount||d.viajesUnicos?.size||'—'}</span></td>
       <td style="font-size:12px;color:var(--text2)">${[...d.personas].slice(0,4).join(', ')}${d.personas.size>4?` +${d.personas.size-4} más`:''}</td>
       <td>${destChipsOS(d.destinos)}</td>
       <td><div style="display:flex;align-items:center;gap:11px"><span style="font-size:13px;font-weight:700;min-width:48px">${d.diasUnicos||0} días</span><div class="os-bar-track"><div class="os-bar-fill" style="width:${barW}%"></div></div></div></td>

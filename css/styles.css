@@ -131,6 +131,35 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .gt-bar-track{flex:1;max-width:70px;height:5px;border-radius:999px;background:var(--border);overflow:hidden;}
 .gt-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--purple));}
 
+/* OFF SITES — fila de KPIs hero + tab bar, clases propias (mismo recipe
+   que las de Get Together, sin acoplar ambas secciones entre si). */
+.os-hero-grid{display:grid;grid-template-columns:1.25fr 1fr 1fr 1fr;gap:16px;margin-bottom:22px;}
+.os-hero-primary{position:relative;display:flex;flex-direction:column;justify-content:space-between;min-height:210px;border-radius:20px;padding:24px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);color:#fff;overflow:hidden;box-shadow:0 16px 36px -16px rgba(58,105,255,0.5);}
+.os-hero-glow{position:absolute;right:-30px;top:-30px;width:160px;height:160px;border-radius:999px;background:radial-gradient(circle,rgba(255,255,255,0.2),transparent 68%);}
+.os-hero-top{position:relative;display:flex;align-items:center;justify-content:space-between;}
+.os-hero-label{font-size:11px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;color:rgba(255,255,255,0.82);}
+.os-hero-icon{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.18);font-size:18px;}
+.os-hero-val{position:relative;font-size:44px;font-weight:800;letter-spacing:-0.03em;line-height:1;margin:0 0 5px;font-variant-numeric:tabular-nums;}
+.os-hero-sub{position:relative;font-size:13px;color:rgba(255,255,255,0.85);}
+.os-kpi-card{display:flex;flex-direction:column;justify-content:space-between;min-height:210px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:var(--shadow-xs);}
+.os-kpi-top{display:flex;align-items:center;justify-content:space-between;}
+.os-kpi-label{font-size:11px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;color:var(--text3);}
+.os-kpi-icon{width:36px;height:36px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.os-kpi-val{font-size:40px;font-weight:800;letter-spacing:-0.03em;line-height:1;margin:0 0 5px;color:var(--text);font-variant-numeric:tabular-nums;}
+.os-kpi-sub{font-size:13px;color:var(--text2);}
+
+.os-tabbar{display:flex;gap:6px;padding:6px;background:var(--bg);border:1px solid var(--border);border-radius:16px;margin-bottom:0;}
+.os-tab{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:11px 14px;border-radius:11px;border:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;font-weight:600;letter-spacing:-0.01em;color:var(--text2);background:transparent;transition:all 0.2s cubic-bezier(0.22,1,0.36,1);}
+.os-tab i{font-size:16px;}
+.os-tab.active{color:#fff;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);box-shadow:0 8px 18px -8px rgba(58,105,255,0.6);}
+
+/* OFF SITES — chips de destino y barra de días en Por persona/Por proyecto
+   (dentro de <table class="data-table">, sin tocar esa clase). */
+.os-dest-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:500;color:var(--text2);background:var(--bg);padding:4px 9px;border-radius:8px;}
+.os-dest-chip i{font-size:12px;color:var(--text3);}
+.os-bar-track{flex:1;max-width:80px;height:5px;border-radius:999px;background:var(--border);overflow:hidden;}
+.os-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--purple));}
+
 .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-xs);}
 .table-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .table-scroll{overflow-x:auto;}

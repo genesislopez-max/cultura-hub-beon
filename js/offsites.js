@@ -27,7 +27,7 @@ async function loadOffsites(){
 }
 
 function switchOSTab(tab,btn){
-  document.querySelectorAll('#page-offsites .tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('#page-offsites .os-tab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   document.getElementById('os-tab-persona').style.display=tab==='persona'?'':'none';
   document.getElementById('os-tab-proyecto').style.display=tab==='proyecto'?'':'none';
@@ -175,6 +175,16 @@ function closeOSPerModal(){
   document.getElementById('os-per-overlay').style.display='none';
 }
 
+// Chips de destino (ícono + nombre) con tope de 3 visibles — reemplaza el
+// string plano unido por comas que se usaba antes en Por persona/Por proyecto.
+function destChipsOS(destinos){
+  const arr=[...destinos];
+  if(!arr.length) return'<span style="font-size:12px;color:var(--text3)">Sin destino</span>';
+  const visibles=arr.slice(0,3).map(d=>`<span class="os-dest-chip"><i class="ti ti-map-pin"></i>${d}</span>`).join('');
+  const resto=arr.length>3?`<span style="font-size:12px;color:var(--text3)">+${arr.length-3}</span>`:'';
+  return`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">${visibles}${resto}</div>`;
+}
+
 function filtrarOSPersona(){ renderOSPersona(); }
 
 function calcDiasOS(f){
@@ -276,15 +286,16 @@ function renderOSPersona(){
     .sort((a,b)=>b[1].ultFecha.localeCompare(a[1].ultFecha));
 
   document.getElementById('os-badge-persona').textContent=`${filas.length} personas`;
+  const maxDias=filas.length?Math.max(...filas.map(([,d])=>d.dias)):0;
   const tb=document.getElementById('os-tbody-persona');
   tb.innerHTML=filas.map(([nombre,d],idx)=>{
     const bg=idx%2===0?'background:var(--bg2)':'';
-    const destStr=[...d.destinos].slice(0,3).join(', ')+(d.destinos.size>3?` +${d.destinos.size-3}`:'');
+    const barW=maxDias?Math.round(d.dias/maxDias*100):0;
     return`<tr class="tr-clickable" style="${bg}" onclick="openOSPerModal(this.dataset.nombre)" data-nombre="${nombre.replace(/"/g,'&quot;')}">
       <td>${avH(nombre)}${nombre}</td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.count}</td>
-      <td style="font-size:12px;color:var(--text2)">${destStr||'—'}</td>
-      <td style="font-size:13px">${d.dias||'—'} días</td>
+      <td>${destChipsOS(d.destinos)}</td>
+      <td><div style="display:flex;align-items:center;gap:11px"><span style="font-size:13px;font-weight:700;min-width:48px">${d.dias||0} días</span><div class="os-bar-track"><div class="os-bar-fill" style="width:${barW}%"></div></div></div></td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
@@ -299,16 +310,17 @@ function renderOSProyecto(){
     .map(([proy,d])=>[proy,{...d,destinos:new Set(Object.keys(d.destinos)),viajesCount:d.viajesUnicos.size}]);
 
   document.getElementById('os-badge-proyecto').textContent=`${filas.length} proyectos`;
+  const maxDias=filas.length?Math.max(...filas.map(([,d])=>d.diasUnicos||0)):0;
   const tb=document.getElementById('os-tbody-proyecto');
   tb.innerHTML=filas.map(([proy,d],idx)=>{
     const bg=idx%2===0?'background:var(--bg2)':'';
-    const destStr=[...d.destinos].slice(0,3).join(', ')+(d.destinos.size>3?` +${d.destinos.size-3}`:'');
+    const barW=maxDias?Math.round((d.diasUnicos||0)/maxDias*100):0;
     return`<tr class="tr-clickable" style="${bg}" onclick="openOSProyModal(this.dataset.proy)" data-proy="${proy.replace(/"/g,'&quot;')}">
       <td><strong>${proy}</strong></td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.viajesCount||d.viajesUnicos?.size||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${[...d.personas].slice(0,4).join(', ')}${d.personas.size>4?` +${d.personas.size-4} más`:''}</td>
-      <td style="font-size:12px;color:var(--text2)">${destStr||'—'}</td>
-      <td style="font-size:13px">${d.diasUnicos||'—'} días</td>
+      <td>${destChipsOS(d.destinos)}</td>
+      <td><div style="display:flex;align-items:center;gap:11px"><span style="font-size:13px;font-weight:700;min-width:48px">${d.diasUnicos||0} días</span><div class="os-bar-track"><div class="os-bar-fill" style="width:${barW}%"></div></div></div></td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
 }

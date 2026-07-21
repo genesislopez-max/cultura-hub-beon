@@ -627,16 +627,18 @@ function renderBenefPersonas(){
 
     const grupoBadge=grupo==='Engineers'?'badge-blue':'badge-purple';
     const nivelColors={'Spark':'badge-nivel-Spark','Ray':'badge-nivel-Ray','Lightning':'badge-nivel-Lightning','Thunder':'badge-nivel-Thunder','Storm':'badge-nivel-Storm'};
-    const nivelEmoji={'Spark':'⚡','Ray':'☀️','Lightning':'🌩','Thunder':'🌪','Storm':'🌊'};
+    const nivelIcon={'Spark':'ti-sparkles','Ray':'ti-sun','Lightning':'ti-bolt','Thunder':'ti-wind','Storm':'ti-cloud-storm'};
     const bg=idx%2===0?'background:var(--bg2)':'';
+    const activeW=beneficiosAccesibles.length?Math.round(asignados.length/beneficiosAccesibles.length*100):0;
 
-    return`<tr class="tr-clickable" style="${bg}" onclick="verBenefPersona('${nombre.replace(/'/g,"\\'")}','${grupo}','${nivel}')">
+    return`<tr class="tr-clickable benef-per-tr" style="${bg}" onclick="verBenefPersona('${nombre.replace(/'/g,"\\'")}','${grupo}','${nivel}')">
       <td>${avH(nombre)}${nombre}</td>
       <td><span class="badge ${grupoBadge}">${grupo}</span></td>
-      <td><span class="badge ${nivelColors[nivel]||'badge-gray'}">${nivel}</span></td>
+      <td><span class="badge ${nivelColors[nivel]||'badge-gray'} benef-per-nivel-badge"><i class="ti ${nivelIcon[nivel]||'ti-award'}"></i>${nivel}</span></td>
       <td style="font-size:13px">
         <span style="font-weight:600">${asignados.length}</span>
         <span style="color:var(--text3);font-size:11px"> asignados / ${beneficiosAccesibles.length} disponibles</span>
+        <div class="benef-per-bar-track"><div class="benef-per-bar-fill" style="width:${activeW}%"></div></div>
       </td>
       <td style="min-width:180px">
         <div style="display:flex;align-items:center;gap:8px">
@@ -647,8 +649,10 @@ function renderBenefPersonas(){
         </div>
       </td>
       <td style="white-space:nowrap">
-        <button onclick="event.stopPropagation();verBenefPersona('${nombre.replace(/'/g,"\'")}','${grupo}','${nivel}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Ver →</button>
-        <button onclick="event.stopPropagation();abrirAsignarBeneficioPara('${nombre.replace(/'/g,"\'")}')" style="background:none;border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-left:6px;">+ Asignar</button>
+        <div class="benef-per-actions">
+          <button class="benef-per-ver-btn" onclick="event.stopPropagation();verBenefPersona('${nombre.replace(/'/g,"\'")}','${grupo}','${nivel}')">Ver<i class="ti ti-arrow-right"></i></button>
+          <button class="benef-per-asignar-btn" onclick="event.stopPropagation();abrirAsignarBeneficioPara('${nombre.replace(/'/g,"\'")}')"><i class="ti ti-plus"></i>Asignar</button>
+        </div>
       </td>
     </tr>`;
   }).join('');

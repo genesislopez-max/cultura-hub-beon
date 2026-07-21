@@ -1397,6 +1397,27 @@
   </div>
 </div>
 
+<!-- BENEFICIOS — DETALLE DE PERSONA (tarjeta centrada, ver verBenefPersona() en side-panel.js) -->
+<div class="bp-detalle-overlay" id="bp-detalle-overlay" onclick="closeBenefPersonaDetalle(event)">
+  <div class="bp-detalle-card" onclick="event.stopPropagation()">
+    <div class="bp-detalle-header">
+      <div class="bp-detalle-glow"></div>
+      <div class="bp-detalle-head-row">
+        <div class="bp-detalle-avatar" id="bpd-avatar">—</div>
+        <div class="bp-detalle-head-mid">
+          <div class="bp-detalle-name" id="bpd-nombre">—</div>
+          <div class="bp-detalle-pills" id="bpd-pills"></div>
+        </div>
+        <button class="bp-detalle-close" onclick="closeBenefPersonaDetalle()"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="bp-detalle-stats" id="bpd-stats"></div>
+    </div>
+    <div class="bp-detalle-body" id="bpd-body">
+      <div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px;">Cargando...</div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
   <div class="modal" onclick="event.stopPropagation()">

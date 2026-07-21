@@ -1,12 +1,25 @@
-async function verBenefPersona(nombre, grupo, nivel){
-  const panel=document.getElementById('sp-panel');
-  const overlay=document.getElementById('sp-overlay');
-  const nivelEmoji={'Spark':'⚡','Ray':'☀️','Lightning':'🌩','Thunder':'🌪','Storm':'🌊'};
+// Tarjeta con detalle de la persona (Beneficios → "Por persona"). Modal
+// propio y centrado (#bp-detalle-overlay) — NO reusa el panel lateral
+// genérico #sp-panel, que también usa verAVPersona() en
+// actividades-virtuales.js con contenido totalmente distinto.
+function bpEmptyBox(icon, texto, accion){
+  return`<div class="bp-detalle-empty">
+    <div class="bp-detalle-empty-icon"><i class="ti ${icon}"></i></div>
+    <div class="bp-detalle-empty-text">${texto}</div>
+    ${accion?`<button class="bp-detalle-empty-btn" onclick="${accion.onclick}"><i class="ti ti-plus"></i>${accion.label}</button>`:''}
+  </div>`;
+}
 
-  document.getElementById('sp-nombre').textContent=nombre;
-  document.getElementById('sp-subtitle').textContent=`${grupo} · ${nivel}`;
-  document.getElementById('sp-body').innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px;">Cargando...</div>';
-  panel.classList.add('open');
+async function verBenefPersona(nombre, grupo, nivel){
+  const overlay=document.getElementById('bp-detalle-overlay');
+
+  document.getElementById('bpd-avatar').textContent=ini(nombre);
+  document.getElementById('bpd-nombre').textContent=nombre;
+  document.getElementById('bpd-pills').innerHTML=`
+    <span class="bp-detalle-pill"><i class="ti ti-users"></i>${grupo}</span>
+    <span class="bp-detalle-pill"><i class="ti ${NIVEL_ICONS[nivel]||'ti-award'}"></i>${nivel}</span>`;
+  document.getElementById('bpd-stats').innerHTML='';
+  document.getElementById('bpd-body').innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px;">Cargando...</div>';
   overlay.classList.add('open');
   document.body.style.overflow='hidden';
 
@@ -56,15 +69,31 @@ async function verBenefPersona(nombre, grupo, nivel){
   else if(awVeces<awRegla.asistenciasConVuelo) awCobertura=`${awRegla.asistenciasConVuelo-awVeces} restante${awRegla.asistenciasConVuelo-awVeces!==1?'s':''} con vuelo`;
   else awCobertura='Sin cobertura de vuelo disponible';
 
+  const activosCount=benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').length;
+  const nombreEscJs=nombre.replace(/'/g,"\\'");
+
+  document.getElementById('bpd-stats').innerHTML=`
+    <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">${activosCount}</div><div class="bp-detalle-stat-label">Beneficios</div></div>
+    <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">$${usadoBenef.toLocaleString('es-AR')}</div><div class="bp-detalle-stat-label">Presupuesto</div></div>
+    <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">${osRecs.length}</div><div class="bp-detalle-stat-label">Viajes</div></div>`;
+
   let html='';
 
   // ── Beneficios asignados
-  html+=`<div class="side-panel-section">
-    <div class="side-panel-section-title">Beneficios asignados (${benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').length} activos)</div>
-    ${benefAsig.length?benefAsig.map(r=>{
+  html+=`<div class="bp-detalle-section-head">
+    <div class="bp-detalle-section-left">
+      <div class="bp-detalle-section-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-gift"></i></div>
+      <span class="bp-detalle-section-title">Beneficios asignados</span>
+      <span class="bp-detalle-section-badge" style="background:var(--tinte-eng);color:var(--blue)">${activosCount} activos</span>
+    </div>
+    <button class="bp-detalle-assign-btn" onclick="abrirAsignarBeneficioPara('${nombreEscJs}')"><i class="ti ti-plus"></i>Asignar</button>
+  </div>`;
+  if(benefAsig.length){
+    html+=`<div class="bp-detalle-rows">${benefAsig.map(r=>{
       const bId=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
       const benef=cacheBeneficiosRaw.find(b=>b.id===bId||b.fields.Beneficio===bId);
       const bNombre=benef?.fields.Beneficio||bId||'—';
+      const cat=estiloCategoria(benef?.fields.Categoria);
       // Prioridad al Monto particular de esta asignación (editable) sobre el
       // valor fijo del catálogo — mismo criterio que se usa para sumar el
       // total usado más arriba.
@@ -81,25 +110,33 @@ async function verBenefPersona(nombre, grupo, nivel){
         const partes=[fechaAct?`Usado desde ${fmt(fechaAct)}`:'',fechaBaja?`Baja: ${fmt(fechaBaja)}`:''].filter(Boolean);
         fechaLabel=partes.length?partes.join(' · '):'Sin fecha registrada';
       }
-      return`<div class="side-panel-row" style="flex-direction:column;align-items:flex-start;gap:3px">
-        <div style="display:flex;justify-content:space-between;align-items:center;width:100%">
-          <span>${bNombre}</span>
-          <span style="display:flex;gap:6px;align-items:center">
-            ${valor?`<span style="font-size:12px;color:var(--text3)">${valor}</span>`:''}
-            <span class="badge ${activo?'badge-green':'badge-amber'}" style="font-size:11px">${activo?'Activo':'Inactivo'}</span>
-            <button onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar" style="background:none;border:none;cursor:pointer;color:var(--text3);padding:2px;line-height:1;"><i class="ti ti-pencil"></i></button>
-            <button onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar" style="background:none;border:none;cursor:pointer;color:var(--critical);padding:2px;line-height:1;"><i class="ti ti-trash"></i></button>
-          </span>
+      return`<div class="bp-detalle-row">
+        <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
+        <div class="bp-detalle-row-mid">
+          <div class="bp-detalle-row-title">${bNombre}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
+          <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}</div>
         </div>
-        <span style="font-size:11px;font-weight:600;color:var(--text3)">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}</span>
+        <span class="badge ${activo?'badge-green':'badge-amber'}">${activo?'Activo':'Inactivo'}</span>
+        <div class="bp-detalle-actions">
+          <button class="bp-detalle-action-btn" onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar"><i class="ti ti-pencil"></i></button>
+          <button class="bp-detalle-action-btn danger" onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar"><i class="ti ti-trash"></i></button>
+        </div>
       </div>`;
-    }).join(''):`<div class="sp-empty">Sin beneficios asignados</div>`}
-  </div>`;
+    }).join('')}</div>`;
+  } else {
+    html+=bpEmptyBox('ti-gift','Sin beneficios asignados',null);
+  }
 
   // ── Capacitaciones
-  html+=`<div class="side-panel-section">
-    <div class="side-panel-section-title">Capacitaciones</div>
-    ${topeCap>0?`<div style="margin-bottom:10px">
+  const capEstilo=estiloCategoria('Aprendizaje');
+  html+=`<div class="bp-detalle-section-head">
+    <div class="bp-detalle-section-left">
+      <div class="bp-detalle-section-icon" style="background:${capEstilo.tinte};color:${capEstilo.accent}"><i class="ti ${capEstilo.icon}"></i></div>
+      <span class="bp-detalle-section-title">Capacitaciones</span>
+    </div>
+  </div>`;
+  if(topeCap>0){
+    html+=`<div style="margin:0 2px 12px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px">
         <span>Capacitación usada (anual)</span>
         <span style="font-weight:600;color:${capPct>=90?'var(--critical)':capPct>=70?'var(--warning)':'var(--text)'}">$${totalCap.toLocaleString('es-AR')} / $${topeCap.toLocaleString('es-AR')}</span>
@@ -107,63 +144,105 @@ async function verBenefPersona(nombre, grupo, nivel){
       <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
         <div style="width:${capPct}%;height:100%;background:${capBarColor};border-radius:3px;transition:width 0.3s"></div>
       </div>
-    </div>`:''}
-    ${caps.length?caps.map(r=>{
+    </div>`;
+  }
+  if(caps.length){
+    html+=`<div class="bp-detalle-rows">${caps.map(r=>{
       const f=r.fields;
-      return`<div class="side-panel-row" style="flex-direction:column;align-items:flex-start;gap:3px">
-        <div style="display:flex;justify-content:space-between;width:100%">
-          <span style="font-weight:500">${f.Descripción||'—'}</span>
-          <span style="font-weight:600;color:var(--blue)">$${Number(f.Monto||0).toLocaleString('es-AR')}</span>
+      return`<div class="bp-detalle-row">
+        <div class="bp-detalle-row-icon" style="background:${capEstilo.tinte};color:${capEstilo.accent}"><i class="ti ${capEstilo.icon}"></i></div>
+        <div class="bp-detalle-row-mid">
+          <div class="bp-detalle-row-title">${f.Descripción||'—'}</div>
+          <div class="bp-detalle-row-sub">${f.Fecha?fmt(f.Fecha):''}${f['URL del curso']?` · <a href="${f['URL del curso']}" target="_blank" style="color:var(--blue)">Ver curso →</a>`:''}</div>
         </div>
-        <div style="display:flex;gap:12px;font-size:11px;color:var(--text3)">
-          ${f.Fecha?`<span>${fmt(f.Fecha)}</span>`:''}
-          ${f['URL del curso']?`<a href="${f['URL del curso']}" target="_blank" style="color:var(--blue)">Ver curso →</a>`:''}
-        </div>
+        <div class="bp-detalle-row-meta" style="font-weight:700;color:var(--blue)">$${Number(f.Monto||0).toLocaleString('es-AR')}</div>
       </div>`;
-    }).join(''):`<div class="sp-empty">Sin capacitaciones registradas</div>`}
-  </div>`;
+    }).join('')}</div>`;
+  } else {
+    html+=bpEmptyBox(capEstilo.icon,'Sin capacitaciones registradas',null);
+  }
 
   // ── Ambassador Week
-  html+=`<div class="side-panel-section">
-    <div class="side-panel-section-title">Ambassador Week · ${awVeces} asistencia${awVeces!==1?'s':''}</div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:8px">${awCobertura}</div>
-    ${awRecs.length?awRecs.map(r=>{
+  html+=`<div class="bp-detalle-section-head">
+    <div class="bp-detalle-section-left">
+      <div class="bp-detalle-section-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-star"></i></div>
+      <span class="bp-detalle-section-title">Ambassador Week</span>
+      <span class="bp-detalle-section-badge" style="background:var(--tinte-amber-icon);color:var(--amber)">${awVeces} asistencia${awVeces!==1?'s':''}</span>
+    </div>
+  </div>
+  <div class="bp-detalle-section-note">${awCobertura}</div>`;
+  if(awRecs.length){
+    html+=`<div class="bp-detalle-rows">${awRecs.map(r=>{
       const f=r.fields;
       const edicion=getEdicionAW(f)||'—';
       let pctRaw2=f['Porcentaje cubierto'];
       const pct=pctRaw2!=null?(pctRaw2<=1?Math.round(pctRaw2*100):Number(pctRaw2)):null;
-      return`<div class="side-panel-row">
-        <span>${edicion}</span>
-        <span style="font-size:12px;font-weight:600;color:${pct===50?'var(--blue)':pct===100?'var(--green)':'var(--text2)'}">${pct!=null?pct+'% vuelo cubierto':'—'}</span>
+      return`<div class="bp-detalle-row">
+        <div class="bp-detalle-row-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-star"></i></div>
+        <div class="bp-detalle-row-mid"><div class="bp-detalle-row-title">${edicion}</div></div>
+        <div class="bp-detalle-row-meta" style="font-weight:600;color:${pct===50?'var(--blue)':pct===100?'var(--green)':'var(--text2)'}">${pct!=null?pct+'% vuelo':'—'}</div>
       </div>`;
-    }).join(''):`<div class="sp-empty">Sin asistencias registradas</div>`}
-  </div>`;
+    }).join('')}</div>`;
+  } else {
+    html+=bpEmptyBox('ti-star','Sin asistencias registradas',{onclick:`abrirRegistrarAWPara('${nombreEscJs}')`,label:'Registrar'});
+  }
 
   // ── Off Sites
-  html+=`<div class="side-panel-section">
-    <div class="side-panel-section-title">Off Sites · ${osRecs.length} viaje${osRecs.length!==1?'s':''}</div>
-    ${osRecs.length?osRecs.map(r=>{
-      const f=r.fields;
-      return`<div class="side-panel-row">
-        <span><strong>${f.Destino||'—'}</strong> <span style="font-size:11px;color:var(--text3)">${f.Proyecto||''}</span></span>
-        <span style="font-size:12px;color:var(--text2)">${fmt(f['Fecha inicio'])}${f['Días']?' · '+f['Días']+'d':''}</span>
-      </div>`;
-    }).join(''):`<div class="sp-empty">Sin off sites registrados</div>`}
+  html+=`<div class="bp-detalle-section-head">
+    <div class="bp-detalle-section-left">
+      <div class="bp-detalle-section-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-plane"></i></div>
+      <span class="bp-detalle-section-title">Off Sites</span>
+      <span class="bp-detalle-section-badge" style="background:var(--tinte-eng);color:var(--blue)">${osRecs.length} viaje${osRecs.length!==1?'s':''}</span>
+    </div>
   </div>`;
+  if(osRecs.length){
+    html+=`<div class="bp-detalle-rows">${osRecs.map(r=>{
+      const f=r.fields;
+      return`<div class="bp-detalle-row">
+        <div class="bp-detalle-row-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-plane"></i></div>
+        <div class="bp-detalle-row-mid">
+          <div class="bp-detalle-row-title">${f.Destino||'—'}</div>
+          <div class="bp-detalle-row-sub">${f.Proyecto||''}</div>
+        </div>
+        <div class="bp-detalle-row-meta">${fmt(f['Fecha inicio'])}${f['Días']?' · '+f['Días']+'d':''}</div>
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    html+=bpEmptyBox('ti-plane','Sin off sites registrados',{onclick:`abrirRegistrarOffSitePara('${nombreEscJs}')`,label:'Registrar'});
+  }
 
   // ── Get Together
-  html+=`<div class="side-panel-section">
-    <div class="side-panel-section-title">Get Togethers · ${gtRecs.length}</div>
-    ${gtRecs.length?gtRecs.map(r=>{
-      const f=r.fields;
-      return`<div class="side-panel-row">
-        <span><strong>${f.Ciudad||'—'}</strong>${f.País?' <span style="font-size:11px;color:var(--text3)">('+f.País+')</span>':''} <span style="font-size:11px;color:var(--text3)">${f.Proyecto||''}</span></span>
-        <span style="font-size:12px;color:var(--text2)">${fmt(f.Fecha)}</span>
-      </div>`;
-    }).join(''):`<div class="sp-empty">Sin get togethers registrados</div>`}
+  html+=`<div class="bp-detalle-section-head">
+    <div class="bp-detalle-section-left">
+      <div class="bp-detalle-section-icon" style="background:var(--tinte-pink);color:var(--text-pink-accent)"><i class="ti ti-users"></i></div>
+      <span class="bp-detalle-section-title">Get Togethers</span>
+      <span class="bp-detalle-section-badge" style="background:var(--tinte-pink);color:var(--text-pink-accent)">${gtRecs.length}</span>
+    </div>
   </div>`;
+  if(gtRecs.length){
+    html+=`<div class="bp-detalle-rows">${gtRecs.map(r=>{
+      const f=r.fields;
+      return`<div class="bp-detalle-row">
+        <div class="bp-detalle-row-icon" style="background:var(--tinte-pink);color:var(--text-pink-accent)"><i class="ti ti-users"></i></div>
+        <div class="bp-detalle-row-mid">
+          <div class="bp-detalle-row-title">${f.Ciudad||'—'}${f['País']?` <span style="font-weight:500;color:var(--text3)">(${f['País']})</span>`:''}</div>
+          <div class="bp-detalle-row-sub">${f.Proyecto||''}</div>
+        </div>
+        <div class="bp-detalle-row-meta">${fmt(f.Fecha)}</div>
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    html+=bpEmptyBox('ti-users','Sin get togethers registrados',{onclick:`abrirRegistrarGetTogetherPara('${nombreEscJs}')`,label:'Registrar'});
+  }
 
-  document.getElementById('sp-body').innerHTML=html;
+  document.getElementById('bpd-body').innerHTML=html;
+}
+
+function closeBenefPersonaDetalle(e){
+  if(!e||e.target===document.getElementById('bp-detalle-overlay')){
+    document.getElementById('bp-detalle-overlay').classList.remove('open');
+    document.body.style.overflow='';
+  }
 }
 
 function toggleCampoMotivoBaja(){

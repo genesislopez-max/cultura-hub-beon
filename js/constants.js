@@ -108,6 +108,7 @@ const rolColor={Engineer:'badge-blue',TEM:'badge-purple',Manager:'badge-amber',L
 const CORE_TEAM_ROLES=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
 const NIVELES=['Spark','Ray','Lightning','Thunder','Storm'];
 const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
+const NIVEL_ICONS={Spark:'ti-sparkles',Ray:'ti-sun',Lightning:'ti-bolt',Thunder:'ti-wind',Storm:'ti-cloud-storm'};
 const LOYALTY_ORDER=['Spark','Ray','Lightning','Thunder','Storm'];
 const AW_RULES={
   Spark:  {asistenciasConVuelo:1, limitadoConVuelo:true},

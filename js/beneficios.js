@@ -528,6 +528,28 @@ function abrirAsignarBeneficioPara(nombre){
   });
 }
 
+// Mismos atajos que abrirAsignarBeneficioPara — se usan desde los estados
+// vacíos de la tarjeta de detalle de persona (ver verBenefPersona() en
+// side-panel.js) para no tener que volver a buscar a la persona ahí.
+function abrirRegistrarAWPara(nombre){
+  _openFormModal({...FORMS['ambassadors'], onMount:()=>{
+    const sel=document.getElementById('f-aw-persona');
+    if(sel) sel.value=nombre;
+  }});
+}
+function abrirRegistrarOffSitePara(nombre){
+  _openFormModal({...FORMS['offsites'], onMount:()=>{
+    const sel=document.getElementById('f-os-persona');
+    if(sel) sel.value=nombre;
+  }});
+}
+function abrirRegistrarGetTogetherPara(nombre){
+  _openFormModal({...FORMS['gettogether'], onMount:()=>{
+    const sel=document.getElementById('f-gt-persona');
+    if(sel) sel.value=nombre;
+  }});
+}
+
 function filtrarBenefPersonas(){ pagBenefPersonas.page=0; renderBenefPersonas(); }
 
 function cambiarPaginaBenefPersonas(dir){
@@ -627,14 +649,13 @@ function renderBenefPersonas(){
 
     const grupoBadge=grupo==='Engineers'?'badge-blue':'badge-purple';
     const nivelColors={'Spark':'badge-nivel-Spark','Ray':'badge-nivel-Ray','Lightning':'badge-nivel-Lightning','Thunder':'badge-nivel-Thunder','Storm':'badge-nivel-Storm'};
-    const nivelIcon={'Spark':'ti-sparkles','Ray':'ti-sun','Lightning':'ti-bolt','Thunder':'ti-wind','Storm':'ti-cloud-storm'};
     const bg=idx%2===0?'background:var(--bg2)':'';
     const activeW=beneficiosAccesibles.length?Math.round(asignados.length/beneficiosAccesibles.length*100):0;
 
     return`<tr class="tr-clickable benef-per-tr" style="${bg}" onclick="verBenefPersona('${nombre.replace(/'/g,"\\'")}','${grupo}','${nivel}')">
       <td>${avH(nombre)}${nombre}</td>
       <td><span class="badge ${grupoBadge}">${grupo}</span></td>
-      <td><span class="badge ${nivelColors[nivel]||'badge-gray'} benef-per-nivel-badge"><i class="ti ${nivelIcon[nivel]||'ti-award'}"></i>${nivel}</span></td>
+      <td><span class="badge ${nivelColors[nivel]||'badge-gray'} benef-per-nivel-badge"><i class="ti ${NIVEL_ICONS[nivel]||'ti-award'}"></i>${nivel}</span></td>
       <td style="font-size:13px">
         <span style="font-weight:600">${asignados.length}</span>
         <span style="color:var(--text3);font-size:11px"> asignados / ${beneficiosAccesibles.length} disponibles</span>

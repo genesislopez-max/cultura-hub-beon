@@ -110,7 +110,10 @@ function initGoogleSignIn(){
     hd:ALLOWED_DOMAIN,
   });
   const btn=document.getElementById('google-signin-btn');
-  if(btn) google.accounts.id.renderButton(btn,{theme:'outline',size:'large',text:'signin_with',shape:'rectangular'});
+  // El botón real de Google se renderiza invisible (ver .login-gbtn-real)
+  // centrado sobre el botón con el estilo del mockup (.login-gbtn-visual) —
+  // así el click cae siempre sobre el widget oficial de Google.
+  if(btn) google.accounts.id.renderButton(btn,{theme:'outline',size:'large',text:'signin_with',shape:'rectangular',width:380});
 }
 
 // Se llama al arrancar — si ya hay sesión guardada (y no venció), no vuelve a
@@ -119,7 +122,9 @@ function initGoogleSignIn(){
 function checkSesion(){
   if(!getIdToken()||sesionExpirada()){
     localStorage.removeItem('hub_session_token');
-    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('login-screen').style.display='block';
+    const anioEl=document.getElementById('login-year');
+    if(anioEl) anioEl.textContent=new Date().getFullYear();
     initGoogleSignIn();
     return false;
   }

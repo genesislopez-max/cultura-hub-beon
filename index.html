@@ -23,15 +23,58 @@
 <body>
 <div class="app">
   <!-- PANTALLA DE LOGIN -->
-<div class="config-screen" id="login-screen" style="display:none">
-  <div class="config-logo">
-    <img src="assets/beon-logo.png" alt="BEON.tech" class="config-logo-img">
-  </div>
-  <div class="config-card">
-    <div class="config-title">Welcome</div>
-    <div id="google-signin-btn" style="display:flex;justify-content:center;"></div>
-    <div class="config-hint" id="login-error" style="display:none;color:var(--critical)"></div>
-    <div class="config-sub">Iniciá sesión con tu cuenta de Google de BEON.tech para entrar al Hub.</div>
+<div class="login-screen" id="login-screen" style="display:none">
+  <div class="login-grid">
+
+    <!-- Panel de marca -->
+    <div class="login-brand">
+      <div class="login-halo login-halo-1"></div>
+      <div class="login-halo login-halo-2"></div>
+      <div class="login-halo login-halo-3"></div>
+
+      <div class="login-brand-logo">
+        <img src="assets/beon-logo.png" alt="BEON.tech">
+      </div>
+
+      <div class="login-brand-mid">
+        <div class="login-brand-pill"><span class="login-brand-dot"></span>BEON.tech Hub</div>
+        <h1 class="login-brand-h1">El equipo,<br>en un solo lugar.</h1>
+        <div class="login-brand-rule"></div>
+        <p class="login-brand-p">Beneficios, cumpleaños, get togethers y off sites de todo BEON — reunidos en un solo Hub para el equipo.</p>
+      </div>
+
+      <div class="login-brand-spacer"></div>
+    </div>
+
+    <!-- Panel de autenticación -->
+    <div class="login-auth">
+      <div class="login-auth-inner">
+        <div class="login-auth-logo"><img src="assets/beon-logo.png" alt="BEON.tech"></div>
+        <div class="login-auth-eyebrow">Bienvenido de nuevo</div>
+        <h2 class="login-auth-h2">Ingresá al Hub</h2>
+        <p class="login-auth-p">Usá tu cuenta de Google de <strong>BEON.tech</strong> para acceder.</p>
+
+        <div class="login-gbtn-wrap">
+          <div class="login-gbtn-visual" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+            <span>Iniciar sesión con Google</span>
+          </div>
+          <div id="google-signin-btn" class="login-gbtn-real"></div>
+        </div>
+
+        <div class="login-error" id="login-error" style="display:none"></div>
+
+        <div class="login-divider"><span></span><em>acceso seguro</em><span></span></div>
+
+        <div class="login-security-note">
+          <i class="ti ti-shield-check"></i>
+          <div>Solo cuentas <strong>@beon.tech</strong> pueden acceder. Si tenés problemas, escribí a People Ops.</div>
+        </div>
+
+        <div class="login-footer">© <span id="login-year"></span> BEON.tech · Uso interno del equipo</div>
+      </div>
+    </div>
+
   </div>
 </div>
 

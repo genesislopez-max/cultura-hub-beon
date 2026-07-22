@@ -557,6 +557,60 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .nivel-option:hover{background:var(--bg);}
 .nivel-pending-banner{background:#FFF8E1;border:1px solid rgba(154,103,0,0.3);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;color:#9a6700;margin-bottom:18px;}
 .nivel-pending-banner i{font-size:18px;flex-shrink:0;}
+
+/* ─── Engineers & Tech — rediseño (claude.ai/design "Engineers y Tech.dc.html") ─
+   Scoped a esta pestaña sola (prefijo et-); Core Team sigue con .data-table. */
+.et-kpi-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
+.et-kpi-card{display:flex;align-items:center;gap:11px;padding:11px 16px 11px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-xs);}
+.et-kpi-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;font-size:15px;}
+.et-kpi-val{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.02em;line-height:1;}
+.et-kpi-label{font-size:11.5px;color:var(--text3);font-weight:600;margin-top:2px;}
+
+.et-panel{background:var(--bg2);border:1px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:var(--shadow-md);}
+.et-toolbar{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:18px 24px;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.et-search-wrap{position:relative;flex:1 1 260px;min-width:220px;max-width:360px;}
+.et-search-wrap i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:15px;}
+.et-search{width:100%;height:42px;padding:0 12px 0 38px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;font-size:13.5px;outline:none;transition:border-color 0.15s,box-shadow 0.15s;}
+.et-search:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(58,105,255,.14);}
+.et-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.et-sel-wrap{position:relative;display:flex;align-items:center;}
+.et-sel-wrap .et-sel-icon{position:absolute;left:12px;color:var(--text2);font-size:13px;pointer-events:none;}
+.et-sel-wrap .et-sel-chevron{position:absolute;right:11px;color:var(--text2);font-size:12px;pointer-events:none;}
+.et-sel{appearance:none;-webkit-appearance:none;height:40px;padding:0 32px 0 33px;border-radius:11px;border:1px solid var(--border);background:var(--bg);color:var(--text2);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:500;outline:none;cursor:pointer;min-width:150px;transition:border-color 0.15s,background 0.15s,color 0.15s;}
+.et-sel.et-active{border-color:rgba(58,105,255,.5);background:rgba(58,105,255,.08);color:var(--blue);}
+
+.et-subhead{display:flex;align-items:center;gap:11px;padding:16px 24px 12px;}
+.et-subhead-title{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.02em;}
+.et-subhead-count{font-size:12px;font-weight:600;color:var(--blue);background:rgba(58,105,255,.1);padding:4px 11px;border-radius:999px;}
+
+.et-thead{display:grid;grid-template-columns:2.4fr 1.15fr 1.3fr 1.7fr 1.4fr 1.6fr 40px;gap:14px;padding:11px 24px;background:var(--bg);border-top:1px solid var(--border);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);}
+.et-rows{display:flex;flex-direction:column;}
+.et-empty{padding:40px 24px;text-align:center;color:var(--text3);font-size:13px;}
+.et-row{display:grid;grid-template-columns:2.4fr 1.15fr 1.3fr 1.7fr 1.4fr 1.6fr 40px;gap:14px;padding:12px 24px;align-items:center;border-bottom:1px solid var(--border);transition:background 0.15s;}
+.et-row:last-child{border-bottom:none;}
+.et-row:hover{background:var(--bg);}
+.et-row:hover .et-open{opacity:1;}
+.et-name-cell{display:flex;align-items:center;gap:12px;min-width:0;}
+.et-name-cell .avatar{width:38px;height:38px;font-size:12px;margin-right:0;flex-shrink:0;}
+.et-name-info{min-width:0;}
+.et-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+.et-name:hover{text-decoration:underline;}
+.et-email{font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.et-proj-cell{display:flex;align-items:center;gap:9px;min-width:0;}
+.et-proj-chip{flex:none;width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font-size:10px;font-weight:800;color:#fff;}
+.et-proj-name{font-size:13px;color:var(--text);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.et-ten-cell{display:flex;align-items:center;gap:7px;}
+.et-ten-cell i{font-size:13px;}
+.et-ten-cell span{font-size:13px;color:var(--text);font-weight:500;}
+.et-mgr-cell{display:flex;align-items:center;gap:9px;min-width:0;}
+.et-mgr-avatar{flex:none;width:26px;height:26px;border-radius:999px;display:grid;place-items:center;font-size:10px;font-weight:700;color:var(--text2);background:var(--bg);}
+.et-mgr-name{font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.et-open{display:flex;justify-content:flex-end;opacity:.35;transition:opacity 0.15s;}
+.et-open button{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:grid;place-items:center;font-size:15px;transition:border-color 0.15s,color 0.15s;}
+.et-open button:hover{border-color:var(--blue);color:var(--blue);}
+.nivel-badge-et{padding:4px 11px 4px 9px;border-radius:999px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity 0.15s;white-space:nowrap;}
+.nivel-badge-et:hover{opacity:0.85;}
+.nivel-badge-et i{font-size:13px;}
 .meet-modal{background:var(--bg2);border-radius:16px;width:600px;max-width:94vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
 .meet-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);}
 .meet-title{font-size:16px;font-weight:700;margin-bottom:4px;}

@@ -8,7 +8,7 @@ function renderPagina(grupo){
   if(!tb) return;
   const colspan=7;
   if(!data.length){
-    tb.innerHTML=`<tr class="empty-row"><td colspan="${colspan}">Sin resultados</td></tr>`;
+    tb.innerHTML=grupo==='eng'?`<div class="et-empty">Sin resultados</div>`:`<tr class="empty-row"><td colspan="${colspan}">Sin resultados</td></tr>`;
     if(bar) bar.style.display='none';
     return;
   }
@@ -61,18 +61,56 @@ function nombreClickHtml(r){
   return`${avH(r.fields.Nombre)}<span class="persona-nombre-link" onclick="verFichaPersona('${r.id}')">${nombre}</span>`;
 }
 
+// Diseño "Engineers y Tech.dc.html" (claude.ai/design) — layout en grid en vez
+// de <table>, propio de esta pestaña; Core Team sigue usando rowHtml() sin cambios.
+const ET_PROJ_COLORS=['var(--blue)','var(--purple)','var(--green)','var(--amber)','var(--text-pink-accent)','var(--text-teal-accent)'];
+function projColorEng(nombre){
+  let sum=0; for(let i=0;i<nombre.length;i++) sum+=nombre.charCodeAt(i);
+  return ET_PROJ_COLORS[sum%ET_PROJ_COLORS.length];
+}
+function projInitialEng(nombre){
+  const m=(nombre||'').match(/[A-Za-z0-9]/);
+  return m?m[0].toUpperCase():'·';
+}
+function nivelBadgeHtmlEng(recordId, nivelActual){
+  const nivel=nivelActual||'Spark';
+  const inner=n=>`<i class="ti ${NIVEL_ICONS[n]||'ti-award'}"></i>${n}`;
+  return`<div class="nivel-select-wrap" id="nw-${recordId}">
+    <button class="nivel-badge-et badge-nivel-${nivel}" onclick="toggleNivelDropdown('${recordId}')">
+      ${inner(nivel)}
+    </button>
+    <div class="nivel-dropdown" id="nd-${recordId}" style="display:none">
+      ${NIVELES.map(n=>`<div class="nivel-option" onclick="cambiarNivel('${recordId}','${n}','${nivel}',event)">
+        <span class="nivel-badge-et badge-nivel-${n}" style="cursor:default">${inner(n)}</span>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
 function rowHtmlEng(r){
-  const f=r.fields, rol=f['Rol en empresa']||'';
+  const f=r.fields, rol=f['Rol en empresa']||'Engineer';
   const nivel=f['Nivel Loyalty']||'Spark';
-  return`<tr>
-    <td>${nombreClickHtml(r)}</td>
-    <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
-    <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
-    <td>${nivelBadgeHtml(r.id, nivel)}</td>
-    <td style="font-size:12px">${f.Proyecto||'—'}</td>
-    <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
-    <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
-  </tr>`;
+  const nombre=f.Nombre||'—', manager=f.Manager||'', proyecto=f.Proyecto||'';
+  const tenure=calcAntiguedad(f['Fecha de ingreso']);
+  const newish=/mes|<\s*1/.test(tenure)&&!/año/.test(tenure);
+  return`<div class="et-row">
+    <div class="et-name-cell">
+      ${avH(nombre)}
+      <div class="et-name-info">
+        <div class="et-name" onclick="verFichaPersona('${r.id}')">${nombre}</div>
+        <div class="et-email">${f.Mail||'—'}</div>
+      </div>
+    </div>
+    <div>${rol?`<span class="badge badge-blue"><i class="ti ti-code"></i>${rol}</span>`:'—'}</div>
+    <div>${nivelBadgeHtmlEng(r.id, nivel)}</div>
+    <div class="et-proj-cell">${proyecto
+      ?`<span class="et-proj-chip" style="background:${projColorEng(proyecto)}">${projInitialEng(proyecto)}</span><span class="et-proj-name">${proyecto}</span>`
+      :'<span style="color:var(--text3);font-size:12px">—</span>'}</div>
+    <div class="et-ten-cell"><i class="ti ti-clock" style="color:${newish?'var(--green)':'var(--text3)'}"></i><span>${tenure}</span></div>
+    <div class="et-mgr-cell">${manager
+      ?`<span class="et-mgr-avatar">${ini(manager)}</span><span class="et-mgr-name">${manager}</span>`
+      :'<span style="color:var(--text3);font-size:12px">—</span>'}</div>
+    <div class="et-open"><button onclick="event.stopPropagation();verFichaPersona('${r.id}')"><i class="ti ti-chevron-right"></i></button></div>
+  </div>`;
 }
 
 function rowHtml(r){
@@ -195,6 +233,7 @@ async function loadPersonas(){
   document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;
   pagState.eng={page:0,data:allEng,all:allEng};
   renderPagina('eng');
+  renderETKpi(allEng);
 
   // Tabla Core Team
   document.getElementById('badge-personas-core').textContent=`${coreTeam.length} personas`;
@@ -256,14 +295,17 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   document.getElementById('nd-'+recordId).style.display='none';
   if(nuevoNivel===nivelAnterior) return;
 
-  // Actualizar badge visualmente de inmediato
+  // Actualizar badge visualmente de inmediato — Engineers & Tech usa el badge
+  // con ícono (nivel-badge-et, diseño "Engineers y Tech.dc.html"), Core Team
+  // sigue con el badge de texto plano (nivel-badge).
   const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
-  const btn=document.querySelector(`#nw-${recordId} .nivel-badge`);
+  const btn=document.querySelector(`#nw-${recordId} .nivel-badge, #nw-${recordId} .nivel-badge-et`);
   if(btn){
-    btn.className=`nivel-badge nivel-${nuevoNivel}`;
-    btn.innerHTML=`${nuevoNivel}`;
+    const esEt=btn.classList.contains('nivel-badge-et');
+    btn.className=esEt?`nivel-badge-et badge-nivel-${nuevoNivel}`:`nivel-badge nivel-${nuevoNivel}`;
+    btn.innerHTML=esEt?`<i class="ti ${NIVEL_ICONS[nuevoNivel]||'ti-award'}"></i>${nuevoNivel}`:nuevoNivel;
     // Actualizar onclick del dropdown para reflejar nuevo nivel actual
-    document.querySelector(`#nw-${recordId} .nivel-badge`).setAttribute('onclick',`toggleNivelDropdown('${recordId}')`);
+    btn.setAttribute('onclick',`toggleNivelDropdown('${recordId}')`);
   }
 
   // Guardar en Airtable
@@ -345,6 +387,7 @@ function filtrarPersonas(grupo){
 
   const badge=document.getElementById(`badge-personas-${grupo}`);
   if(badge) badge.textContent=`${pagState[grupo].data.length} personas`;
+  if(grupo==='eng') actualizarEstiloFiltrosET();
 }
 
 function poblarFiltrosPersonas(){
@@ -360,5 +403,35 @@ function poblarFiltrosPersonas(){
     if(selMgr){
       selMgr.innerHTML='<option value="">Todos los TEMs</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
     }
+  });
+  actualizarEstiloFiltrosET();
+}
+
+// KPI strip por nivel Loyalty de Engineers & Tech (diseño "Engineers y Tech.dc.html").
+function renderETKpi(lista){
+  const cont=document.getElementById('et-kpi-strip');
+  if(!cont) return;
+  const conteo={};
+  NIVELES.forEach(n=>conteo[n]=0);
+  lista.forEach(p=>{
+    const n=p.fields['Nivel Loyalty']||'Spark';
+    conteo[n]=(conteo[n]||0)+1;
+  });
+  cont.innerHTML=[...NIVELES].reverse().map(n=>`
+    <div class="et-kpi-card">
+      <div class="et-kpi-icon badge-nivel-${n}"><i class="ti ${NIVEL_ICONS[n]||'ti-award'}"></i></div>
+      <div>
+        <div class="et-kpi-val">${conteo[n]}</div>
+        <div class="et-kpi-label">${n}</div>
+      </div>
+    </div>`).join('');
+}
+
+// Resalta en azul los selects de Engineers & Tech que tienen un filtro activo
+// (diseño "Engineers y Tech.dc.html") — Core Team no se toca.
+function actualizarEstiloFiltrosET(){
+  ['personas-loyalty-eng','personas-proyecto-eng','personas-manager-eng'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(sel) sel.classList.toggle('et-active',!!sel.value);
   });
 }

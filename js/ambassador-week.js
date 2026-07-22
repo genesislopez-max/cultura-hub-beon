@@ -30,6 +30,8 @@ async function loadAmbassadors(){
     }
     return {...r, fields:f};
   });
+  poblarSelectorTEM('aw-tem');
+  poblarSelectorTEM('aw-hist-tem');
   renderAWMetricas();
   renderAWPersonas();
   renderAWHistorial();
@@ -223,6 +225,7 @@ function filtrarAWHistorial(){ renderAWHistorial(); }
 function renderAWPersonas(){
   const q=(document.getElementById('aw-search')?.value||'').toLowerCase();
   const loyaltyFil=document.getElementById('aw-loyalty')?.value||'';
+  const temFil=document.getElementById('aw-tem')?.value||'';
 
   // Contar asistencias por persona
   const asistMap={};
@@ -240,7 +243,8 @@ function renderAWPersonas(){
     const nivel=p.fields['Nivel Loyalty']||'Spark';
     const matchQ=!q||nombre.includes(q);
     const matchL=!loyaltyFil||nivel===loyaltyFil;
-    return !yaEgreso(p)&&matchQ&&matchL;
+    const matchTem=!temFil||(p.fields.Manager||'')===temFil;
+    return !yaEgreso(p)&&matchQ&&matchL&&matchTem;
   });
 
   document.getElementById('aw-badge-personas').textContent=`${personas.length} personas`;
@@ -288,11 +292,14 @@ function renderAWPersonas(){
 
 function renderAWHistorial(){
   const q=(document.getElementById('aw-hist-search')?.value||'').toLowerCase();
+  const temFil=document.getElementById('aw-hist-tem')?.value||'';
 
   const recs=cacheAWRaw.filter(r=>{
     const p=Array.isArray(r.fields.Persona)?r.fields.Persona[0]:(r.fields.Persona||'');
     const dest=getEdicionAW(r.fields);
-    return !q||(p+dest).toLowerCase().includes(q);
+    const matchQ=!q||(p+dest).toLowerCase().includes(q);
+    const matchTem=!temFil||managerDePersona(p)===temFil;
+    return matchQ&&matchTem;
   });
 
   document.getElementById('aw-badge-historial').textContent=`${recs.length} registros`;

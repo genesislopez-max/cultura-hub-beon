@@ -29,6 +29,7 @@ async function loadBeneficios(){
   const tabCount=document.getElementById('benef-tab-count-catalogo');
   if(tabCount) tabCount.textContent=cacheBeneficiosRaw.length;
   poblarFiltroBeneficioNombre();
+  poblarSelectorTEM('benef-persona-tem');
   renderBenefCatalogo();
   renderBenefPersonas();
   renderBenefMetricas();
@@ -562,6 +563,7 @@ function renderBenefPersonas(){
   const q=(document.getElementById('benef-persona-search')?.value||'').toLowerCase();
   const grupoFil=document.getElementById('benef-persona-grupo')?.value||'';
   const loyaltyFil=document.getElementById('benef-persona-loyalty')?.value||'';
+  const temFil=document.getElementById('benef-persona-tem')?.value||'';
 
   // Construir mapa de topes por grupo+nivel desde cachePresupuestoLoyalty
   const topeMap={};
@@ -577,7 +579,8 @@ function renderBenefPersonas(){
     const matchQ=!q||nombre.includes(q);
     const matchG=!grupoFil||grupo===grupoFil;
     const matchL=!loyaltyFil||nivel===loyaltyFil;
-    return !yaEgreso(p)&&matchQ&&matchG&&matchL;
+    const matchTem=!temFil||(p.fields.Manager||'')===temFil;
+    return !yaEgreso(p)&&matchQ&&matchG&&matchL&&matchTem;
   });
 
   document.getElementById('badge-benef-personas').textContent=`${personas.length} personas`;

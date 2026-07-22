@@ -7,9 +7,10 @@ async function loadCumpleanos(personas){
     const fecha=f['Fecha de cumpleaños'];
     const days=daysTo(fecha);
     const proximo=new Date(now.getTime()+days*86400000);
-    return{nombre:f.Nombre,fecha,days,proximo,grupo:CORE_TEAM_ROLES.has(rol)?'core':'eng'};
+    return{nombre:f.Nombre,fecha,days,proximo,grupo:CORE_TEAM_ROLES.has(rol)?'core':'eng',manager:f.Manager||''};
   }).sort((a,b)=>a.days-b.days);
   cacheCumpleRows=rows;
+  poblarSelectorTEM('cumple-tem');
 
   const esteM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesActual);
   const proxM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesProximo).length;
@@ -38,7 +39,8 @@ async function loadCumpleanos(personas){
 function filtrarCumpleanos(){
   const now=new Date();now.setHours(0,0,0,0);
   const q=(document.getElementById('cumple-search')?.value||'').trim().toLowerCase();
-  const filtrados=q?cacheCumpleRows.filter(r=>r.nombre.toLowerCase().includes(q)):cacheCumpleRows;
+  const temFil=document.getElementById('cumple-tem')?.value||'';
+  const filtrados=cacheCumpleRows.filter(r=>(!q||r.nombre.toLowerCase().includes(q))&&(!temFil||r.manager===temFil));
   const engRows=filtrados.filter(r=>r.grupo==='eng');
   const coreRows=filtrados.filter(r=>r.grupo==='core');
   document.getElementById('badge-cumple-eng').textContent=`${engRows.length} persona${engRows.length!==1?'s':''}`;

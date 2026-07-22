@@ -9,8 +9,9 @@ async function loadAniversarios(personas){
     const años=anivEsteAño<now?añosAct+1:añosAct;
     if(años===0)return null;
     const grupo=CORE_TEAM_ROLES.has((f['Rol en empresa']||'').trim())?'core':'eng';
-    return{nombre:f.Nombre,fecha:f['Fecha de ingreso'],años,days:daysTo(f['Fecha de ingreso']),grupo};
+    return{nombre:f.Nombre,fecha:f['Fecha de ingreso'],años,days:daysTo(f['Fecha de ingreso']),grupo,manager:f.Manager||''};
   }).filter(Boolean).sort((a,b)=>a.days-b.days);
+  poblarSelectorTEM('aniv-tem');
   const esteM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesActual);
   const proxM=rows.filter(r=>new Date(r.fecha+'T12:00:00').getMonth()===mesProximo).length;
   const mesNombre=new Date(now.getFullYear(),mesActual,1).toLocaleString('es-AR',{month:'long'});
@@ -75,7 +76,7 @@ async function loadAniversarios(personas){
             if(proxAniv<now) proxAniv.setFullYear(now.getFullYear()+1);
             const proxAnivStr=proxAniv.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
             const bg=idx%2===0?'background:var(--bg2)':'';
-            return`<tr data-nombre="${r.nombre.toLowerCase()}" data-años="${r.años}" data-grupo="${r.grupo}" style="${bg}"><td>${avH(r.nombre)}${r.nombre}</td><td style="font-size:12px;color:var(--text2)">${fmt(r.fecha)}</td><td style="font-size:12px;color:var(--text2)">${proxAnivStr}</td><td><span class="badge badge-purple">${r.años} ${r.años===1?'año':'años'} ${em} · ${dl}</span></td></tr>`;
+            return`<tr data-nombre="${r.nombre.toLowerCase()}" data-años="${r.años}" data-grupo="${r.grupo}" data-manager="${(r.manager||'').replace(/"/g,'&quot;')}" style="${bg}"><td>${avH(r.nombre)}${r.nombre}</td><td style="font-size:12px;color:var(--text2)">${fmt(r.fecha)}</td><td style="font-size:12px;color:var(--text2)">${proxAnivStr}</td><td><span class="badge badge-purple">${r.años} ${r.años===1?'año':'años'} ${em} · ${dl}</span></td></tr>`;
           }).join('')}</tbody>
         </table>
       </div>`;
@@ -94,6 +95,7 @@ function filtrarAniversarios(){
   const q=(document.getElementById('aniv-search')?.value||'').toLowerCase();
   const año=document.getElementById('aniv-año')?.value||'';
   const grupo=document.getElementById('aniv-grupo')?.value||'';
+  const tem=document.getElementById('aniv-tem')?.value||'';
   const container=document.getElementById('aniv-container');
   if(!container) return;
   let total=0;
@@ -105,11 +107,13 @@ function filtrarAniversarios(){
       const nombre=tr.dataset.nombre||'';
       const años=tr.dataset.años||'';
       const g=tr.dataset.grupo||'';
+      const manager=tr.dataset.manager||'';
       const matchQ=!q||nombre.includes(q);
       const matchAño=!año||años===año;
       const matchGrupo=!grupo||g===grupo;
-      tr.style.display=matchQ&&matchAño&&matchGrupo?'':'none';
-      if(matchQ&&matchAño&&matchGrupo) visibles++;
+      const matchTem=!tem||manager===tem;
+      tr.style.display=matchQ&&matchAño&&matchGrupo&&matchTem?'':'none';
+      if(matchQ&&matchAño&&matchGrupo&&matchTem) visibles++;
     });
     seccion.style.display=visibles>0?'':'none';
     total+=visibles;

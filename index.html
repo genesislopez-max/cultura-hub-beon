@@ -257,7 +257,7 @@
             <option value="">Todos los proyectos</option>
           </select>
           <select class="filter-select" id="personas-manager-eng" onchange="filtrarPersonas('eng')">
-            <option value="">Todos los managers</option>
+            <option value="">Todos los TEMs</option>
           </select>
         </div>
         <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-top:16px;">
@@ -309,7 +309,7 @@
             <option value="">Todos los proyectos</option>
           </select>
           <select class="filter-select" id="personas-manager-core" onchange="filtrarPersonas('core')">
-            <option value="">Todos los managers</option>
+            <option value="">Todos los TEMs</option>
           </select>
         </div>
         <div class="table-wrap" id="wrap-coreteam" style="border-radius:13px;margin-top:16px;">
@@ -343,6 +343,12 @@
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" id="cumple-search" placeholder="Buscar persona…" oninput="filtrarCumpleanos()">
+          </div>
+          <div style="position:relative">
+            <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+            <select class="filter-select" id="cumple-tem" onchange="filtrarCumpleanos()" style="padding-left:28px">
+              <option value="">Todos los TEMs</option>
+            </select>
           </div>
         </div>
         <div class="table-wrap" style="border-radius:13px;margin-bottom:16px;">
@@ -384,6 +390,12 @@
             <select class="filter-select" id="aniv-año" onchange="filtrarAniversarios()">
               <option value="">Todos los años</option>
             </select>
+            <div style="position:relative">
+              <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+              <select class="filter-select" id="aniv-tem" onchange="filtrarAniversarios()" style="padding-left:28px">
+                <option value="">Todos los TEMs</option>
+              </select>
+            </div>
           </div>
           <div id="aniv-container" class="table-scroll"></div>
         </div>
@@ -478,7 +490,7 @@
                 <option value="no-aplica">No aplica</option>
               </select>
               <select class="filter-select" id="gd-manager" onchange="filtrarGD()">
-                <option value="">Todos los managers</option>
+                <option value="">Todos los TEMs</option>
               </select>
             </div>
             <div class="table-scroll">
@@ -745,6 +757,12 @@
                   <option value="Storm">🌊 Storm</option>
                 </select>
               </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="benef-persona-tem" onchange="filtrarBenefPersonas()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -823,6 +841,12 @@
                 <option value="Thunder">🌪 Thunder</option>
                 <option value="Storm">🌊 Storm</option>
               </select>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="aw-tem" onchange="filtrarAW()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -844,6 +868,12 @@
               <div class="search-wrap">
                 <i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="aw-hist-search" placeholder="Buscar persona o destino…" oninput="filtrarAWHistorial()">
+              </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="aw-hist-tem" onchange="filtrarAWHistorial()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
               </div>
             </div>
             <div class="table-scroll">

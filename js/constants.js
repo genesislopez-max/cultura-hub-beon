@@ -123,3 +123,7 @@ const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo egreso',engineers:'Nueva p
 const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',tareas:'Tareas',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together',actividades:'Asistencia a Actividades'};
 // Texto del "eyebrow" arriba del título en el topbar — solo las secciones listadas lo muestran.
 const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:'Comunidad BEON'};
+// Grupo del menú lateral (dropdown) al que pertenece cada sección — usado
+// para expandir el grupo automáticamente si showSection() navega a una
+// sección que está dentro de un grupo colapsado.
+const SECCION_GRUPO={inicio:'principal',engineers:'principal',coreteam:'principal',cumpleanos:'eventos',aniversarios:'eventos',ingresos:'gestion',egresos:'gestion',reviews:'gestion',proyectos:'gestion',tareas:'gestion',beneficios:'beneficios',ambassadors:'beneficios',offsites:'beneficios',gettogether:'beneficios',actividades:'beneficios'};

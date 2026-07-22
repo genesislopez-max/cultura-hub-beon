@@ -26,12 +26,40 @@ function toggleTheme(){
   actualizarIconoTema(nuevo);
 }
 
+// ─── MENÚ LATERAL (dropdown) ─────────────────────────────────────────────────
+function toggleSidebarGroup(nombre){
+  const btnGrupo=document.querySelector(`.sb-section[data-group="${nombre}"]`);
+  const grupo=document.getElementById(`sbg-${nombre}`);
+  if(!btnGrupo||!grupo) return;
+  const colapsado=grupo.classList.toggle('collapsed');
+  btnGrupo.classList.toggle('collapsed',colapsado);
+  const guardados=new Set(JSON.parse(localStorage.getItem('hub_sidebar_collapsed')||'[]'));
+  if(colapsado) guardados.add(nombre); else guardados.delete(nombre);
+  localStorage.setItem('hub_sidebar_collapsed',JSON.stringify([...guardados]));
+}
+
+// Se llama al arrancar — colapsa los grupos que el usuario ya había cerrado
+// en una sesión anterior (mismo patrón que el theme guardado).
+function aplicarSidebarColapsado(){
+  const guardados=JSON.parse(localStorage.getItem('hub_sidebar_collapsed')||'[]');
+  guardados.forEach(nombre=>{
+    document.querySelector(`.sb-section[data-group="${nombre}"]`)?.classList.add('collapsed');
+    document.getElementById(`sbg-${nombre}`)?.classList.add('collapsed');
+  });
+}
+
 // ─── NAV ─────────────────────────────────────────────────────────────────────
 function showSection(name,btn){
   document.querySelectorAll('.section-page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
   if(btn)btn.classList.add('active');
+  // Si la sección vive en un grupo del menú colapsado, expandirlo — para que
+  // la navegación (ej. un link de "Ver proyecto") nunca deje el item activo escondido.
+  const grupoNombre=SECCION_GRUPO[name];
+  if(grupoNombre&&document.getElementById(`sbg-${grupoNombre}`)?.classList.contains('collapsed')){
+    toggleSidebarGroup(grupoNombre);
+  }
   document.getElementById('page-title').textContent=TITLES[name]||name;
   const eyebrow=document.getElementById('page-eyebrow');
   if(eyebrow){
@@ -262,6 +290,7 @@ async function iniciarHub(){
 
 async function init(){
   actualizarIconoTema(document.documentElement.getAttribute('data-theme')||'light');
+  aplicarSidebarColapsado();
   if(!checkSesion()) return; // muestra la pantalla de login; onGoogleSignIn() llama a iniciarHub()
   await iniciarHub();
 }

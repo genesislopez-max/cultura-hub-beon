@@ -84,25 +84,33 @@
       <div class="sb-title">Cultura Hub</div>
       <div class="sb-sub">BEON.tech</div>
     </div>
-    <div class="sb-section">Principal</div>
-    <button class="sb-item active" onclick="showSection('inicio',this)"><i class="ti ti-layout-dashboard"></i>Inicio</button>
-    <button class="sb-item" onclick="showSection('engineers',this)"><i class="ti ti-code"></i>Engineers & Tech <span class="bc" id="bc-engineers">0</span></button>
-    <button class="sb-item" onclick="showSection('coreteam',this)"><i class="ti ti-building-skyscraper"></i>Core Team <span class="bc" id="bc-coreteam">0</span></button>
-    <div class="sb-section">Eventos</div>
-    <button class="sb-item" onclick="showSection('cumpleanos',this)"><i class="ti ti-cake"></i>Cumpleaños</button>
-    <button class="sb-item" onclick="showSection('aniversarios',this)"><i class="ti ti-star"></i>Aniversarios</button>
-    <div class="sb-section">Gestión</div>
-    <button class="sb-item" onclick="showSection('ingresos',this)"><i class="ti ti-user-plus"></i>Ingresos <span class="bc" id="bc-ingresos">0</span></button>
-    <button class="sb-item" onclick="showSection('egresos',this)"><i class="ti ti-user-minus"></i>Egresos <span class="bc" id="bc-egresos">0</span></button>
-    <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-brand-google"></i>Glassdoor</button>
-    <button class="sb-item" onclick="showSection('proyectos',this)"><i class="ti ti-folder"></i>Proyectos</button>
-    <button class="sb-item" onclick="showSection('tareas',this)"><i class="ti ti-checklist"></i>Tareas <span class="bc" id="bc-tareas">0</span></button>
-    <div class="sb-section">Beneficios</div>
-    <button class="sb-item" onclick="showSection('beneficios',this)"><i class="ti ti-gift"></i>Beneficios</button>
-    <button class="sb-item" onclick="showSection('ambassadors',this)"><i class="ti ti-plane"></i>Ambassador Week</button>
-    <button class="sb-item" onclick="showSection('offsites',this)"><i class="ti ti-map-pin"></i>Off Sites</button>
-    <button class="sb-item" onclick="showSection('gettogether',this)"><i class="ti ti-users-group"></i>Get Together</button>
-    <button class="sb-item" onclick="showSection('actividades',this)"><i class="ti ti-broadcast"></i>Asistencia a Actividades</button>
+    <button class="sb-section" data-group="principal" onclick="toggleSidebarGroup('principal')"><span>Principal</span><i class="ti ti-chevron-down chevron"></i></button>
+    <div class="sb-group" id="sbg-principal">
+      <button class="sb-item active" onclick="showSection('inicio',this)"><i class="ti ti-layout-dashboard"></i>Inicio</button>
+      <button class="sb-item" onclick="showSection('engineers',this)"><i class="ti ti-code"></i>Engineers & Tech <span class="bc" id="bc-engineers">0</span></button>
+      <button class="sb-item" onclick="showSection('coreteam',this)"><i class="ti ti-building-skyscraper"></i>Core Team <span class="bc" id="bc-coreteam">0</span></button>
+    </div>
+    <button class="sb-section" data-group="eventos" onclick="toggleSidebarGroup('eventos')"><span>Eventos</span><i class="ti ti-chevron-down chevron"></i></button>
+    <div class="sb-group" id="sbg-eventos">
+      <button class="sb-item" onclick="showSection('cumpleanos',this)"><i class="ti ti-cake"></i>Cumpleaños</button>
+      <button class="sb-item" onclick="showSection('aniversarios',this)"><i class="ti ti-star"></i>Aniversarios</button>
+    </div>
+    <button class="sb-section" data-group="gestion" onclick="toggleSidebarGroup('gestion')"><span>Gestión</span><i class="ti ti-chevron-down chevron"></i></button>
+    <div class="sb-group" id="sbg-gestion">
+      <button class="sb-item" onclick="showSection('ingresos',this)"><i class="ti ti-user-plus"></i>Ingresos <span class="bc" id="bc-ingresos">0</span></button>
+      <button class="sb-item" onclick="showSection('egresos',this)"><i class="ti ti-user-minus"></i>Egresos <span class="bc" id="bc-egresos">0</span></button>
+      <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-brand-google"></i>Glassdoor</button>
+      <button class="sb-item" onclick="showSection('proyectos',this)"><i class="ti ti-folder"></i>Proyectos</button>
+      <button class="sb-item" onclick="showSection('tareas',this)"><i class="ti ti-checklist"></i>Tareas <span class="bc" id="bc-tareas">0</span></button>
+    </div>
+    <button class="sb-section" data-group="beneficios" onclick="toggleSidebarGroup('beneficios')"><span>Beneficios</span><i class="ti ti-chevron-down chevron"></i></button>
+    <div class="sb-group" id="sbg-beneficios">
+      <button class="sb-item" onclick="showSection('beneficios',this)"><i class="ti ti-gift"></i>Beneficios</button>
+      <button class="sb-item" onclick="showSection('ambassadors',this)"><i class="ti ti-plane"></i>Ambassador Week</button>
+      <button class="sb-item" onclick="showSection('offsites',this)"><i class="ti ti-map-pin"></i>Off Sites</button>
+      <button class="sb-item" onclick="showSection('gettogether',this)"><i class="ti ti-users-group"></i>Get Together</button>
+      <button class="sb-item" onclick="showSection('actividades',this)"><i class="ti ti-broadcast"></i>Asistencia a Actividades</button>
+    </div>
     <div class="sb-bottom">
       <button class="sb-theme-toggle" id="sb-theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
         <i class="ti ti-moon" id="sb-theme-icon"></i><span id="sb-theme-label">Modo oscuro</span>

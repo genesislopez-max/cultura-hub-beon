@@ -269,7 +269,9 @@ const FORMS={
         if(v('f-ba-link')) fields.Link=v('f-ba-link');
       }
       if(esBeneficioConQuarterAuto(nombreBeneficio)&&fecha) fields.Quarter=quarterLabel(fecha);
-      await atPost('Beneficios Asignados',fields);return true;
+      await atPost('Beneficios Asignados',fields);
+      sendSlack(`🎁 *Beneficio asignado en el Hub*\n${nombrePersona} — ${nombreBeneficio}`);
+      return true;
     }},
 
   beneficios:{title:'Nuevo beneficio al catálogo',html:()=>`
@@ -599,7 +601,9 @@ const FORMS={
       const fields={Persona:v('f-os-persona'),Destino:v('f-os-destino'),'Fecha inicio':v('f-os-inicio'),'Fecha fin':v('f-os-fin')};
       if(v('f-os-proyecto')) fields.Proyecto=v('f-os-proyecto');
       if(v('f-os-desc')) fields.Descripción=v('f-os-desc');
-      await atPost('Off Sites',fields);return true;
+      await atPost('Off Sites',fields);
+      sendSlack(`✈️ *Off Site registrado en el Hub*\n${v('f-os-persona')} — ${v('f-os-destino')} (${fmt(v('f-os-inicio'))} → ${fmt(v('f-os-fin'))})`);
+      return true;
     }}
 };
 FORMS.coreteam=FORMS.engineers; // Engineers & Tech y Core Team comparten el mismo alta de persona

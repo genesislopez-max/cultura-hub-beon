@@ -358,7 +358,7 @@ function poblarFiltrosPersonas(){
       selProy.innerHTML='<option value="">Todos los proyectos</option>'+proyectos.map(p=>`<option value="${p}">${p}</option>`).join('');
     }
     if(selMgr){
-      selMgr.innerHTML='<option value="">Todos los managers</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
+      selMgr.innerHTML='<option value="">Todos los TEMs</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
     }
   });
 }

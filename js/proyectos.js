@@ -1,6 +1,7 @@
 function filtrarProyectos(){
   const q=(document.getElementById('proyectos-search')?.value||'').toLowerCase();
   const estadoFil=document.getElementById('proyectos-estado')?.value||'';
+  const temFil=document.getElementById('proyectos-tem')?.value||'';
   const tb=document.getElementById('tbody-proyectos');
   if(!tb) return;
   let count=0;
@@ -8,9 +9,11 @@ function filtrarProyectos(){
     if(tr.classList.contains('empty-row')){tr.style.display='none';return;}
     const texto=tr.textContent.toLowerCase();
     const estado=tr.dataset.estado||'';
+    const tems=(tr.dataset.tems||'').split('|');
     const matchQ=!q||texto.includes(q);
     const matchEstado=!estadoFil?true:estadoFil==='activos'?(estado!=='De Baja'&&estado!=='Inactivo'):estado===estadoFil;
-    const visible=matchQ&&matchEstado;
+    const matchTem=!temFil||tems.includes(temFil);
+    const visible=matchQ&&matchEstado&&matchTem;
     tr.style.display=visible?'':'none';
     if(visible) count++;
   });
@@ -58,7 +61,20 @@ async function loadProyectos(){
   });
 
   const devs={};
-  cachePersonasRaw.forEach(p=>{if(yaEgreso(p))return;const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
+  const temsPorProyecto={};
+  cachePersonasRaw.forEach(p=>{
+    if(yaEgreso(p))return;
+    const pr=(p.fields.Proyecto||'').trim();
+    if(!pr)return;
+    devs[pr]=(devs[pr]||0)+1;
+    const tem=(p.fields.Manager||'').trim();
+    if(tem){
+      if(!temsPorProyecto[pr]) temsPorProyecto[pr]=new Set();
+      temsPorProyecto[pr].add(tem);
+    }
+  });
+
+  poblarSelectorTEM('proyectos-tem');
 
   const tb=document.getElementById('tbody-proyectos');
   tb.innerHTML=todosRecs.length?todosRecs.map(r=>{
@@ -92,7 +108,8 @@ async function loadProyectos(){
     }
 
     const fechaInicioVal=f['Fecha de Inicio']||f['Fecha de inicio']||'';
-    return`<tr class="tr-clickable" data-estado="${estado}" onclick="openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}')">
+    const temsProyecto=[...(temsPorProyecto[nombre]||[])].join('|');
+    return`<tr class="tr-clickable" data-estado="${estado}" data-tems="${temsProyecto.replace(/"/g,'&quot;')}" onclick="openMeetModal('${r.id}','${nombre.replace(/'/g,"\\'")}')">
       <td><strong>${nombre}</strong></td>
       <td>${estadoBadge}</td>
       <td style="font-size:12px;color:var(--text2)">${fechaInicioVal?fmt(fechaInicioVal):'—'}</td>

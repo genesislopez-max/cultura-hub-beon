@@ -29,8 +29,13 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .sb-logo-mark img{width:20px;height:20px;object-fit:contain;}
 .sb-title{color:#fff;font-size:14px;font-weight:700;letter-spacing:-0.01em;}
 .sb-sub{color:rgba(255,255,255,0.4);font-size:11px;margin-top:2px;}
-.sb-section{padding:20px 12px 6px;color:rgba(255,255,255,0.32);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.9px;}
-.sb-item{display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:9px;margin:2px 7px;cursor:pointer;color:rgba(255,255,255,0.58);font-size:13px;font-weight:500;transition:background 0.15s,color 0.15s,box-shadow 0.15s;border:none;background:none;width:calc(100% - 14px);font-family:'Plus Jakarta Sans',sans-serif;text-align:left;}
+.sb-section{display:flex;align-items:center;justify-content:space-between;width:100%;padding:20px 12px 6px;color:rgba(255,255,255,0.32);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.9px;border:none;background:none;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;text-align:left;transition:color 0.15s;}
+.sb-section:hover{color:rgba(255,255,255,0.55);}
+.sb-section .chevron{font-size:13px;transition:transform 0.2s;}
+.sb-section.collapsed .chevron{transform:rotate(-90deg);}
+.sb-group{display:flex;flex-direction:column;overflow:hidden;max-height:600px;transition:max-height 0.25s ease;}
+.sb-group.collapsed{max-height:0;}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:9px;margin:2px 7px;cursor:pointer;color:rgba(255,255,255,0.58);font-size:13px;font-weight:500;transition:background 0.15s,color 0.15s,box-shadow 0.15s;border:none;background:none;width:calc(100% - 14px);font-family:'Plus Jakarta Sans',sans-serif;text-align:left;flex-shrink:0;}
 .sb-item i{font-size:17px;flex-shrink:0;width:17px;text-align:center;}
 .sb-item:hover{background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.92);}
 .sb-item.active{background:rgba(58,105,255,0.22);color:#fff;box-shadow:inset 3px 0 0 0 var(--blue);}

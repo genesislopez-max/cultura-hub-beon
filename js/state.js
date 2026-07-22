@@ -36,6 +36,7 @@ let sugerenciaProyectoIndex=0; // índice del candidato mostrado actualmente en 
 // Beneficios
 let cacheBenefAsignados=[], cachePresupuestoLoyalty=[];
 let benefMetricasInicializado=false; // si ya se seteó el Q/año actual por defecto en la pestaña Métricas
+let benefDetalleActual=null; // {r, grupoFiltro} del beneficio abierto en #benef-detalle-overlay — para poder re-filtrar por TEM sin volver a abrir el modal
 
 // Off Sites
 let cacheOSRaw=[];

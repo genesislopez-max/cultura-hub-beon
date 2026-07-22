@@ -39,6 +39,32 @@ function av(n){const s=safeStr(n);return AVS[s.split('').reduce((a,c)=>a+c.charC
 function ini(n){const s=safeStr(n)||'?';return s.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();}
 function avH(n){const s=safeStr(n);return`<div class="avatar ${av(s)}">${ini(s)}</div>`;}
 
+// ─── TEM (Manager a cargo) ───────────────────────────────────────────────────
+// Lista de TEMs distintos sobre TODAS las personas (activas e históricas) —
+// fuente única para poblar cualquier select de "Filtrar por TEM" en tablas
+// que no tienen ya su propio dataset acotado (ver poblarFiltrosPersonas()
+// en personas.js para las tablas que sí lo tienen).
+function listaTEMs(){
+  return[...new Set(cachePersonasRaw.map(p=>p.fields.Manager).filter(Boolean))].sort();
+}
+// Resuelve el TEM de una persona a partir de su nombre — para tablas cuyas
+// filas ya no son el registro de Personas completo (ej. Off Sites, Get
+// Together: ahí solo queda el nombre resuelto, hay que volver a buscarlo).
+function managerDePersona(nombre){
+  const p=cachePersonasRaw.find(x=>(x.fields.Nombre||'').trim()===String(nombre||'').trim());
+  return p?.fields.Manager||'';
+}
+// Puebla un <select id="selectId"> con "Todos los TEMs" + la lista de
+// listaTEMs(), preservando la selección vigente si sigue siendo válida.
+function poblarSelectorTEM(selectId){
+  const sel=document.getElementById(selectId);
+  if(!sel) return;
+  const actual=sel.value;
+  const tems=listaTEMs();
+  sel.innerHTML='<option value="">Todos los TEMs</option>'+tems.map(t=>`<option value="${t}">${t}</option>`).join('');
+  if(tems.includes(actual)) sel.value=actual;
+}
+
 // ─── MÉTRICAS POR TRIMESTRE (Beneficios / Off Sites / Get Together / AW) ──────
 const MESES_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 

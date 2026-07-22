@@ -104,6 +104,7 @@ function renderCard(r,tipo){
   div.className='kanban-card';
   div.dataset.nombre=nombre.toLowerCase();
   div.dataset.proyecto=(proyecto||'').toLowerCase();
+  div.dataset.manager=(pf.Manager||'').toLowerCase();
   div.innerHTML=`
     <div class="kc-name">${avH(nombre)}${nombre}</div>
     <div class="kc-meta">
@@ -136,17 +137,19 @@ function renderCard(r,tipo){
 // Filtro por nombre/proyecto sobre las tarjetas ya renderizadas — no hace
 // falta volver a pedir los datos ni re-renderizar el board, solo mostrar/
 // ocultar cards vía sus data-attributes.
-function filtrarKanbanChecklist(boardId,inputId){
+function filtrarKanbanChecklist(boardId,inputId,temSelectId){
   const q=(document.getElementById(inputId)?.value||'').trim().toLowerCase();
+  const tem=(temSelectId?document.getElementById(temSelectId)?.value:'')||'';
   const board=document.getElementById(boardId);
   if(!board) return;
   board.querySelectorAll('.kanban-card').forEach(card=>{
-    const match=!q||(card.dataset.nombre||'').includes(q)||(card.dataset.proyecto||'').includes(q);
-    card.style.display=match?'':'none';
+    const matchQ=!q||(card.dataset.nombre||'').includes(q)||(card.dataset.proyecto||'').includes(q);
+    const matchTem=!tem||(card.dataset.manager||'')===tem.toLowerCase();
+    card.style.display=matchQ&&matchTem?'':'none';
   });
 }
-function filtrarIngresos(){ filtrarKanbanChecklist('kb-ingresos','ingresos-search'); }
-function filtrarEgresos(){ filtrarKanbanChecklist('kb-egresos','egresos-search'); }
+function filtrarIngresos(){ filtrarKanbanChecklist('kb-ingresos','ingresos-search','ingresos-tem'); }
+function filtrarEgresos(){ filtrarKanbanChecklist('kb-egresos','egresos-search','egresos-tem'); }
 
 function confirmarEliminar(checklistId, nombre){
   showConfirm(
@@ -310,6 +313,7 @@ async function loadKanbanIngresos(){
     if(cid&&!counts[col]) document.getElementById(cid).innerHTML='<div class="kanban-empty">Sin tarjetas</div>';
   });
   setupDragDrop('kb-ingresos');
+  poblarSelectorTEM('ingresos-tem');
 
   // Card inicio — ingresos del mes
   const now=new Date();
@@ -371,6 +375,7 @@ async function loadKanbanEgresos(){
     if(cid&&!counts[col]) document.getElementById(cid).innerHTML='<div class="kanban-empty">Sin tarjetas</div>';
   });
   setupDragDrop('kb-egresos');
+  poblarSelectorTEM('egresos-tem');
 
   const now=new Date();
   const esteM=recs.filter(r=>{

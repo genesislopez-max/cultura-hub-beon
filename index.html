@@ -84,25 +84,33 @@
       <div class="sb-title">Cultura Hub</div>
       <div class="sb-sub">BEON.tech</div>
     </div>
-    <div class="sb-section">Principal</div>
-    <button class="sb-item active" onclick="showSection('inicio',this)"><i class="ti ti-layout-dashboard"></i>Inicio</button>
-    <button class="sb-item" onclick="showSection('engineers',this)"><i class="ti ti-code"></i>Engineers & Tech <span class="bc" id="bc-engineers">0</span></button>
-    <button class="sb-item" onclick="showSection('coreteam',this)"><i class="ti ti-building-skyscraper"></i>Core Team <span class="bc" id="bc-coreteam">0</span></button>
-    <div class="sb-section">Eventos</div>
-    <button class="sb-item" onclick="showSection('cumpleanos',this)"><i class="ti ti-cake"></i>Cumpleaños</button>
-    <button class="sb-item" onclick="showSection('aniversarios',this)"><i class="ti ti-star"></i>Aniversarios</button>
-    <div class="sb-section">Gestión</div>
-    <button class="sb-item" onclick="showSection('ingresos',this)"><i class="ti ti-user-plus"></i>Ingresos <span class="bc" id="bc-ingresos">0</span></button>
-    <button class="sb-item" onclick="showSection('egresos',this)"><i class="ti ti-user-minus"></i>Egresos <span class="bc" id="bc-egresos">0</span></button>
-    <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-brand-google"></i>Glassdoor</button>
-    <button class="sb-item" onclick="showSection('proyectos',this)"><i class="ti ti-folder"></i>Proyectos</button>
-    <button class="sb-item" onclick="showSection('tareas',this)"><i class="ti ti-checklist"></i>Tareas <span class="bc" id="bc-tareas">0</span></button>
-    <div class="sb-section">Beneficios</div>
-    <button class="sb-item" onclick="showSection('beneficios',this)"><i class="ti ti-gift"></i>Beneficios</button>
-    <button class="sb-item" onclick="showSection('ambassadors',this)"><i class="ti ti-plane"></i>Ambassador Week</button>
-    <button class="sb-item" onclick="showSection('offsites',this)"><i class="ti ti-map-pin"></i>Off Sites</button>
-    <button class="sb-item" onclick="showSection('gettogether',this)"><i class="ti ti-users-group"></i>Get Together</button>
-    <button class="sb-item" onclick="showSection('actividades',this)"><i class="ti ti-broadcast"></i>Asistencia a Actividades</button>
+    <button class="sb-section" data-group="principal" onclick="toggleSidebarGroup('principal')"><span>Principal</span><i class="ti ti-chevron-down chevron"></i></button>
+    <div class="sb-group" id="sbg-principal">
+      <button class="sb-item active" onclick="showSection('inicio',this)"><i class="ti ti-layout-dashboard"></i>Inicio</button>
+      <button class="sb-item" onclick="showSection('engineers',this)"><i class="ti ti-code"></i>Engineers & Tech <span class="bc" id="bc-engineers">0</span></button>
+      <button class="sb-item" onclick="showSection('coreteam',this)"><i class="ti ti-building-skyscraper"></i>Core Team <span class="bc" id="bc-coreteam">0</span></button>
+    </div>
+    <button class="sb-section" data-group="eventos" onclick="toggleSidebarGroup('eventos')"><span>Eventos</span><i class="ti ti-chevron-down chevron"></i></button>
+    <div class="sb-group" id="sbg-eventos">
+      <button class="sb-item" onclick="showSection('cumpleanos',this)"><i class="ti ti-cake"></i>Cumpleaños</button>
+      <button class="sb-item" onclick="showSection('aniversarios',this)"><i class="ti ti-star"></i>Aniversarios</button>
+    </div>
+    <button class="sb-section" data-group="gestion" onclick="toggleSidebarGroup('gestion')"><span>Gestión</span><i class="ti ti-chevron-down chevron"></i></button>
+    <div class="sb-group" id="sbg-gestion">
+      <button class="sb-item" onclick="showSection('ingresos',this)"><i class="ti ti-user-plus"></i>Ingresos <span class="bc" id="bc-ingresos">0</span></button>
+      <button class="sb-item" onclick="showSection('egresos',this)"><i class="ti ti-user-minus"></i>Egresos <span class="bc" id="bc-egresos">0</span></button>
+      <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-brand-google"></i>Glassdoor</button>
+      <button class="sb-item" onclick="showSection('proyectos',this)"><i class="ti ti-folder"></i>Proyectos</button>
+      <button class="sb-item" onclick="showSection('tareas',this)"><i class="ti ti-checklist"></i>Tareas <span class="bc" id="bc-tareas">0</span></button>
+    </div>
+    <button class="sb-section" data-group="beneficios" onclick="toggleSidebarGroup('beneficios')"><span>Beneficios</span><i class="ti ti-chevron-down chevron"></i></button>
+    <div class="sb-group" id="sbg-beneficios">
+      <button class="sb-item" onclick="showSection('beneficios',this)"><i class="ti ti-gift"></i>Beneficios</button>
+      <button class="sb-item" onclick="showSection('ambassadors',this)"><i class="ti ti-plane"></i>Ambassador Week</button>
+      <button class="sb-item" onclick="showSection('offsites',this)"><i class="ti ti-map-pin"></i>Off Sites</button>
+      <button class="sb-item" onclick="showSection('gettogether',this)"><i class="ti ti-users-group"></i>Get Together</button>
+      <button class="sb-item" onclick="showSection('actividades',this)"><i class="ti ti-broadcast"></i>Asistencia a Actividades</button>
+    </div>
     <div class="sb-bottom">
       <button class="sb-theme-toggle" id="sb-theme-toggle" onclick="toggleTheme()" title="Cambiar tema">
         <i class="ti ti-moon" id="sb-theme-icon"></i><span id="sb-theme-label">Modo oscuro</span>
@@ -249,7 +257,7 @@
             <option value="">Todos los proyectos</option>
           </select>
           <select class="filter-select" id="personas-manager-eng" onchange="filtrarPersonas('eng')">
-            <option value="">Todos los managers</option>
+            <option value="">Todos los TEMs</option>
           </select>
         </div>
         <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-top:16px;">
@@ -301,7 +309,7 @@
             <option value="">Todos los proyectos</option>
           </select>
           <select class="filter-select" id="personas-manager-core" onchange="filtrarPersonas('core')">
-            <option value="">Todos los managers</option>
+            <option value="">Todos los TEMs</option>
           </select>
         </div>
         <div class="table-wrap" id="wrap-coreteam" style="border-radius:13px;margin-top:16px;">
@@ -335,6 +343,12 @@
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" id="cumple-search" placeholder="Buscar persona…" oninput="filtrarCumpleanos()">
+          </div>
+          <div style="position:relative">
+            <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+            <select class="filter-select" id="cumple-tem" onchange="filtrarCumpleanos()" style="padding-left:28px">
+              <option value="">Todos los TEMs</option>
+            </select>
           </div>
         </div>
         <div class="table-wrap" style="border-radius:13px;margin-bottom:16px;">
@@ -376,6 +390,12 @@
             <select class="filter-select" id="aniv-año" onchange="filtrarAniversarios()">
               <option value="">Todos los años</option>
             </select>
+            <div style="position:relative">
+              <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+              <select class="filter-select" id="aniv-tem" onchange="filtrarAniversarios()" style="padding-left:28px">
+                <option value="">Todos los TEMs</option>
+              </select>
+            </div>
           </div>
           <div id="aniv-container" class="table-scroll"></div>
         </div>
@@ -387,6 +407,12 @@
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" id="ingresos-search" placeholder="Buscar por nombre o proyecto…" oninput="filtrarIngresos()">
+          </div>
+          <div style="position:relative">
+            <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+            <select class="filter-select" id="ingresos-tem" onchange="filtrarIngresos()" style="padding-left:28px">
+              <option value="">Todos los TEMs</option>
+            </select>
           </div>
         </div>
         <div class="kanban-board" id="kb-ingresos">
@@ -420,6 +446,12 @@
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" id="egresos-search" placeholder="Buscar por nombre o proyecto…" oninput="filtrarEgresos()">
+          </div>
+          <div style="position:relative">
+            <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+            <select class="filter-select" id="egresos-tem" onchange="filtrarEgresos()" style="padding-left:28px">
+              <option value="">Todos los TEMs</option>
+            </select>
           </div>
         </div>
         <div class="kanban-board" id="kb-egresos">
@@ -470,7 +502,7 @@
                 <option value="no-aplica">No aplica</option>
               </select>
               <select class="filter-select" id="gd-manager" onchange="filtrarGD()">
-                <option value="">Todos los managers</option>
+                <option value="">Todos los TEMs</option>
               </select>
             </div>
             <div class="table-scroll">
@@ -527,6 +559,12 @@
               <option value="Inactivo">Solo inactivos</option>
               <option value="De Baja">Solo dados de baja</option>
             </select>
+            <div style="position:relative">
+              <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+              <select class="filter-select" id="proyectos-tem" onchange="filtrarProyectos()" style="padding-left:28px">
+                <option value="">Todos los TEMs</option>
+              </select>
+            </div>
           </div>
           <div class="table-scroll">
           <table class="data-table">
@@ -737,6 +775,12 @@
                   <option value="Storm">🌊 Storm</option>
                 </select>
               </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="benef-persona-tem" onchange="filtrarBenefPersonas()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -815,6 +859,12 @@
                 <option value="Thunder">🌪 Thunder</option>
                 <option value="Storm">🌊 Storm</option>
               </select>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="aw-tem" onchange="filtrarAW()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -836,6 +886,12 @@
               <div class="search-wrap">
                 <i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="aw-hist-search" placeholder="Buscar persona o destino…" oninput="filtrarAWHistorial()">
+              </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="aw-hist-tem" onchange="filtrarAWHistorial()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
               </div>
             </div>
             <div class="table-scroll">
@@ -933,6 +989,12 @@
                 <i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="os-search-persona" placeholder="Buscar persona…" oninput="filtrarOSPersona()">
               </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="os-persona-tem" onchange="filtrarOSPersona()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -980,6 +1042,12 @@
               <select class="filter-select" id="os-filter-proyecto" onchange="filtrarOSHistorial()">
                 <option value="">Todos los proyectos</option>
               </select>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="os-hist-tem" onchange="filtrarOSHistorial()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -1075,6 +1143,12 @@
                   <option value="">Todos los países</option>
                 </select>
               </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="gt-filter-tem-per" onchange="filtrarGTPersona()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -1127,6 +1201,12 @@
                 <i class="ti ti-briefcase" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
                 <select class="filter-select" id="gt-filter-proyecto" onchange="filtrarGTHistorial()" style="padding-left:28px">
                   <option value="">Todos los proyectos</option>
+                </select>
+              </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="gt-filter-tem" onchange="filtrarGTHistorial()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
                 </select>
               </div>
             </div>
@@ -1186,6 +1266,12 @@
             <div class="search-bar">
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="av-search-persona" placeholder="Buscar persona…" oninput="filtrarAVPersona()">
+              </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="av-persona-tem" onchange="filtrarAVPersona()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
               </div>
             </div>
             <div class="table-scroll">
@@ -1334,7 +1420,13 @@
     </div>
     <div style="padding:0 24px 24px;">
       <div id="benef-detalle-titulo" style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px"></div>
-      <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Quién tiene este beneficio</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:12px">Quién tiene este beneficio</div>
+      <div style="position:relative;margin-bottom:16px">
+        <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+        <select class="filter-select" id="benef-detalle-tem" onchange="filtrarBenefDetalle()" style="padding-left:28px;width:100%">
+          <option value="">Todos los TEMs</option>
+        </select>
+      </div>
       <div id="benef-detalle-body"></div>
     </div>
   </div>

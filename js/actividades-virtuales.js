@@ -15,6 +15,7 @@ async function loadActividadesVirtuales(){
     }
     return {...r, fields:f};
   });
+  poblarSelectorTEM('av-persona-tem');
   renderAVMetricas();
   renderAVPersona();
   poblarAVEventoAnio();
@@ -118,6 +119,7 @@ function filtrarAVEvento(){ renderAVEvento(); }
 
 function renderAVPersona(){
   const q=(document.getElementById('av-search-persona')?.value||'').toLowerCase();
+  const temFil=document.getElementById('av-persona-tem')?.value||'';
   const mapa={};
   cacheAVRaw.forEach(r=>{
     const nombre=r.fields.Persona;
@@ -137,7 +139,7 @@ function renderAVPersona(){
   const filas=Object.entries(mapa)
     .filter(([nombre])=>{
       const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
-      return persona&&!yaEgreso(persona);
+      return persona&&!yaEgreso(persona)&&(!temFil||(persona.fields.Manager||'')===temFil);
     })
     .filter(([n])=>!q||n.toLowerCase().includes(q))
     .sort((a,b)=>b[1].ultFecha.localeCompare(a[1].ultFecha));

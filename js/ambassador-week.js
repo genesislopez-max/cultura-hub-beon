@@ -299,7 +299,7 @@ function renderAWHistorial(){
     const dest=getEdicionAW(r.fields);
     const matchQ=!q||(p+dest).toLowerCase().includes(q);
     const matchTem=!temFil||managerDePersona(p)===temFil;
-    return matchQ&&matchTem;
+    return personaActiva(p)&&matchQ&&matchTem;
   });
 
   document.getElementById('aw-badge-historial').textContent=`${recs.length} registros`;

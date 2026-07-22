@@ -339,6 +339,7 @@ function personasActivasBeneficio(nombreBeneficio,grupoFiltro,temFiltro){
     const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
     if(bNombre!==nombreBeneficio||(a.fields.Estado||'Activo')!=='Activo') return false;
     const nombrePersona=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'');
+    if(!personaActiva(nombrePersona)) return false;
     if(grupoFiltro==='Engineers'||grupoFiltro==='Core Team'){
       const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===(nombrePersona||'').trim());
       if(!persona||getRolGroup(persona.fields['Rol en empresa']||'')!==grupoFiltro) return false;

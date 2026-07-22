@@ -20,6 +20,8 @@ async function loadGetTogether(){
     if(Array.isArray(f.Ciudad)) f.Ciudad=f.Ciudad[0]||'';
     return {...r, fields:f};
   });
+  poblarSelectorTEM('gt-filter-tem-per');
+  poblarSelectorTEM('gt-filter-tem');
   renderGTMetricas();
   renderGTPersona();
   renderGTCiudad();
@@ -196,12 +198,14 @@ function filtrarGTHistorial(){ renderGTHistorial(); }
 function renderGTPersona(){
   const q=(document.getElementById('gt-search-persona')?.value||'').toLowerCase();
   const paisFil=document.getElementById('gt-filter-pais-per')?.value||'';
+  const temFil=document.getElementById('gt-filter-tem-per')?.value||'';
   const mapa={};
   cacheGetTogetherRaw.forEach(r=>{
     const f=r.fields;
     const nombre=f.BEONer||'';
     if(!nombre) return;
     if(paisFil&&(f.País||'')!==paisFil) return;
+    if(temFil&&managerDePersona(nombre)!==temFil) return;
     if(!mapa[nombre]) mapa[nombre]={count:0,paises:new Set(),ciudades:new Set(),ultFecha:'',primerFecha:'9999'};
     mapa[nombre].count++;
     if(f['País']) mapa[nombre].paises.add(f['País']);
@@ -213,7 +217,7 @@ function renderGTPersona(){
     .filter(([n])=>!q||n.toLowerCase().includes(q))
     .sort((a,b)=>b[1].count-a[1].count); // Ordenar por más encuentros
   document.getElementById('gt-badge-persona').textContent=`${filas.length} BEONers`;
-  const soloRankingNatural=!q&&!paisFil; // medallas solo tienen sentido sobre el ranking sin filtrar
+  const soloRankingNatural=!q&&!paisFil&&!temFil; // medallas solo tienen sentido sobre el ranking sin filtrar
   const max=filas.length?filas[0][1].count:0;
   const tb=document.getElementById('gt-tbody-persona');
   tb.innerHTML=filas.map(([nombre,d],i)=>{
@@ -271,10 +275,11 @@ function renderGTHistorial(){
   const q=(document.getElementById('gt-search-hist')?.value||'').toLowerCase();
   const paisFil=document.getElementById('gt-filter-pais')?.value||'';
   const proyFil=document.getElementById('gt-filter-proyecto')?.value||'';
+  const temFil=document.getElementById('gt-filter-tem')?.value||'';
   const recs=cacheGetTogetherRaw.filter(r=>{
     const f=r.fields;
     const txt=`${f.BEONer||''} ${f.Ciudad||''} ${f.País||''} ${f.Proyecto||''}`.toLowerCase();
-    return(!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil);
+    return(!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil)&&(!temFil||managerDePersona(f.BEONer)===temFil);
   });
   document.getElementById('gt-badge-hist').textContent=`${recs.length} registros`;
   const tb=document.getElementById('gt-tbody-hist');

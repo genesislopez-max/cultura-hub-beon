@@ -19,6 +19,8 @@ async function loadOffsites(){
     return {...r, fields:f};
   });
   buildOSProyMap(); // precalcular mapa de proyectos una sola vez
+  poblarSelectorTEM('os-persona-tem');
+  poblarSelectorTEM('os-hist-tem');
   renderOSMetricas();
   renderOSPersona();
   renderOSProyecto();
@@ -269,6 +271,7 @@ function filtrarOSHistorial(){ renderOSHistorial(); }
 
 function renderOSPersona(){
   const q=(document.getElementById('os-search-persona')?.value||'').toLowerCase();
+  const temFil=document.getElementById('os-persona-tem')?.value||'';
   // Agrupar por persona
   const mapa={};
   cacheOSRaw.forEach(r=>{
@@ -282,7 +285,7 @@ function renderOSPersona(){
   });
 
   const filas=Object.entries(mapa)
-    .filter(([n])=>!q||n.toLowerCase().includes(q))
+    .filter(([n])=>(!q||n.toLowerCase().includes(q))&&(!temFil||managerDePersona(n)===temFil))
     .sort((a,b)=>b[1].ultFecha.localeCompare(a[1].ultFecha));
 
   document.getElementById('os-badge-persona').textContent=`${filas.length} personas`;
@@ -328,10 +331,12 @@ function renderOSProyecto(){
 function renderOSHistorial(){
   const q=(document.getElementById('os-search-hist')?.value||'').toLowerCase();
   const proyFil=document.getElementById('os-filter-proyecto')?.value||'';
+  const temFil=document.getElementById('os-hist-tem')?.value||'';
   const recs=cacheOSRaw.filter(r=>{
     const f=r.fields;
     const texto=`${f.Persona||''} ${f.Proyecto||''} ${f.Destino||''}`.toLowerCase();
-    return(!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil);
+    const nombrePersona=Array.isArray(f.Persona)?f.Persona[0]:(f.Persona||'');
+    return(!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil)&&(!temFil||managerDePersona(nombrePersona)===temFil);
   });
   (()=>{const _e=document.getElementById('os-badge-historial');if(_e) _e.textContent=`${recs.length} registros`;})();
   const tb=document.getElementById('os-tbody-historial');

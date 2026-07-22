@@ -559,6 +559,12 @@
               <option value="Inactivo">Solo inactivos</option>
               <option value="De Baja">Solo dados de baja</option>
             </select>
+            <div style="position:relative">
+              <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+              <select class="filter-select" id="proyectos-tem" onchange="filtrarProyectos()" style="padding-left:28px">
+                <option value="">Todos los TEMs</option>
+              </select>
+            </div>
           </div>
           <div class="table-scroll">
           <table class="data-table">

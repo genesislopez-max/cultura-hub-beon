@@ -285,7 +285,7 @@ function renderOSPersona(){
   });
 
   const filas=Object.entries(mapa)
-    .filter(([n])=>(!q||n.toLowerCase().includes(q))&&(!temFil||managerDePersona(n)===temFil))
+    .filter(([n])=>personaActiva(n)&&(!q||n.toLowerCase().includes(q))&&(!temFil||managerDePersona(n)===temFil))
     .sort((a,b)=>b[1].ultFecha.localeCompare(a[1].ultFecha));
 
   document.getElementById('os-badge-persona').textContent=`${filas.length} personas`;
@@ -336,7 +336,7 @@ function renderOSHistorial(){
     const f=r.fields;
     const texto=`${f.Persona||''} ${f.Proyecto||''} ${f.Destino||''}`.toLowerCase();
     const nombrePersona=Array.isArray(f.Persona)?f.Persona[0]:(f.Persona||'');
-    return(!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil)&&(!temFil||managerDePersona(nombrePersona)===temFil);
+    return personaActiva(nombrePersona)&&(!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil)&&(!temFil||managerDePersona(nombrePersona)===temFil);
   });
   (()=>{const _e=document.getElementById('os-badge-historial');if(_e) _e.textContent=`${recs.length} registros`;})();
   const tb=document.getElementById('os-tbody-historial');

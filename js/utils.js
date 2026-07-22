@@ -45,7 +45,7 @@ function avH(n){const s=safeStr(n);return`<div class="avatar ${av(s)}">${ini(s)}
 // que no tienen ya su propio dataset acotado (ver poblarFiltrosPersonas()
 // en personas.js para las tablas que sí lo tienen).
 function listaTEMs(){
-  return[...new Set(cachePersonasRaw.map(p=>p.fields.Manager).filter(Boolean))].sort();
+  return[...new Set(cachePersonasRaw.filter(p=>!yaEgreso(p)).map(p=>p.fields.Manager).filter(Boolean))].sort();
 }
 // Resuelve el TEM de una persona a partir de su nombre — para tablas cuyas
 // filas ya no son el registro de Personas completo (ej. Off Sites, Get
@@ -53,6 +53,13 @@ function listaTEMs(){
 function managerDePersona(nombre){
   const p=cachePersonasRaw.find(x=>(x.fields.Nombre||'').trim()===String(nombre||'').trim());
   return p?.fields.Manager||'';
+}
+// Si la persona ya no está en la empresa (Fecha de egreso pasada), los
+// listados "por persona"/historial no deben mostrarla — mismo criterio que
+// ya usan Personas/Cumpleaños/Aniversarios/Beneficios "Por persona".
+function personaActiva(nombre){
+  const p=cachePersonasRaw.find(x=>(x.fields.Nombre||'').trim()===String(nombre||'').trim());
+  return!!p&&!yaEgreso(p);
 }
 // Puebla un <select id="selectId"> con "Todos los TEMs" + la lista de
 // listaTEMs(), preservando la selección vigente si sigue siendo válida.

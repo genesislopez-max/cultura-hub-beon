@@ -204,6 +204,7 @@ function renderGTPersona(){
     const f=r.fields;
     const nombre=f.BEONer||'';
     if(!nombre) return;
+    if(!personaActiva(nombre)) return;
     if(paisFil&&(f.País||'')!==paisFil) return;
     if(temFil&&managerDePersona(nombre)!==temFil) return;
     if(!mapa[nombre]) mapa[nombre]={count:0,paises:new Set(),ciudades:new Set(),ultFecha:'',primerFecha:'9999'};
@@ -279,7 +280,7 @@ function renderGTHistorial(){
   const recs=cacheGetTogetherRaw.filter(r=>{
     const f=r.fields;
     const txt=`${f.BEONer||''} ${f.Ciudad||''} ${f.País||''} ${f.Proyecto||''}`.toLowerCase();
-    return(!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil)&&(!temFil||managerDePersona(f.BEONer)===temFil);
+    return personaActiva(f.BEONer)&&(!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil)&&(!temFil||managerDePersona(f.BEONer)===temFil);
   });
   document.getElementById('gt-badge-hist').textContent=`${recs.length} registros`;
   const tb=document.getElementById('gt-tbody-hist');

@@ -334,15 +334,16 @@ function renderBenefCatalogo(){
 // un beneficio "Ambos" (ej. clase de inglés), donde el catálogo tiene una
 // sola tarjeta por grupo pero conviene poder ver solo quiénes de cada uno
 // lo usan.
-function personasActivasBeneficio(nombreBeneficio,grupoFiltro){
+function personasActivasBeneficio(nombreBeneficio,grupoFiltro,temFiltro){
   return cacheBenefAsignados.filter(a=>{
     const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
     if(bNombre!==nombreBeneficio||(a.fields.Estado||'Activo')!=='Activo') return false;
+    const nombrePersona=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'');
     if(grupoFiltro==='Engineers'||grupoFiltro==='Core Team'){
-      const nombrePersona=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'');
       const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===(nombrePersona||'').trim());
       if(!persona||getRolGroup(persona.fields['Rol en empresa']||'')!==grupoFiltro) return false;
     }
+    if(temFiltro&&managerDePersona(nombrePersona)!==temFiltro) return false;
     return true;
   });
 }
@@ -354,15 +355,27 @@ function personasActivasBeneficio(nombreBeneficio,grupoFiltro){
 function abrirBenefDetalleModal(id,seccionGrupo){
   const r=cacheBeneficiosRaw.find(b=>b.id===id);
   if(!r) return;
+  benefDetalleActual={r,grupoFiltro:seccionGrupo};
   document.getElementById('benef-detalle-titulo').textContent=r.fields.Beneficio||'—';
-  document.getElementById('benef-detalle-body').innerHTML=contenidoBenefDetalle(r,seccionGrupo);
+  poblarSelectorTEM('benef-detalle-tem');
+  document.getElementById('benef-detalle-tem').value='';
+  document.getElementById('benef-detalle-body').innerHTML=contenidoBenefDetalle(r,seccionGrupo,'');
   document.getElementById('benef-detalle-overlay').style.display='flex';
 }
 function cerrarBenefDetalleModal(){
   document.getElementById('benef-detalle-overlay').style.display='none';
+  benefDetalleActual=null;
 }
-function contenidoBenefDetalle(r,grupoFiltro){
-  const activos=personasActivasBeneficio(r.fields.Beneficio,grupoFiltro);
+// Re-renderiza el detalle abierto cuando se cambia el select de TEM, sin
+// volver a abrir el modal (benefDetalleActual guarda el beneficio/grupo vigente).
+function filtrarBenefDetalle(){
+  if(!benefDetalleActual) return;
+  const temFiltro=document.getElementById('benef-detalle-tem')?.value||'';
+  document.getElementById('benef-detalle-body').innerHTML=
+    contenidoBenefDetalle(benefDetalleActual.r,benefDetalleActual.grupoFiltro,temFiltro);
+}
+function contenidoBenefDetalle(r,grupoFiltro,temFiltro){
+  const activos=personasActivasBeneficio(r.fields.Beneficio,grupoFiltro,temFiltro);
   if(!activos.length){
     const sufijoGrupo=(grupoFiltro==='Engineers'||grupoFiltro==='Core Team')?` de ${grupoFiltro}`:'';
     return `<div style="color:var(--text3);font-size:12px;">Nadie${sufijoGrupo} tiene este beneficio activo en este momento.</div>`;

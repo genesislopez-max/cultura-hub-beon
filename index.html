@@ -1249,6 +1249,12 @@
               <div class="search-wrap"><i class="ti ti-search search-icon"></i>
                 <input class="search-input" id="av-search-persona" placeholder="Buscar persona…" oninput="filtrarAVPersona()">
               </div>
+              <div style="position:relative">
+                <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="av-persona-tem" onchange="filtrarAVPersona()" style="padding-left:28px">
+                  <option value="">Todos los TEMs</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -1396,7 +1402,13 @@
     </div>
     <div style="padding:0 24px 24px;">
       <div id="benef-detalle-titulo" style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px"></div>
-      <div style="font-size:13px;color:var(--text3);margin-bottom:20px">Quién tiene este beneficio</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:12px">Quién tiene este beneficio</div>
+      <div style="position:relative;margin-bottom:16px">
+        <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+        <select class="filter-select" id="benef-detalle-tem" onchange="filtrarBenefDetalle()" style="padding-left:28px;width:100%">
+          <option value="">Todos los TEMs</option>
+        </select>
+      </div>
       <div id="benef-detalle-body"></div>
     </div>
   </div>

@@ -408,6 +408,12 @@
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" id="ingresos-search" placeholder="Buscar por nombre o proyecto…" oninput="filtrarIngresos()">
           </div>
+          <div style="position:relative">
+            <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+            <select class="filter-select" id="ingresos-tem" onchange="filtrarIngresos()" style="padding-left:28px">
+              <option value="">Todos los TEMs</option>
+            </select>
+          </div>
         </div>
         <div class="kanban-board" id="kb-ingresos">
           <div class="kanban-col col-pre-ingreso" data-col="Pre-ingreso">
@@ -440,6 +446,12 @@
           <div class="search-wrap">
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" id="egresos-search" placeholder="Buscar por nombre o proyecto…" oninput="filtrarEgresos()">
+          </div>
+          <div style="position:relative">
+            <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+            <select class="filter-select" id="egresos-tem" onchange="filtrarEgresos()" style="padding-left:28px">
+              <option value="">Todos los TEMs</option>
+            </select>
           </div>
         </div>
         <div class="kanban-board" id="kb-egresos">

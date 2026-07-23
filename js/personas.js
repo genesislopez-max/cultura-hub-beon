@@ -401,8 +401,8 @@ function poblarFiltrosPersonas(){
   ['eng','core'].forEach(grupo=>{
     const datos=pagState[grupo].all||[];
     const proyectos=[...new Set(datos.map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
-    // listaTEMs() (no los valores de Manager de este grupo) — así el
-    // selector solo ofrece gente cuyo "Rol en empresa" es TEM de verdad,
+    // listaTEMs() (no los valores crudos de Manager de este grupo) — así el
+    // selector solo ofrece gente con un rol de liderazgo real (LIDER_ROLES),
     // en vez de cualquiera que figure en el campo Manager de alguien.
     const managers=listaTEMs();
     const selProy=document.getElementById(`personas-proyecto-${grupo}`);
@@ -411,7 +411,11 @@ function poblarFiltrosPersonas(){
       selProy.innerHTML='<option value="">Todos los proyectos</option>'+proyectos.map(p=>`<option value="${p}">${p}</option>`).join('');
     }
     if(selMgr){
-      selMgr.innerHTML='<option value="">Todos los TEMs</option>'+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
+      // "TEM" es específico de Engineers & Tech — Core Team puede reportarle
+      // a cualquier líder (Lead, Manager, Supervisor, etc.), así que ahí el
+      // copy dice "managers" en vez de "TEMs".
+      const placeholder=grupo==='eng'?'Todos los TEMs':'Todos los managers';
+      selMgr.innerHTML=`<option value="">${placeholder}</option>`+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
     }
   });
   actualizarEstiloFiltrosET();

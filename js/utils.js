@@ -67,14 +67,18 @@ function personaActiva(nombre){
   const p=cachePersonasRaw.find(x=>(x.fields.Nombre||'').trim()===String(nombre||'').trim());
   return!!p&&!yaEgreso(p);
 }
-// Puebla un <select id="selectId"> con "Todos los TEMs" + la lista de
+// Puebla un <select id="selectId"> con "Todos los managers" + la lista de
 // listaTEMs(), preservando la selección vigente si sigue siendo válida.
+// El copy dice "managers" y no "TEMs" porque este selector se usa en tablas
+// donde la persona puede reportarle a cualquier líder (TEM, Lead, Manager,
+// etc.) — "TEM" como tal solo aplica en Engineers & Tech (ver
+// poblarFiltrosPersonas() en personas.js, que sí distingue por grupo).
 function poblarSelectorTEM(selectId){
   const sel=document.getElementById(selectId);
   if(!sel) return;
   const actual=sel.value;
   const tems=listaTEMs();
-  sel.innerHTML='<option value="">Todos los TEMs</option>'+tems.map(t=>`<option value="${t}">${t}</option>`).join('');
+  sel.innerHTML='<option value="">Todos los managers</option>'+tems.map(t=>`<option value="${t}">${t}</option>`).join('');
   if(tems.includes(actual)) sel.value=actual;
 }
 

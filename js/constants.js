@@ -106,6 +106,10 @@ const rolColor={Engineer:'badge-blue',TEM:'badge-purple',Manager:'badge-amber',L
 // Roles que pertenecen a Core Team — usado en Personas y Cumpleaños para
 // clasificar a alguien en un grupo u otro.
 const CORE_TEAM_ROLES=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
+// Roles que califican como líder/manager de alguien — usado para poblar el
+// selector de "Filtrar por TEM": no se limita al rol "TEM" en sí, porque
+// Core Team puede reportarle a un Lead, Manager, Supervisor, COO o Founder.
+const LIDER_ROLES=new Set(['TEM','Manager','Lead','Supervisor','COO','Founder']);
 const NIVELES=['Spark','Ray','Lightning','Thunder','Storm'];
 const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
 const NIVEL_ICONS={Spark:'ti-sparkles',Ray:'ti-sun',Lightning:'ti-bolt',Thunder:'ti-wind',Storm:'ti-cloud-storm'};

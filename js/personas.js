@@ -401,7 +401,10 @@ function poblarFiltrosPersonas(){
   ['eng','core'].forEach(grupo=>{
     const datos=pagState[grupo].all||[];
     const proyectos=[...new Set(datos.map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
-    const managers=[...new Set(datos.map(p=>p.fields.Manager||'').filter(Boolean))].sort();
+    // listaTEMs() (no los valores de Manager de este grupo) — así el
+    // selector solo ofrece gente cuyo "Rol en empresa" es TEM de verdad,
+    // en vez de cualquiera que figure en el campo Manager de alguien.
+    const managers=listaTEMs();
     const selProy=document.getElementById(`personas-proyecto-${grupo}`);
     const selMgr=document.getElementById(`personas-manager-${grupo}`);
     if(selProy){

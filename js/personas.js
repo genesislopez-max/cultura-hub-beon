@@ -377,14 +377,28 @@ function filtrarPersonas(grupo){
   actualizarEstiloFiltrosET();
 }
 
+// TEM real (Rol en empresa==='TEM') + Valentina Poblet — caso puntual: hace
+// de TEM de Engineers aunque su rol en Airtable no está tageado como tal.
+// A diferencia de listaTEMs() (usada en Core Team y el resto de la app, que
+// acepta cualquier LIDER_ROLES), acá el filtro de Engineers & Tech es
+// estricto: solo TEMs de verdad, más esta excepción.
+function listaTEMsEngineers(){
+  const nombres=new Set(cachePersonasRaw
+    .filter(p=>!yaEgreso(p)&&(p.fields['Rol en empresa']||'').trim()==='TEM')
+    .map(p=>p.fields.Nombre));
+  if(cachePersonasRaw.some(p=>!yaEgreso(p)&&(p.fields.Nombre||'').trim()==='Valentina Poblet')){
+    nombres.add('Valentina Poblet');
+  }
+  return[...nombres].sort();
+}
 function poblarFiltrosPersonas(){
   ['eng','core'].forEach(grupo=>{
     const datos=pagState[grupo].all||[];
     const proyectos=[...new Set(datos.map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
-    // listaTEMs() (no los valores crudos de Manager de este grupo) — así el
-    // selector solo ofrece gente con un rol de liderazgo real (LIDER_ROLES),
-    // en vez de cualquiera que figure en el campo Manager de alguien.
-    const managers=listaTEMs();
+    // Engineers & Tech es estricto (solo TEM + Valentina Poblet); Core Team
+    // usa listaTEMs() (cualquier LIDER_ROLES), porque ahí se puede reportar
+    // a un Lead/Manager/Supervisor/etc., no solo a un TEM.
+    const managers=grupo==='eng'?listaTEMsEngineers():listaTEMs();
     const selProy=document.getElementById(`personas-proyecto-${grupo}`);
     const selMgr=document.getElementById(`personas-manager-${grupo}`);
     if(selProy){

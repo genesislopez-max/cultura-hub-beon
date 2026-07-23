@@ -88,7 +88,7 @@ function nivelBadgeHtmlEng(recordId, nivelActual){
 }
 function rowHtmlEng(r){
   const f=r.fields, rol=f['Rol en empresa']||'Engineer';
-  const nivel=f['Nivel Loyalty']||'Spark';
+  const nivel=normalizarNivel(f['Nivel Loyalty']);
   const nombre=f.Nombre||'—', manager=f.Manager||'', proyecto=f.Proyecto||'';
   const tenure=calcAntiguedad(f['Fecha de ingreso']);
   const newish=/mes|<\s*1/.test(tenure)&&!/año/.test(tenure);
@@ -115,7 +115,7 @@ function rowHtmlEng(r){
 
 function rowHtml(r){
   const f=r.fields, rol=f['Rol en empresa']||'';
-  const nivel=f['Nivel Loyalty']||'Spark';
+  const nivel=normalizarNivel(f['Nivel Loyalty']);
   return`<tr>
     <td>${nombreClickHtml(r)}</td>
     <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
@@ -380,7 +380,7 @@ function filtrarPersonas(grupo){
           proy=(f.Proyecto||'').toLowerCase(), ciudad=(f.Ciudad||'').toLowerCase();
     const matchQ=!q||nombre.includes(q)||mail.includes(q)||proy.includes(q)||ciudad.includes(q);
     const matchRol=!rol||(f['Rol en empresa']||'')===rol;
-    const matchLoyalty=!loyalty||(f['Nivel Loyalty']||'Spark')===loyalty;
+    const matchLoyalty=!loyalty||normalizarNivel(f['Nivel Loyalty'])===loyalty;
     const matchProyecto=!proyecto||(f.Proyecto||'')===proyecto;
     const matchManager=!manager||(f.Manager||'')===manager;
     return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager;
@@ -415,14 +415,23 @@ function poblarFiltrosPersonas(){
 }
 
 // KPI strip por nivel Loyalty de Engineers & Tech (diseño "Engineers y Tech.dc.html").
+// Cualquier valor de "Nivel Loyalty" que no matchee exactamente uno de los 5
+// niveles (typo, mayúsculas distintas, espacios) antes se perdía en silencio:
+// en el KPI quedaba sumado bajo una clave que el strip nunca renderiza (el
+// total de las 5 tarjetas terminaba siendo menor a la cantidad real de
+// Engineers), y en el filtro por nivel esa persona nunca matcheaba ninguna
+// opción. Se normaliza acá una sola vez para que ambos usen el mismo criterio.
+function normalizarNivel(valor){
+  const crudo=(valor||'').trim();
+  return NIVELES.find(niv=>niv.toLowerCase()===crudo.toLowerCase())||'Spark';
+}
 function renderETKpi(lista){
   const cont=document.getElementById('et-kpi-strip');
   if(!cont) return;
   const conteo={};
   NIVELES.forEach(n=>conteo[n]=0);
   lista.forEach(p=>{
-    const n=p.fields['Nivel Loyalty']||'Spark';
-    conteo[n]=(conteo[n]||0)+1;
+    conteo[normalizarNivel(p.fields['Nivel Loyalty'])]++;
   });
   cont.innerHTML=[...NIVELES].reverse().map(n=>`
     <div class="et-kpi-card">

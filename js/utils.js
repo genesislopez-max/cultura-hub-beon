@@ -46,12 +46,12 @@ function avH(n){const s=safeStr(n);return`<div class="avatar ${av(s)}">${ini(s)}
 // en personas.js para las tablas que sí lo tienen).
 function listaTEMs(){
   // Antes se armaba con los valores distintos del campo Manager de cualquier
-  // persona activa — pero ese campo puede apuntar a alguien con otro rol
-  // (Lead, Manager, etc.) que no es formalmente un TEM, y terminaba
-  // apareciendo como opción en el selector sin serlo. Se usa en cambio
-  // cachePersonasPorRol.TEM (armado en loadPersonas() a partir de
-  // "Rol en empresa"==='TEM'), la fuente real de quién es TEM.
-  return[...new Set(cachePersonasPorRol.TEM||[])].sort();
+  // persona activa — pero ese campo solo indica "a quién le reporta", y
+  // puede apuntar a alguien sin ningún rol de liderazgo real, colándose como
+  // opción del selector sin serlo. Tampoco alcanza con limitarlo al rol
+  // "TEM" en sí: Core Team puede reportarle a un Lead/Manager/Supervisor/
+  // COO/Founder también — LIDER_ROLES cubre todos esos roles de liderazgo.
+  return[...new Set(cachePersonasRaw.filter(p=>!yaEgreso(p)&&LIDER_ROLES.has((p.fields['Rol en empresa']||'').trim())).map(p=>p.fields.Nombre).filter(Boolean))].sort();
 }
 // Resuelve el TEM de una persona a partir de su nombre — para tablas cuyas
 // filas ya no son el registro de Personas completo (ej. Off Sites, Get

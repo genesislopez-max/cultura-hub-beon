@@ -45,7 +45,13 @@ function avH(n){const s=safeStr(n);return`<div class="avatar ${av(s)}">${ini(s)}
 // que no tienen ya su propio dataset acotado (ver poblarFiltrosPersonas()
 // en personas.js para las tablas que sí lo tienen).
 function listaTEMs(){
-  return[...new Set(cachePersonasRaw.filter(p=>!yaEgreso(p)).map(p=>p.fields.Manager).filter(Boolean))].sort();
+  // Antes se armaba con los valores distintos del campo Manager de cualquier
+  // persona activa — pero ese campo puede apuntar a alguien con otro rol
+  // (Lead, Manager, etc.) que no es formalmente un TEM, y terminaba
+  // apareciendo como opción en el selector sin serlo. Se usa en cambio
+  // cachePersonasPorRol.TEM (armado en loadPersonas() a partir de
+  // "Rol en empresa"==='TEM'), la fuente real de quién es TEM.
+  return[...new Set(cachePersonasPorRol.TEM||[])].sort();
 }
 // Resuelve el TEM de una persona a partir de su nombre — para tablas cuyas
 // filas ya no son el registro de Personas completo (ej. Off Sites, Get

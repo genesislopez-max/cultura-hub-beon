@@ -239,38 +239,59 @@
 
       <!-- PERSONAS -->
       <div class="section-page" id="page-engineers">
-        <!-- Barra búsqueda+filtros Engineers & Tech -->
-        <div class="search-bar" style="border:1px solid var(--border);border-radius:13px 13px 0 0;margin-bottom:-1px;background:var(--bg2);">
-          <div class="search-wrap">
-            <i class="ti ti-search search-icon"></i>
-            <input class="search-input" id="personas-search-eng" placeholder="Buscar por nombre, mail, proyecto o ciudad…" oninput="filtrarPersonas('eng')">
+        <!-- KPI por nivel Loyalty -->
+        <div class="et-kpi-strip" id="et-kpi-strip"></div>
+
+        <div class="et-panel" id="wrap-engineers">
+          <!-- Toolbar -->
+          <div class="et-toolbar">
+            <div class="et-search-wrap">
+              <i class="ti ti-search"></i>
+              <input class="et-search" id="personas-search-eng" placeholder="Buscar por nombre, mail, proyecto o ciudad…" oninput="filtrarPersonas('eng')">
+            </div>
+            <div class="et-filters">
+              <div class="et-sel-wrap">
+                <i class="ti ti-award et-sel-icon"></i>
+                <select class="et-sel" id="personas-loyalty-eng" onchange="filtrarPersonas('eng')">
+                  <option value="">Todos los niveles</option>
+                  <option value="Spark">⚡ Spark</option>
+                  <option value="Ray">☀️ Ray</option>
+                  <option value="Lightning">🌩 Lightning</option>
+                  <option value="Thunder">🌪 Thunder</option>
+                  <option value="Storm">🌊 Storm</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+              <div class="et-sel-wrap">
+                <i class="ti ti-folder et-sel-icon"></i>
+                <select class="et-sel" id="personas-proyecto-eng" onchange="filtrarPersonas('eng')">
+                  <option value="">Todos los proyectos</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+              <div class="et-sel-wrap">
+                <i class="ti ti-user-star et-sel-icon"></i>
+                <select class="et-sel" id="personas-manager-eng" onchange="filtrarPersonas('eng')">
+                  <option value="">Todos los TEMs</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+            </div>
           </div>
-          <select class="filter-select" id="personas-loyalty-eng" onchange="filtrarPersonas('eng')">
-            <option value="">Todos los niveles</option>
-            <option value="Spark">⚡ Spark</option>
-            <option value="Ray">☀️ Ray</option>
-            <option value="Lightning">🌩 Lightning</option>
-            <option value="Thunder">🌪 Thunder</option>
-            <option value="Storm">🌊 Storm</option>
-          </select>
-          <select class="filter-select" id="personas-proyecto-eng" onchange="filtrarPersonas('eng')">
-            <option value="">Todos los proyectos</option>
-          </select>
-          <select class="filter-select" id="personas-manager-eng" onchange="filtrarPersonas('eng')">
-            <option value="">Todos los TEMs</option>
-          </select>
-        </div>
-        <div class="table-wrap" id="wrap-engineers" style="border-radius:13px;margin-top:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid var(--blue);border-radius:13px 13px 0 0;">
-            <span class="table-head-title" style="color:var(--text-eng-accent)">Engineers & Tech</span>
-            <span class="badge badge-blue" id="badge-personas-eng">—</span>
+
+          <!-- Sub header -->
+          <div class="et-subhead">
+            <div class="et-subhead-title">Engineers & Tech</div>
+            <span class="et-subhead-count" id="badge-personas-eng">—</span>
           </div>
-          <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Antigüedad</th><th>Manager</th></tr></thead>
-            <tbody id="tbody-personas-eng"></tbody>
-          </table>
+
+          <!-- Table head -->
+          <div class="et-thead">
+            <div>Nombre</div><div>Rol</div><div>Nivel loyalty</div><div>Proyecto</div><div>Antigüedad</div><div>Manager</div><div></div>
           </div>
+
+          <div class="et-rows" id="tbody-personas-eng"></div>
+
           <div class="pag-bar" id="pag-bar-eng" style="display:none">
             <button class="pag-btn" id="pag-prev-eng" onclick="cambiarPaginaPersonas('eng',-1)">← Anterior</button>
             <span class="pag-info" id="pag-info-eng"></span>

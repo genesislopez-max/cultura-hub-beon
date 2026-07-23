@@ -308,6 +308,14 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
     btn.setAttribute('onclick',`toggleNivelDropdown('${recordId}')`);
   }
 
+  // Actualizar el registro en cache (mismo objeto referenciado por
+  // pagState.eng/core .all/.data, ya que vienen de filter()/spread sobre
+  // cachePersonasRaw, no de una copia profunda) — si no, el filtro por nivel
+  // y el KPI de Engineers & Tech siguen viendo el nivel viejo hasta recargar.
+  const persona=cachePersonasRaw.find(p=>p.id===recordId);
+  if(persona) persona.fields['Nivel Loyalty']=nuevoNivel;
+  if(pagState.eng?.all?.some(p=>p.id===recordId)) renderETKpi(pagState.eng.all);
+
   // Guardar en Airtable
   try{
     await atPatch(`Personas/${recordId}`,{'Nivel Loyalty':nuevoNivel});
@@ -316,8 +324,7 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
     return;
   }
 
-  // Obtener nombre de la persona para el recordatorio
-  const persona=cachePersonasRaw.find(p=>p.id===recordId);
+  // Nombre de la persona para el recordatorio
   const nombre=persona?.fields?.Nombre||'esta persona';
 
   // Notificar Slack

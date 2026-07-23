@@ -3,6 +3,7 @@
 // justo después del login con Google.
 const {verifyGoogleIdToken}=require('./_lib/auth');
 const {signSession}=require('./_lib/session');
+const {resolverRolAcceso}=require('./_lib/roles');
 
 module.exports=async(req,res)=>{
   if(req.method!=='POST'){
@@ -17,13 +18,18 @@ module.exports=async(req,res)=>{
     return;
   }
 
+  // Se resuelve acá (una sola vez, al loguear) y queda embebido en el token
+  // firmado — así el resto de los pedidos no necesita volver a consultar
+  // Airtable para saber el rol de acceso (ver api/_lib/roles.js).
+  const rol=await resolverRolAcceso(verificado.email);
+
   let token;
   try{
-    token=signSession({email:verificado.email,name:verificado.name});
+    token=signSession({email:verificado.email,name:verificado.name,rol});
   }catch(e){
     res.status(500).json({error:{message:e.message}});
     return;
   }
 
-  res.status(200).json({token,email:verificado.email,name:verificado.name});
+  res.status(200).json({token,email:verificado.email,name:verificado.name,rol});
 };

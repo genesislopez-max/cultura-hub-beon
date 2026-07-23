@@ -86,3 +86,149 @@ test('api/airtable: un token de sesión vencido devuelve 401', async()=>{
   await handler(req,res);
   assert.equal(res.statusCode,401);
 });
+
+// ─── Control de acceso por rol ───────────────────────────────────────────────
+const TOKEN_EQUIPO=signSession({email:'ana@beon.tech',name:'Ana',rol:'equipo'});
+const TOKEN_TEM=signSession({email:'vicky@beon.tech',name:'Vicky',rol:'tem'});
+const TOKEN_HR=signSession({email:'hr@beon.tech',name:'HR',rol:'hr'});
+// Sesión firmada antes de este cambio — sin rol en el payload.
+const TOKEN_SIN_ROL=signSession({email:'viejo@beon.tech',name:'Viejo'});
+
+test('api/airtable: Checklist (Ingresos/Egresos) — 200 con records vacíos para equipo/tem, sin llamar a Airtable', async()=>{
+  for(const token of [TOKEN_EQUIPO,TOKEN_TEM,TOKEN_SIN_ROL]){
+    const {calls,fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[{id:'rec1'}]})});
+    const original=global.fetch;
+    global.fetch=fetchImpl;
+    try{
+      const req={headers:{authorization:`Bearer ${token}`},method:'GET',query:{path:'Checklist'}};
+      const res=fakeRes();
+      await handler(req,res);
+      assert.equal(res.statusCode,200);
+      assert.deepEqual(res.body,{records:[]});
+      assert.equal(calls.length,0);
+    }finally{
+      global.fetch=original;
+    }
+  }
+});
+
+test('api/airtable: Checklist — HR ve los datos reales', async()=>{
+  const {calls,fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[{id:'rec1'}]})});
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const req={headers:{authorization:`Bearer ${TOKEN_HR}`},method:'GET',query:{path:'Checklist'}};
+    const res=fakeRes();
+    await handler(req,res);
+    assert.equal(res.statusCode,200);
+    assert.deepEqual(JSON.parse(res.body),{records:[{id:'rec1'}]});
+    assert.equal(calls.length,1);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+test('api/airtable: escribir en Checklist sin ser HR devuelve 403 (no 200 silencioso)', async()=>{
+  const {calls,fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[]})});
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const req={headers:{authorization:`Bearer ${TOKEN_EQUIPO}`},method:'PATCH',query:{path:'Checklist/rec1'},body:{fields:{}}};
+    const res=fakeRes();
+    await handler(req,res);
+    assert.equal(res.statusCode,403);
+    assert.equal(calls.length,0);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+test('api/airtable: Presupuesto Loyalty — oculto para equipo, visible para tem y hr', async()=>{
+  for(const [token,esperaVacio] of [[TOKEN_EQUIPO,true],[TOKEN_TEM,false],[TOKEN_HR,false]]){
+    const {fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[{id:'recP'}]})});
+    const original=global.fetch;
+    global.fetch=fetchImpl;
+    try{
+      const req={headers:{authorization:`Bearer ${token}`},method:'GET',query:{path:'Presupuesto Loyalty'}};
+      const res=fakeRes();
+      await handler(req,res);
+      assert.equal(res.statusCode,200);
+      const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+      assert.equal(body.records.length,esperaVacio?0:1);
+    }finally{
+      global.fetch=original;
+    }
+  }
+});
+
+test('api/airtable: Eventos — a equipo/tem les saca los registros de Glassdoor pero conserva el resto', async()=>{
+  const eventos=[
+    {id:'e1',fields:{Tipo:'Glassdoor',Evento:'Glassdoor — Fulano'}},
+    {id:'e2',fields:{Tipo:'Cumpleaños',Evento:'Cumple de Fulano'}},
+  ];
+  const {fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:eventos})});
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const req={headers:{authorization:`Bearer ${TOKEN_EQUIPO}`},method:'GET',query:{path:'Eventos'}};
+    const res=fakeRes();
+    await handler(req,res);
+    assert.deepEqual(res.body.records.map(r=>r.id),['e2']);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+test('api/airtable: Eventos — HR ve todo, incluido Glassdoor', async()=>{
+  const eventos=[
+    {id:'e1',fields:{Tipo:'Glassdoor',Evento:'Glassdoor — Fulano'}},
+    {id:'e2',fields:{Tipo:'Cumpleaños',Evento:'Cumple de Fulano'}},
+  ];
+  const {fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:eventos})});
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const req={headers:{authorization:`Bearer ${TOKEN_HR}`},method:'GET',query:{path:'Eventos'}};
+    const res=fakeRes();
+    await handler(req,res);
+    const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+    assert.equal(body.records.length,2);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+test('api/airtable: Beneficios — a equipo le saca el campo Valor, tem/hr lo conservan', async()=>{
+  for(const [token,esperaValor] of [[TOKEN_EQUIPO,false],[TOKEN_TEM,true],[TOKEN_HR,true]]){
+    const {fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[{id:'b1',fields:{Beneficio:'Gimnasio',Valor:50000}}]})});
+    const original=global.fetch;
+    global.fetch=fetchImpl;
+    try{
+      const req={headers:{authorization:`Bearer ${token}`},method:'GET',query:{path:'Beneficios'}};
+      const res=fakeRes();
+      await handler(req,res);
+      const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+      assert.equal('Valor' in body.records[0].fields,esperaValor);
+      assert.equal(body.records[0].fields.Beneficio,'Gimnasio'); // el resto de los campos no se toca
+    }finally{
+      global.fetch=original;
+    }
+  }
+});
+
+test('api/airtable: Beneficios Asignados — a equipo le saca el campo Monto, tem/hr lo conservan', async()=>{
+  for(const [token,esperaMonto] of [[TOKEN_EQUIPO,false],[TOKEN_TEM,true]]){
+    const {fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[{id:'a1',fields:{Persona:'Ana',Monto:30000}}]})});
+    const original=global.fetch;
+    global.fetch=fetchImpl;
+    try{
+      const req={headers:{authorization:`Bearer ${token}`},method:'GET',query:{path:'Beneficios Asignados'}};
+      const res=fakeRes();
+      await handler(req,res);
+      const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+      assert.equal('Monto' in body.records[0].fields,esperaMonto);
+    }finally{
+      global.fetch=original;
+    }
+  }
+});

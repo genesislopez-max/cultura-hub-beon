@@ -13,6 +13,45 @@
 // endpoint fijo + query param no depende de esa resolución de rutas.
 const {verifySession}=require('./_lib/session');
 
+// Control de acceso por rol — ver api/_lib/roles.js para cómo se resuelve
+// "rol" (una sola vez, en el login, embebido en el token de sesión).
+// Ingresos/Egresos (tabla Checklist) y Glassdoor (registros de Tipo
+// "Glassdoor" en Eventos) son exclusivos de People/HR; los montos/
+// presupuesto de Beneficios (Presupuesto Loyalty, y los campos
+// Valor/Monto en Beneficios/Beneficios Asignados) son exclusivos de
+// People/HR y TEM/Manager — el resto del equipo no los ve.
+const TABLAS_SOLO_HR=new Set(['Checklist']);
+const TABLAS_MONTO_SOLO_HR_TEM=new Set(['Presupuesto Loyalty']);
+const TABLAS_REDACTABLES=new Set(['Eventos','Beneficios','Beneficios Asignados']);
+
+function estaBloqueadaDelTodo(tabla,rol){
+  return (TABLAS_SOLO_HR.has(tabla)&&rol!=='hr')||(TABLAS_MONTO_SOLO_HR_TEM.has(tabla)&&rol==='equipo');
+}
+
+// Filtra/redacta la respuesta de Airtable ya obtenida — solo aplica en GET,
+// para no romper Promise.all()s del cliente que asumen que estas lecturas
+// siempre resuelven (ej. loadBeneficios() en js/beneficios.js pide Beneficios
+// + Beneficios Asignados + Presupuesto Loyalty juntos).
+function redactarSegunRol(tabla,rol,data){
+  if(rol==='hr') return data;
+  if(tabla==='Eventos'){
+    data.records=(data.records||[]).filter(r=>r.fields?.Tipo!=='Glassdoor');
+  } else if(rol==='equipo'&&tabla==='Beneficios'){
+    data.records=(data.records||[]).map(r=>{
+      const fields={...r.fields};
+      delete fields.Valor;
+      return {...r,fields};
+    });
+  } else if(rol==='equipo'&&tabla==='Beneficios Asignados'){
+    data.records=(data.records||[]).map(r=>{
+      const fields={...r.fields};
+      delete fields.Monto;
+      return {...r,fields};
+    });
+  }
+  return data;
+}
+
 module.exports=async(req,res)=>{
   const idToken=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
   const verificado=verifySession(idToken);
@@ -20,6 +59,9 @@ module.exports=async(req,res)=>{
     res.status(401).json({error:{message:verificado.error}});
     return;
   }
+  // Sesiones firmadas antes de este cambio no tienen rol — se tratan como el
+  // nivel más restrictivo hasta que esa persona vuelva a loguearse.
+  const rol=verificado.rol||'equipo';
 
   const token=process.env.AIRTABLE_TOKEN;
   const base=process.env.AIRTABLE_BASE;
@@ -31,6 +73,21 @@ module.exports=async(req,res)=>{
   const {path,...resto}=req.query;
   if(!path){
     res.status(400).json({error:{message:'Falta indicar la tabla de Airtable.'}});
+    return;
+  }
+
+  const tabla=String(path).split('/')[0];
+  if(estaBloqueadaDelTodo(tabla,rol)){
+    if(req.method==='GET'){
+      // Degradación silenciosa — sin esto, un Promise.all() en el cliente
+      // que pide esta tabla junto con otras rompería la carga entera.
+      res.status(200).json({records:[]});
+    } else {
+      // Escritura a una tabla restringida: la UI ya no debería exponer estos
+      // flujos para este rol — esto es un cinturón de seguridad, no el
+      // camino esperado.
+      res.status(403).json({error:{message:'No autorizado.'}});
+    }
     return;
   }
 
@@ -55,6 +112,16 @@ module.exports=async(req,res)=>{
   }
 
   const text=await airtableRes.text();
+
+  if(req.method==='GET'&&airtableRes.ok&&rol!=='hr'&&TABLAS_REDACTABLES.has(tabla)){
+    let data;
+    try{ data=JSON.parse(text); }catch(e){ data=null; }
+    if(data){
+      res.status(airtableRes.status).json(redactarSegunRol(tabla,rol,data));
+      return;
+    }
+  }
+
   res.status(airtableRes.status);
   res.setHeader('Content-Type','application/json');
   res.send(text);

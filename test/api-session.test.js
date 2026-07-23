@@ -36,6 +36,25 @@ test('api/session: intercambia un ID token de Google válido por un token de ses
   }
 });
 
+test('api/session: resuelve y devuelve el rol de acceso (HR_EMAILS) — sin AIRTABLE_TOKEN/BASE configurados no explota', async()=>{
+  const original=global.fetch;
+  const hrOriginal=process.env.HR_EMAILS;
+  process.env.HR_EMAILS='gustavo@beon.tech';
+  global.fetch=fakeGoogleFetch({aud:GOOGLE_CLIENT_ID,email_verified:'true',email:'gustavo@beon.tech',hd:'beon.tech',name:'Gustavo'});
+  try{
+    const req={method:'POST',body:{idToken:'google-id-token'}};
+    const res=fakeRes();
+    await handler(req,res);
+    assert.equal(res.statusCode,200);
+    assert.equal(res.body.rol,'hr');
+    const verificado=verifySession(res.body.token);
+    assert.equal(verificado.rol,'hr');
+  }finally{
+    global.fetch=original;
+    process.env.HR_EMAILS=hrOriginal;
+  }
+});
+
 test('api/session: ID token inválido no emite sesión', async()=>{
   const original=global.fetch;
   global.fetch=async()=>({ok:false});

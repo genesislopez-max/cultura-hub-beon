@@ -48,8 +48,31 @@ function aplicarSidebarColapsado(){
   });
 }
 
+// ─── CONTROL DE ACCESO POR ROL ────────────────────────────────────────────────
+// Se llama al arrancar — oculta del menú lateral y del dashboard de Inicio las
+// secciones exclusivas de People/HR para quien no sea HR. El bloqueo real de
+// los datos ya pasó en el servidor (api/airtable.js); esto es solo para que
+// la navegación no muestre secciones que van a llegar vacías.
+function aplicarRestriccionesDeAcceso(){
+  if(rolUsuarioActual()==='hr') return;
+  SECCIONES_SOLO_HR.forEach(nombre=>{
+    document.querySelector(`.sb-item[onclick*="${nombre}"]`)?.style.setProperty('display','none');
+  });
+  // Tarjetas resumen de Inicio que muestran datos de esas secciones
+  ['sc-ingresos','sc-glassdoor','sc-offboard'].forEach(id=>{
+    document.getElementById(id)?.closest('.summary-card')?.style.setProperty('display','none');
+  });
+}
+
 // ─── NAV ─────────────────────────────────────────────────────────────────────
 function showSection(name,btn){
+  // Cinturón de seguridad — el bloqueo real ya pasó en el servidor
+  // (api/airtable.js); esto solo evita que algo (ej. devtools) navegue a una
+  // sección restringida y la deje visible sin datos.
+  if(SECCIONES_SOLO_HR.has(name)&&rolUsuarioActual()!=='hr'){
+    name='inicio';
+    btn=document.querySelector('.sb-item[onclick*="inicio"]');
+  }
   document.querySelectorAll('.section-page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
@@ -292,6 +315,7 @@ async function init(){
   actualizarIconoTema(document.documentElement.getAttribute('data-theme')||'light');
   aplicarSidebarColapsado();
   if(!checkSesion()) return; // muestra la pantalla de login; onGoogleSignIn() llama a iniciarHub()
+  aplicarRestriccionesDeAcceso();
   await iniciarHub();
 }
 init();

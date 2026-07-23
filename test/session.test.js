@@ -13,6 +13,20 @@ test('signSession + verifySession: un token recién firmado es válido', ()=>{
   assert.equal(r.name,'Gustavo');
 });
 
+test('signSession + verifySession: el rol de acceso viaja en el token firmado', ()=>{
+  const token=signSession({email:'gustavo@beon.tech',name:'Gustavo',rol:'tem'});
+  const r=verifySession(token);
+  assert.equal(r.ok,true);
+  assert.equal(r.rol,'tem');
+});
+
+test('verifySession: un token firmado antes de este cambio (sin rol) no explota', ()=>{
+  const token=signSession({email:'gustavo@beon.tech',name:'Gustavo'});
+  const r=verifySession(token);
+  assert.equal(r.ok,true);
+  assert.equal(r.rol,undefined);
+});
+
 test('verifySession: un token vencido se rechaza', ()=>{
   const token=signSession({email:'gustavo@beon.tech',name:'Gustavo'},-1000);
   const r=verifySession(token);

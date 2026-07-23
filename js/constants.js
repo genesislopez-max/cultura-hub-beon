@@ -131,3 +131,8 @@ const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:
 // para expandir el grupo automáticamente si showSection() navega a una
 // sección que está dentro de un grupo colapsado.
 const SECCION_GRUPO={inicio:'principal',engineers:'principal',coreteam:'principal',cumpleanos:'eventos',aniversarios:'eventos',ingresos:'gestion',egresos:'gestion',reviews:'gestion',proyectos:'gestion',tareas:'gestion',beneficios:'beneficios',ambassadors:'beneficios',offsites:'beneficios',gettogether:'beneficios',actividades:'beneficios'};
+// Secciones exclusivas de People/HR (control de acceso) — Ingresos/Egresos
+// (Kanban de onboarding/offboarding) y Glassdoor. El bloqueo real ya pasa en
+// el servidor (api/airtable.js); esto es solo para ocultar la navegación del
+// lado del cliente. Ver js/nav.js: aplicarRestriccionesDeAcceso()/showSection().
+const SECCIONES_SOLO_HR=new Set(['ingresos','egresos','reviews']);

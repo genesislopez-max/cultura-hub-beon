@@ -483,35 +483,88 @@
 
       <!-- EGRESOS -->
       <div class="section-page" id="page-egresos">
-        <div class="metrics-3">
-          <div class="metric"><div class="metric-label">Offboardings este mes</div><div class="metric-val" style="color:var(--red)" id="me-offboard-mes">—</div><div class="metric-sub">en proceso o completados</div></div>
-          <div class="metric"><div class="metric-label">Promedio de estadía</div><div class="metric-val" style="color:var(--amber)" id="me-estadia">—</div><div class="metric-sub">meses en la empresa</div></div>
-          <div class="metric"><div class="metric-label">Total offboardings</div><div class="metric-val" id="me-offboard-total">—</div><div class="metric-sub">registrados</div></div>
+        <div class="eg-kpi-grid">
+          <div class="eg-kpi-card">
+            <div class="eg-kpi-top">
+              <span class="eg-kpi-label">Offboardings este mes</span>
+              <div class="eg-kpi-icon" style="background:var(--tinte-red-icon);color:var(--red)"><i class="ti ti-user-minus"></i></div>
+            </div>
+            <div class="eg-kpi-val" style="color:var(--red)" id="me-offboard-mes">—</div>
+            <div class="eg-kpi-sub">en proceso o completados</div>
+          </div>
+          <div class="eg-kpi-card">
+            <div class="eg-kpi-top">
+              <span class="eg-kpi-label">Promedio de estadía</span>
+              <div class="eg-kpi-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-clock"></i></div>
+            </div>
+            <div class="eg-kpi-val" style="color:var(--amber)" id="me-estadia">—</div>
+            <div class="eg-kpi-sub">meses en la empresa</div>
+          </div>
+          <div class="eg-kpi-card">
+            <div class="eg-kpi-top">
+              <span class="eg-kpi-label">Total offboardings</span>
+              <div class="eg-kpi-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-archive"></i></div>
+            </div>
+            <div class="eg-kpi-val" id="me-offboard-total">—</div>
+            <div class="eg-kpi-sub">registrados</div>
+          </div>
         </div>
-        <div class="search-bar" style="background:transparent;border:none;padding:0 0 14px;">
-          <div class="search-wrap">
-            <i class="ti ti-search search-icon"></i>
-            <input class="search-input" id="egresos-search" placeholder="Buscar por nombre o proyecto…" oninput="filtrarEgresos()">
+
+        <div class="et-toolbar" style="border:none;padding:0 0 18px;">
+          <div class="et-search-wrap">
+            <i class="ti ti-search"></i>
+            <input class="et-search" id="egresos-search" placeholder="Buscar por nombre o proyecto…" oninput="filtrarEgresos()">
           </div>
-          <div style="position:relative">
-            <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
-            <select class="filter-select" id="egresos-tem" onchange="filtrarEgresos()" style="padding-left:28px">
-              <option value="">Todos los managers</option>
-            </select>
+          <div class="et-filters">
+            <div class="et-sel-wrap">
+              <i class="ti ti-user-star et-sel-icon"></i>
+              <select class="et-sel" id="egresos-tem" onchange="filtrarEgresos()">
+                <option value="">Todos los managers</option>
+              </select>
+              <i class="ti ti-chevron-down et-sel-chevron"></i>
+            </div>
           </div>
         </div>
-        <div class="kanban-board" id="kb-egresos">
-          <div class="kanban-col col-aviso-dado" data-col="Aviso dado">
-            <div class="kanban-col-head"><span class="kanban-col-title">Aviso dado</span><span class="kanban-col-count" id="kc-Aviso-dado">0</span></div>
-            <div class="kanban-cards" id="cards-Aviso-dado"><div class="kanban-empty">Sin tarjetas</div></div>
+
+        <div class="eg-board" id="kb-egresos">
+          <div class="eg-col" data-col="Aviso dado">
+            <div class="eg-col-head">
+              <div class="eg-col-accent" style="background:var(--amber)"></div>
+              <div class="eg-col-head-row">
+                <div class="eg-col-title-wrap">
+                  <span class="eg-col-dot" style="background:var(--amber)"></span>
+                  <span class="eg-col-title">Aviso dado</span>
+                </div>
+                <span class="eg-col-count" id="kc-Aviso-dado" style="color:var(--amber);background:var(--tinte-amber-icon)">0</span>
+              </div>
+            </div>
+            <div class="eg-col-body" id="cards-Aviso-dado"><div class="eg-empty"><div class="eg-empty-icon"><i class="ti ti-inbox"></i></div><div class="eg-empty-label">Sin tarjetas</div></div></div>
           </div>
-          <div class="kanban-col col-en-proceso" data-col="En proceso">
-            <div class="kanban-col-head"><span class="kanban-col-title">En proceso</span><span class="kanban-col-count" id="kc-En-proceso">0</span></div>
-            <div class="kanban-cards" id="cards-En-proceso"><div class="kanban-empty">Sin tarjetas</div></div>
+          <div class="eg-col" data-col="En proceso">
+            <div class="eg-col-head">
+              <div class="eg-col-accent" style="background:var(--red)"></div>
+              <div class="eg-col-head-row">
+                <div class="eg-col-title-wrap">
+                  <span class="eg-col-dot" style="background:var(--red)"></span>
+                  <span class="eg-col-title">En proceso</span>
+                </div>
+                <span class="eg-col-count" id="kc-En-proceso" style="color:var(--red);background:var(--tinte-red-icon)">0</span>
+              </div>
+            </div>
+            <div class="eg-col-body" id="cards-En-proceso"><div class="eg-empty"><div class="eg-empty-icon"><i class="ti ti-inbox"></i></div><div class="eg-empty-label">Sin tarjetas</div></div></div>
           </div>
-          <div class="kanban-col col-offboarding-completo" data-col="Offboarding completo">
-            <div class="kanban-col-head"><span class="kanban-col-title">Offboarding completo</span><span class="kanban-col-count" id="kc-Offboarding-completo">0</span></div>
-            <div class="kanban-cards" id="cards-Offboarding-completo"><div class="kanban-empty">Sin tarjetas</div></div>
+          <div class="eg-col" data-col="Offboarding completo">
+            <div class="eg-col-head">
+              <div class="eg-col-accent" style="background:var(--blue)"></div>
+              <div class="eg-col-head-row">
+                <div class="eg-col-title-wrap">
+                  <span class="eg-col-dot" style="background:var(--blue)"></span>
+                  <span class="eg-col-title">Offboarding completo</span>
+                </div>
+                <span class="eg-col-count" id="kc-Offboarding-completo" style="color:var(--blue);background:var(--tinte-eng)">0</span>
+              </div>
+            </div>
+            <div class="eg-col-body" id="cards-Offboarding-completo"><div class="eg-empty"><div class="eg-empty-icon"><i class="ti ti-inbox"></i></div><div class="eg-empty-label">Sin tarjetas</div></div></div>
           </div>
         </div>
       </div>

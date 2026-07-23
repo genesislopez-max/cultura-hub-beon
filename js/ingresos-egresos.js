@@ -58,10 +58,12 @@ async function getUltimoIngresoHR(){
 }
 
 // Mapa explícito columna → id del DOM (evita bugs con caracteres especiales como í, ó)
+// Selector por [data-col] (no por clase) — Ingresos usa .kanban-col, Egresos
+// usa .eg-col (rediseño "Egresos Kanban.dc.html"), ambas lo tienen.
 function setupDragDrop(boardId){
   const board=document.getElementById(boardId);
   if(!board)return;
-  board.querySelectorAll('.kanban-col').forEach(col=>{
+  board.querySelectorAll('[data-col]').forEach(col=>{
     col.addEventListener('dragover',e=>{e.preventDefault();col.classList.add('drag-over');});
     col.addEventListener('dragleave',e=>{if(!col.contains(e.relatedTarget))col.classList.remove('drag-over');});
     col.addEventListener('drop',async e=>{
@@ -134,6 +136,65 @@ function renderCard(r,tipo){
   return div;
 }
 
+// Diseño "Egresos Kanban.dc.html" (claude.ai/design) — tarjeta rediseñada,
+// exclusiva de Egresos (Ingresos sigue con renderCard()/.kanban-card). Misma
+// fuente de datos que renderCard: Personas en vivo con fallback a lo
+// denormalizado en Checklist.
+function renderEgresoCard(r){
+  const f=r.fields,rol=f.Rol||'Otro';
+  cacheChecklistFields[r.id]=f;
+  const st=clState[r.id]||[];
+  const {comp,total,pct}=contarProgreso('Egreso',rol,st);
+  const rbc=rol==='Engineer'?'badge-blue':rol==='Core Team'?'badge-purple':rol==='Ambos'?'badge-amber':'badge-gray';
+  const nombre=f.Persona||'—';
+  const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
+  const pf=persona?.fields||{};
+  const proyecto=pf.Proyecto||f.Proyecto;
+  const mail=pf.Mail||f.Mail;
+  const pais=pf['País']||f['País'];
+  const cumple=pf['Fecha de cumpleaños'];
+  const completo=pct===100;
+  const metaRows=[
+    mail&&{icon:'ti-mail',label:'Correo',value:mail},
+    pais&&{icon:'ti-world',label:'País',value:pais},
+    f.Fecha&&{icon:'ti-calendar-x',label:'Fecha de salida',value:fmt(f.Fecha)},
+    cumple&&{icon:'ti-cake',label:'Cumpleaños',value:fmt(cumple)},
+  ].filter(Boolean);
+  const div=document.createElement('div');
+  div.className='eg-card';
+  div.dataset.nombre=nombre.toLowerCase();
+  div.dataset.proyecto=(proyecto||'').toLowerCase();
+  div.dataset.manager=(pf.Manager||'').toLowerCase();
+  div.innerHTML=`
+    <div class="eg-card-top">
+      ${avH(nombre)}
+      <div class="eg-card-info">
+        <div class="eg-card-name">${nombre}</div>
+        ${proyecto?`<div class="eg-card-proj"><i class="ti ti-folder"></i><span>${proyecto}</span></div>`:''}
+      </div>
+      <span class="badge ${rbc}">${rol}</span>
+    </div>
+    ${metaRows.length?`<div class="eg-meta">
+      ${metaRows.map(m=>`<div class="eg-meta-row"><i class="ti ${m.icon}"></i><span class="eg-meta-label">${m.label}</span><span class="eg-meta-val">${m.value}</span></div>`).join('')}
+    </div>`:''}
+    <div class="eg-progress">
+      <div class="eg-progress-top">
+        <span class="eg-progress-label"><i class="ti ti-list-check"></i>Checklist de salida</span>
+        <span class="eg-progress-frac" style="color:${completo?'var(--green)':'var(--blue)'}">${comp}/${total}</span>
+      </div>
+      <div class="eg-progress-track"><div class="eg-progress-fill" style="width:${pct}%;background:${completo?'var(--green)':'linear-gradient(90deg,var(--blue),var(--purple))'}"></div></div>
+    </div>
+    <div class="eg-actions">
+      <button class="eg-btn-edit" title="Editar persona" onclick="event.stopPropagation();abrirEdicionPersona('${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-pencil"></i></button>
+      <button class="eg-btn-del" title="Eliminar egreso" onclick="event.stopPropagation();confirmarEliminar('${r.id}','${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+    </div>`;
+  div.onclick=e=>{if(!e.defaultPrevented)openChecklistFromKanban(r.id,nombre,'Egreso',rol,f.Fecha,f.EstadoKanban);};
+  div.draggable=true;
+  div.addEventListener('dragstart',e=>{dragId=r.id;div.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
+  div.addEventListener('dragend',()=>{div.classList.remove('dragging');dragId=null;});
+  return div;
+}
+
 // Filtro por nombre/proyecto sobre las tarjetas ya renderizadas — no hace
 // falta volver a pedir los datos ni re-renderizar el board, solo mostrar/
 // ocultar cards vía sus data-attributes.
@@ -142,7 +203,9 @@ function filtrarKanbanChecklist(boardId,inputId,temSelectId){
   const tem=(temSelectId?document.getElementById(temSelectId)?.value:'')||'';
   const board=document.getElementById(boardId);
   if(!board) return;
-  board.querySelectorAll('.kanban-card').forEach(card=>{
+  // Ingresos usa .kanban-card, Egresos usa .eg-card (rediseño "Egresos
+  // Kanban.dc.html") — ambas tienen los mismos data-nombre/proyecto/manager.
+  board.querySelectorAll('.kanban-card, .eg-card').forEach(card=>{
     const matchQ=!q||(card.dataset.nombre||'').includes(q)||(card.dataset.proyecto||'').includes(q);
     const matchTem=!tem||(card.dataset.manager||'')===tem.toLowerCase();
     card.style.display=matchQ&&matchTem?'':'none';
@@ -366,13 +429,13 @@ async function loadKanbanEgresos(){
     counts[col]=(counts[col]||0)+1;
     const cid=COL_ID_EGRESO[col];
     const el=cid?document.getElementById(cid):null;
-    if(el) el.appendChild(renderCard(r,'Egreso'));
+    if(el) el.appendChild(renderEgresoCard(r));
   });
   ETAPAS_EGRESO.forEach(col=>{
     const cid=COL_ID_EGRESO[col];
     const cnt=COL_CNT_EGRESO[col];
     if(cnt) document.getElementById(cnt).textContent=counts[col]||0;
-    if(cid&&!counts[col]) document.getElementById(cid).innerHTML='<div class="kanban-empty">Sin tarjetas</div>';
+    if(cid&&!counts[col]) document.getElementById(cid).innerHTML='<div class="eg-empty"><div class="eg-empty-icon"><i class="ti ti-inbox"></i></div><div class="eg-empty-label">Sin tarjetas</div></div>';
   });
   setupDragDrop('kb-egresos');
   poblarSelectorTEM('egresos-tem');

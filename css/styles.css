@@ -610,6 +610,65 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .nivel-badge-et{padding:4px 11px 4px 9px;border-radius:999px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer;border:none;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity 0.15s;white-space:nowrap;}
 .nivel-badge-et:hover{opacity:0.85;}
 .nivel-badge-et i{font-size:13px;}
+
+/* ─── Egresos Kanban — rediseño (claude.ai/design "Egresos Kanban.dc.html") ─
+   Prefijo eg-, exclusivo de esta pestaña; Ingresos y Tareas siguen con
+   .kanban-*. El toolbar reutiliza .et-search/.et-sel (genéricos, ver arriba). */
+.eg-kpi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:22px;}
+.eg-kpi-card{border-radius:20px;padding:20px 24px;background:var(--bg2);border:1px solid var(--border);box-shadow:var(--shadow-sm);}
+.eg-kpi-top{display:flex;align-items:center;justify-content:space-between;}
+.eg-kpi-label{font-size:11px;font-weight:700;letter-spacing:0.11em;text-transform:uppercase;color:var(--text3);}
+.eg-kpi-icon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;flex-shrink:0;font-size:17px;}
+.eg-kpi-val{font-size:40px;font-weight:800;letter-spacing:-0.03em;line-height:1;margin:14px 0 5px;}
+.eg-kpi-sub{font-size:13px;color:var(--text2);}
+
+.eg-board{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start;}
+.eg-col{background:var(--bg);border:1px solid var(--border);border-radius:18px;overflow:hidden;display:flex;flex-direction:column;transition:background 0.15s,border-color 0.15s;}
+.eg-col.drag-over{background:rgba(58,105,255,.08);border-color:var(--blue);}
+.eg-col-head{position:relative;padding:15px 16px 13px;flex-shrink:0;}
+.eg-col-accent{position:absolute;top:0;left:0;right:0;height:3px;}
+.eg-col-head-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.eg-col-title-wrap{display:flex;align-items:center;gap:9px;}
+.eg-col-dot{width:9px;height:9px;border-radius:999px;flex-shrink:0;}
+.eg-col-title{font-size:13px;font-weight:700;letter-spacing:0.02em;text-transform:uppercase;color:var(--text2);}
+.eg-col-count{min-width:24px;height:24px;padding:0 8px;border-radius:8px;display:grid;place-items:center;font-size:12.5px;font-weight:800;}
+.eg-col-body{padding:4px 12px 14px;display:flex;flex-direction:column;gap:12px;min-height:180px;max-height:640px;overflow-y:auto;}
+.eg-col-body::-webkit-scrollbar{width:7px;}
+.eg-col-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+
+.eg-card{background:var(--bg2);border:1px solid var(--border);border-radius:15px;padding:15px;cursor:pointer;user-select:none;transition:transform 0.18s cubic-bezier(0.22,1,0.36,1),border-color 0.18s,box-shadow 0.18s;}
+.eg-card:hover{border-color:rgba(58,105,255,.4);box-shadow:0 16px 34px -18px rgba(32,34,45,.28);transform:translateY(-2px);}
+.eg-card.dragging{opacity:0.4;cursor:grabbing;}
+.eg-card:hover .eg-actions{opacity:1;}
+.eg-card-top{display:flex;align-items:center;gap:11px;margin-bottom:12px;}
+.eg-card-top .avatar{width:38px;height:38px;font-size:12px;margin-right:0;flex-shrink:0;}
+.eg-card-info{min-width:0;flex:1;}
+.eg-card-name{font-size:14.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.eg-card-proj{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);margin-top:2px;}
+.eg-card-proj span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.eg-meta{display:flex;flex-direction:column;gap:6px;padding:11px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+.eg-meta-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text2);}
+.eg-meta-row i{font-size:13px;color:var(--text3);}
+.eg-meta-label{color:var(--text3);}
+.eg-meta-val{margin-left:auto;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+
+.eg-progress{margin-top:12px;}
+.eg-progress-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.eg-progress-label{font-size:11.5px;font-weight:600;color:var(--text3);display:flex;align-items:center;gap:5px;}
+.eg-progress-frac{font-size:12px;font-weight:800;}
+.eg-progress-track{height:7px;border-radius:999px;background:var(--border);overflow:hidden;}
+.eg-progress-fill{height:100%;border-radius:999px;transition:width 0.3s;}
+
+.eg-actions{display:flex;justify-content:flex-end;gap:6px;margin-top:12px;opacity:0.4;transition:opacity 0.15s;}
+.eg-actions button{width:30px;height:30px;border-radius:9px;border:1px solid var(--border);background:var(--bg2);color:var(--text2);cursor:pointer;display:grid;place-items:center;transition:border-color 0.15s,color 0.15s,background 0.15s;}
+.eg-actions .eg-btn-edit:hover{border-color:var(--blue);color:var(--blue);}
+.eg-actions .eg-btn-del:hover{border-color:#D65656;color:#D65656;background:rgba(214,86,86,.08);}
+
+.eg-empty{display:flex;flex-direction:column;align-items:center;gap:9px;padding:34px 20px;border:1.5px dashed var(--border);border-radius:14px;}
+.eg-empty-icon{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--bg2);border:1px solid var(--border);color:var(--text3);font-size:19px;}
+.eg-empty-label{font-size:12.5px;color:var(--text3);font-weight:500;}
+
 .meet-modal{background:var(--bg2);border-radius:16px;width:600px;max-width:94vw;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
 .meet-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);}
 .meet-title{font-size:16px;font-weight:700;margin-bottom:4px;}

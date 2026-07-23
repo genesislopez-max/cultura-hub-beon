@@ -126,7 +126,7 @@ const ADD_FULL_SECTIONS=['ingresos'];
 const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo egreso',engineers:'Nueva persona',coreteam:'Nueva persona',reviews:'Nuevo reminder',proyectos:'Nuevo proyecto',tareas:'Nueva tarea',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together',actividades:'Registrar actividad'};
 const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',tareas:'Tareas',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together',actividades:'Asistencia a Actividades'};
 // Texto del "eyebrow" arriba del título en el topbar — solo las secciones listadas lo muestran.
-const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:'Comunidad BEON',engineers:'Directorio del equipo'};
+const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:'Comunidad BEON',engineers:'Directorio del equipo',egresos:'Offboarding'};
 // Grupo del menú lateral (dropdown) al que pertenece cada sección — usado
 // para expandir el grupo automáticamente si showSection() navega a una
 // sección que está dentro de un grupo colapsado.

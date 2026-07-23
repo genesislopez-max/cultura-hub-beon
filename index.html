@@ -302,48 +302,73 @@
 
       <!-- CORE TEAM -->
       <div class="section-page" id="page-coreteam">
-        <!-- Barra búsqueda+filtros Core Team -->
-        <div class="search-bar" style="border:1px solid var(--border);border-radius:13px 13px 0 0;margin-bottom:-1px;background:var(--bg2);">
-          <div class="search-wrap">
-            <i class="ti ti-search search-icon"></i>
-            <input class="search-input" id="personas-search-core" placeholder="Buscar por nombre, mail, proyecto o ciudad…" oninput="filtrarPersonas('core')">
+        <!-- KPI por nivel Loyalty -->
+        <div class="et-kpi-strip" id="ct-kpi-strip"></div>
+
+        <div class="et-panel" id="wrap-coreteam">
+          <!-- Toolbar -->
+          <div class="et-toolbar">
+            <div class="et-search-wrap">
+              <i class="ti ti-search"></i>
+              <input class="et-search" id="personas-search-core" placeholder="Buscar por nombre, mail, proyecto o ciudad…" oninput="filtrarPersonas('core')">
+            </div>
+            <div class="et-filters">
+              <div class="et-sel-wrap">
+                <i class="ti ti-briefcase et-sel-icon"></i>
+                <select class="et-sel" id="personas-rol-core" onchange="filtrarPersonas('core')">
+                  <option value="">Todos los roles</option>
+                  <option value="Core Team">Core Team</option>
+                  <option value="Supervisor">Supervisor</option>
+                  <option value="TEM">TEM</option>
+                  <option value="Lead">Lead</option>
+                  <option value="Manager">Manager</option>
+                  <option value="COO">COO</option>
+                  <option value="Founder">Founder</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+              <div class="et-sel-wrap">
+                <i class="ti ti-award et-sel-icon"></i>
+                <select class="et-sel" id="personas-loyalty-core" onchange="filtrarPersonas('core')">
+                  <option value="">Todos los niveles</option>
+                  <option value="Spark">⚡ Spark</option>
+                  <option value="Ray">☀️ Ray</option>
+                  <option value="Lightning">🌩 Lightning</option>
+                  <option value="Thunder">🌪 Thunder</option>
+                  <option value="Storm">🌊 Storm</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+              <div class="et-sel-wrap">
+                <i class="ti ti-folder et-sel-icon"></i>
+                <select class="et-sel" id="personas-proyecto-core" onchange="filtrarPersonas('core')">
+                  <option value="">Todos los proyectos</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+              <div class="et-sel-wrap">
+                <i class="ti ti-user-star et-sel-icon"></i>
+                <select class="et-sel" id="personas-manager-core" onchange="filtrarPersonas('core')">
+                  <option value="">Todos los managers</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+            </div>
           </div>
-          <select class="filter-select" id="personas-rol-core" onchange="filtrarPersonas('core')">
-            <option value="">Todos los roles</option>
-            <option value="Core Team">Core Team</option>
-            <option value="Supervisor">Supervisor</option>
-            <option value="TEM">TEM</option>
-            <option value="Lead">Lead</option>
-            <option value="Manager">Manager</option>
-            <option value="COO">COO</option>
-            <option value="Founder">Founder</option>
-          </select>
-          <select class="filter-select" id="personas-loyalty-core" onchange="filtrarPersonas('core')">
-            <option value="">Todos los niveles</option>
-            <option value="Spark">⚡ Spark</option>
-            <option value="Ray">☀️ Ray</option>
-            <option value="Lightning">🌩 Lightning</option>
-            <option value="Thunder">🌪 Thunder</option>
-            <option value="Storm">🌊 Storm</option>
-          </select>
-          <select class="filter-select" id="personas-proyecto-core" onchange="filtrarPersonas('core')">
-            <option value="">Todos los proyectos</option>
-          </select>
-          <select class="filter-select" id="personas-manager-core" onchange="filtrarPersonas('core')">
-            <option value="">Todos los managers</option>
-          </select>
-        </div>
-        <div class="table-wrap" id="wrap-coreteam" style="border-radius:13px;margin-top:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid var(--purple);border-radius:13px 13px 0 0;">
-            <span class="table-head-title" style="color:var(--text-core-accent)">Core Team</span>
-            <span class="badge badge-purple" id="badge-personas-core">—</span>
+
+          <!-- Sub header -->
+          <div class="et-subhead">
+            <div class="et-subhead-title">Core Team</div>
+            <span class="et-subhead-count" id="badge-personas-core">—</span>
           </div>
-          <div class="table-scroll">
-          <table class="data-table">
-            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Antigüedad</th><th>Manager</th></tr></thead>
-            <tbody id="tbody-personas-core"></tbody>
-          </table>
+
+          <!-- Table head -->
+          <div class="et-thead">
+            <div>Nombre</div><div>Rol</div><div>Nivel loyalty</div><div>Proyecto</div><div>Antigüedad</div><div>Manager</div><div></div>
           </div>
+
+          <div class="et-rows" id="tbody-personas-core"></div>
+
           <div class="pag-bar" id="pag-bar-core" style="display:none">
             <button class="pag-btn" id="pag-prev-core" onclick="cambiarPaginaPersonas('core',-1)">← Anterior</button>
             <span class="pag-info" id="pag-info-core"></span>

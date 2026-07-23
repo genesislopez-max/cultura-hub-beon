@@ -6,16 +6,15 @@ function renderPagina(grupo){
   const btnPrev=document.getElementById(`pag-prev-${grupo}`);
   const btnNext=document.getElementById(`pag-next-${grupo}`);
   if(!tb) return;
-  const colspan=7;
   if(!data.length){
-    tb.innerHTML=grupo==='eng'?`<div class="et-empty">Sin resultados</div>`:`<tr class="empty-row"><td colspan="${colspan}">Sin resultados</td></tr>`;
+    tb.innerHTML=`<div class="et-empty">Sin resultados</div>`;
     if(bar) bar.style.display='none';
     return;
   }
   const totalPags=Math.ceil(data.length/PAG_SIZE);
   const inicio=page*PAG_SIZE, fin=Math.min(inicio+PAG_SIZE,data.length);
   const slice=data.slice(inicio,fin);
-  tb.innerHTML=grupo==='eng'?slice.map(rowHtmlEng).join(''):slice.map(rowHtml).join('');
+  tb.innerHTML=slice.map(grupo==='eng'?rowHtmlEng:rowHtmlCore).join('');
   if(totalPags>1){
     if(bar) bar.style.display='flex';
     if(info) info.textContent=`${inicio+1}–${fin} de ${data.length} personas`;
@@ -42,27 +41,10 @@ function calcAntiguedad(fechaStr){
   if(meses===0) return `${anos} año${anos!==1?'s':''}`;
   return `${anos} año${anos!==1?'s':''} y ${meses} mes${meses!==1?'es':''}`;
 }
-function nivelBadgeHtml(recordId, nivelActual){
-  const nivel=nivelActual||'Spark';
-  return`<div class="nivel-select-wrap" id="nw-${recordId}">
-    <button class="nivel-badge nivel-${nivel}" onclick="toggleNivelDropdown('${recordId}')">
-      ${nivel}
-    </button>
-    <div class="nivel-dropdown" id="nd-${recordId}" style="display:none">
-      ${NIVELES.map(n=>`<div class="nivel-option" onclick="cambiarNivel('${recordId}','${n}','${nivel}',event)">
-        <span class="nivel-badge nivel-${n}" style="cursor:default">${n}</span>
-      </div>`).join('')}
-    </div>
-  </div>`;
-}
-
-function nombreClickHtml(r){
-  const nombre=r.fields.Nombre||'—';
-  return`${avH(r.fields.Nombre)}<span class="persona-nombre-link" onclick="verFichaPersona('${r.id}')">${nombre}</span>`;
-}
 
 // Diseño "Engineers y Tech.dc.html" (claude.ai/design) — layout en grid en vez
-// de <table>, propio de esta pestaña; Core Team sigue usando rowHtml() sin cambios.
+// de <table>, reutilizado también en Core Team (mismas clases .et-*, misma
+// estructura; solo cambia cómo se arma el badge de rol de cada uno).
 const ET_PROJ_COLORS=['var(--blue)','var(--purple)','var(--green)','var(--amber)','var(--text-pink-accent)','var(--text-teal-accent)'];
 function projColorEng(nombre){
   let sum=0; for(let i=0;i<nombre.length;i++) sum+=nombre.charCodeAt(i);
@@ -86,8 +68,11 @@ function nivelBadgeHtmlEng(recordId, nivelActual){
     </div>
   </div>`;
 }
-function rowHtmlEng(r){
-  const f=r.fields, rol=f['Rol en empresa']||'Engineer';
+// Fila en grid compartida por Engineers & Tech y Core Team — solo cambia
+// cómo arma cada uno el badge de rol (rolBadgeHtml), el resto de las columnas
+// es idéntico.
+function personaRowHtml(r, rolBadgeHtml){
+  const f=r.fields;
   const nivel=normalizarNivel(f['Nivel Loyalty']);
   const nombre=f.Nombre||'—', manager=f.Manager||'', proyecto=f.Proyecto||'';
   const tenure=calcAntiguedad(f['Fecha de ingreso']);
@@ -100,7 +85,7 @@ function rowHtmlEng(r){
         <div class="et-email">${f.Mail||'—'}</div>
       </div>
     </div>
-    <div>${rol?`<span class="badge badge-blue"><i class="ti ti-code"></i>${rol}</span>`:'—'}</div>
+    <div>${rolBadgeHtml}</div>
     <div>${nivelBadgeHtmlEng(r.id, nivel)}</div>
     <div class="et-proj-cell">${proyecto
       ?`<span class="et-proj-chip" style="background:${projColorEng(proyecto)}">${projInitialEng(proyecto)}</span><span class="et-proj-name">${proyecto}</span>`
@@ -112,19 +97,13 @@ function rowHtmlEng(r){
     <div class="et-open"><button onclick="event.stopPropagation();verFichaPersona('${r.id}')"><i class="ti ti-chevron-right"></i></button></div>
   </div>`;
 }
-
-function rowHtml(r){
-  const f=r.fields, rol=f['Rol en empresa']||'';
-  const nivel=normalizarNivel(f['Nivel Loyalty']);
-  return`<tr>
-    <td>${nombreClickHtml(r)}</td>
-    <td style="font-size:12px;color:var(--text2)">${f.Mail||'—'}</td>
-    <td>${rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'—'}</td>
-    <td>${nivelBadgeHtml(r.id, nivel)}</td>
-    <td style="font-size:12px">${f.Proyecto||'—'}</td>
-    <td style="font-size:12px;color:var(--text2)">${calcAntiguedad(f['Fecha de ingreso'])}</td>
-    <td style="font-size:12px;color:var(--text2)">${f.Manager||'—'}</td>
-  </tr>`;
+function rowHtmlEng(r){
+  const rol=r.fields['Rol en empresa']||'Engineer';
+  return personaRowHtml(r, rol?`<span class="badge badge-blue"><i class="ti ti-code"></i>${rol}</span>`:'—');
+}
+function rowHtmlCore(r){
+  const rol=r.fields['Rol en empresa']||'';
+  return personaRowHtml(r, rol?`<span class="badge ${rolColor[rol]||'badge-gray'}"><i class="ti ti-briefcase"></i>${rol}</span>`:'—');
 }
 
 // Ficha completa de la persona — se abre al clickear el nombre en la tabla,
@@ -233,12 +212,13 @@ async function loadPersonas(){
   document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;
   pagState.eng={page:0,data:allEng,all:allEng};
   renderPagina('eng');
-  renderETKpi(allEng);
+  renderETKpi(allEng,'et-kpi-strip');
 
   // Tabla Core Team
   document.getElementById('badge-personas-core').textContent=`${coreTeam.length} personas`;
   pagState.core={page:0,data:coreTeam,all:coreTeam};
   renderPagina('core');
+  renderETKpi(coreTeam,'ct-kpi-strip');
 
   poblarFiltrosPersonas();
   return recs;
@@ -295,15 +275,13 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   document.getElementById('nd-'+recordId).style.display='none';
   if(nuevoNivel===nivelAnterior) return;
 
-  // Actualizar badge visualmente de inmediato — Engineers & Tech usa el badge
-  // con ícono (nivel-badge-et, diseño "Engineers y Tech.dc.html"), Core Team
-  // sigue con el badge de texto plano (nivel-badge).
-  const nivelEmoji={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
-  const btn=document.querySelector(`#nw-${recordId} .nivel-badge, #nw-${recordId} .nivel-badge-et`);
+  // Actualizar badge visualmente de inmediato — Engineers & Tech y Core Team
+  // comparten el mismo badge con ícono (nivel-badge-et, diseño
+  // "Engineers y Tech.dc.html").
+  const btn=document.querySelector(`#nw-${recordId} .nivel-badge-et`);
   if(btn){
-    const esEt=btn.classList.contains('nivel-badge-et');
-    btn.className=esEt?`nivel-badge-et badge-nivel-${nuevoNivel}`:`nivel-badge nivel-${nuevoNivel}`;
-    btn.innerHTML=esEt?`<i class="ti ${NIVEL_ICONS[nuevoNivel]||'ti-award'}"></i>${nuevoNivel}`:nuevoNivel;
+    btn.className=`nivel-badge-et badge-nivel-${nuevoNivel}`;
+    btn.innerHTML=`<i class="ti ${NIVEL_ICONS[nuevoNivel]||'ti-award'}"></i>${nuevoNivel}`;
     // Actualizar onclick del dropdown para reflejar nuevo nivel actual
     btn.setAttribute('onclick',`toggleNivelDropdown('${recordId}')`);
   }
@@ -311,10 +289,12 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   // Actualizar el registro en cache (mismo objeto referenciado por
   // pagState.eng/core .all/.data, ya que vienen de filter()/spread sobre
   // cachePersonasRaw, no de una copia profunda) — si no, el filtro por nivel
-  // y el KPI de Engineers & Tech siguen viendo el nivel viejo hasta recargar.
+  // y el KPI de Engineers & Tech / Core Team siguen viendo el nivel viejo
+  // hasta recargar.
   const persona=cachePersonasRaw.find(p=>p.id===recordId);
   if(persona) persona.fields['Nivel Loyalty']=nuevoNivel;
-  if(pagState.eng?.all?.some(p=>p.id===recordId)) renderETKpi(pagState.eng.all);
+  if(pagState.eng?.all?.some(p=>p.id===recordId)) renderETKpi(pagState.eng.all,'et-kpi-strip');
+  if(pagState.core?.all?.some(p=>p.id===recordId)) renderETKpi(pagState.core.all,'ct-kpi-strip');
 
   // Guardar en Airtable
   try{
@@ -394,7 +374,7 @@ function filtrarPersonas(grupo){
 
   const badge=document.getElementById(`badge-personas-${grupo}`);
   if(badge) badge.textContent=`${pagState[grupo].data.length} personas`;
-  if(grupo==='eng') actualizarEstiloFiltrosET();
+  actualizarEstiloFiltrosET();
 }
 
 function poblarFiltrosPersonas(){
@@ -432,8 +412,8 @@ function normalizarNivel(valor){
   const crudo=(valor||'').trim();
   return NIVELES.find(niv=>niv.toLowerCase()===crudo.toLowerCase())||'Spark';
 }
-function renderETKpi(lista){
-  const cont=document.getElementById('et-kpi-strip');
+function renderETKpi(lista,containerId){
+  const cont=document.getElementById(containerId||'et-kpi-strip');
   if(!cont) return;
   const conteo={};
   NIVELES.forEach(n=>conteo[n]=0);
@@ -450,10 +430,11 @@ function renderETKpi(lista){
     </div>`).join('');
 }
 
-// Resalta en azul los selects de Engineers & Tech que tienen un filtro activo
-// (diseño "Engineers y Tech.dc.html") — Core Team no se toca.
+// Resalta en azul los selects de Engineers & Tech / Core Team que tienen un
+// filtro activo (diseño "Engineers y Tech.dc.html").
 function actualizarEstiloFiltrosET(){
-  ['personas-loyalty-eng','personas-proyecto-eng','personas-manager-eng'].forEach(id=>{
+  ['personas-loyalty-eng','personas-proyecto-eng','personas-manager-eng',
+   'personas-rol-core','personas-loyalty-core','personas-proyecto-core','personas-manager-core'].forEach(id=>{
     const sel=document.getElementById(id);
     if(sel) sel.classList.toggle('et-active',!!sel.value);
   });

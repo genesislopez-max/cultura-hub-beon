@@ -316,8 +316,6 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .data-table tbody tr{transition:background 0.1s;}
 .data-table tbody tr:hover td{background:var(--bg);}
 .avatar{width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;vertical-align:middle;margin-right:9px;box-shadow:inset 0 0 0 1px rgba(0,0,0,0.05);}
-.persona-nombre-link{cursor:pointer;}
-.persona-nombre-link:hover{color:var(--blue);text-decoration:underline;}
 .av-blue{background:#EEF2FF;color:#3A69FF;}
 .av-purple{background:#F3EEFF;color:#7432FF;}
 .av-pink{background:#FEF0FB;color:#c040a8;}
@@ -558,8 +556,9 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .nivel-pending-banner{background:#FFF8E1;border:1px solid rgba(154,103,0,0.3);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px;font-size:13px;font-weight:500;color:#9a6700;margin-bottom:18px;}
 .nivel-pending-banner i{font-size:18px;flex-shrink:0;}
 
-/* ─── Engineers & Tech — rediseño (claude.ai/design "Engineers y Tech.dc.html") ─
-   Scoped a esta pestaña sola (prefijo et-); Core Team sigue con .data-table. */
+/* ─── Engineers & Tech / Core Team — rediseño (claude.ai/design "Engineers y
+   Tech.dc.html") — prefijo et-, compartido por ambas pestañas de Personas;
+   el resto de las tablas de la app sigue con .data-table. */
 .et-kpi-strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px;}
 .et-kpi-card{display:flex;align-items:center;gap:11px;padding:11px 16px 11px 13px;background:var(--bg2);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-xs);}
 .et-kpi-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;font-size:15px;}

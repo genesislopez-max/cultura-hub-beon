@@ -19,6 +19,28 @@ function decodeJwt(token){
 
 function getIdToken(){ return localStorage.getItem('hub_session_token')||''; }
 
+// Rol de acceso resuelto por el servidor al loguear (ver api/_lib/roles.js) —
+// 'full' | 'hr' | 'tem' | 'manager' | 'equipo'. Se usa para ocultar
+// secciones/datos restringidos del lado del cliente (el bloqueo real ya
+// pasó en el servidor).
+function rolUsuarioActual(){
+  try{
+    return JSON.parse(localStorage.getItem('hub_user')||'{}').rol||'equipo';
+  }catch(e){
+    return 'equipo';
+  }
+}
+
+// Único grupo de Beneficios que puede ver este rol ('Engineers'|'Core Team'),
+// o null si ve los dos grupos sin restricción (full/tem/manager).
+function grupoBeneficiosActual(){
+  try{
+    return JSON.parse(localStorage.getItem('hub_user')||'{}').grupoBeneficios||null;
+  }catch(e){
+    return null;
+  }
+}
+
 // El token de sesión propio es "payload.firma" (no un JWT de 3 partes como el
 // de Google) — decodeJwt no sirve acá porque toma la parte [1] asumiendo
 // header.payload.firma.
@@ -73,11 +95,12 @@ async function onGoogleSignIn(response){
   }
 
   localStorage.setItem('hub_session_token',sesion.token);
-  localStorage.setItem('hub_user',JSON.stringify({email,nombre:payload.name||email,foto:payload.picture||''}));
+  localStorage.setItem('hub_user',JSON.stringify({email,nombre:payload.name||email,foto:payload.picture||'',rol:sesion.rol||'equipo',grupoBeneficios:sesion.grupoBeneficios||null}));
   const err=document.getElementById('login-error');
   if(err) err.style.display='none';
   mostrarSesionActiva();
   document.getElementById('login-screen').style.display='none';
+  aplicarRestriccionesDeAcceso();
   iniciarHub();
 }
 

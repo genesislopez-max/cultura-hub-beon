@@ -156,7 +156,17 @@ function renderBenefMetricas(){
       if(benef?.fields.Valor) totalUsado+=Number(benef.fields.Valor)||0;
     }
   });
-  document.getElementById('mb-presupuesto').textContent=totalUsado>0?`$${totalUsado.toLocaleString('es-AR')}`:'—';
+  // "Resto del equipo" ve el catálogo/asignaciones de su propio grupo, pero
+  // no el agregado de gasto total — se oculta la tarjeta entera (no solo el
+  // número) para no dejar la etiqueta sin nada al lado.
+  const presupuestoEl=document.getElementById('mb-presupuesto');
+  const presupuestoCard=presupuestoEl?.closest('.metric');
+  if(rolUsuarioActual()==='equipo'){
+    if(presupuestoCard) presupuestoCard.style.display='none';
+  } else {
+    if(presupuestoCard) presupuestoCard.style.display='';
+    if(presupuestoEl) presupuestoEl.textContent=totalUsado>0?`$${totalUsado.toLocaleString('es-AR')}`:'—';
+  }
 
   // Personas con/sin beneficios — solo sobre el equipo activo hoy, igual
   // criterio (yaEgreso) que el resto de las vistas de Beneficios.

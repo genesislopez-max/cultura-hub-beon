@@ -48,8 +48,35 @@ function aplicarSidebarColapsado(){
   });
 }
 
+// ─── CONTROL DE ACCESO POR ROL ────────────────────────────────────────────────
+// Secciones restringidas → id de la tarjeta resumen de Inicio que muestra
+// datos de esa sección (para ocultarla también, no solo el ítem del sidebar).
+const SECCION_TARJETA_INICIO={ingresos:'sc-ingresos',egresos:'sc-offboard',reviews:'sc-glassdoor'};
+
+// Se llama al arrancar — oculta del menú lateral y del dashboard de Inicio las
+// secciones que el rol actual no puede ver. El bloqueo real de los datos ya
+// pasó en el servidor (api/airtable.js); esto es solo para que la navegación
+// no muestre secciones que van a llegar vacías.
+function aplicarRestriccionesDeAcceso(){
+  const rol=rolUsuarioActual();
+  Object.entries(SECCION_ROLES_PERMITIDOS).forEach(([nombre,permitidos])=>{
+    if(permitidos.has(rol)) return;
+    document.querySelector(`.sb-item[onclick*="${nombre}"]`)?.style.setProperty('display','none');
+    const tarjetaId=SECCION_TARJETA_INICIO[nombre];
+    if(tarjetaId) document.getElementById(tarjetaId)?.closest('.summary-card')?.style.setProperty('display','none');
+  });
+}
+
 // ─── NAV ─────────────────────────────────────────────────────────────────────
 function showSection(name,btn){
+  // Cinturón de seguridad — el bloqueo real ya pasó en el servidor
+  // (api/airtable.js); esto solo evita que algo (ej. devtools) navegue a una
+  // sección restringida y la deje visible sin datos.
+  const permitidos=SECCION_ROLES_PERMITIDOS[name];
+  if(permitidos&&!permitidos.has(rolUsuarioActual())){
+    name='inicio';
+    btn=document.querySelector('.sb-item[onclick*="inicio"]');
+  }
   document.querySelectorAll('.section-page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
@@ -292,6 +319,7 @@ async function init(){
   actualizarIconoTema(document.documentElement.getAttribute('data-theme')||'light');
   aplicarSidebarColapsado();
   if(!checkSesion()) return; // muestra la pantalla de login; onGoogleSignIn() llama a iniciarHub()
+  aplicarRestriccionesDeAcceso();
   await iniciarHub();
 }
 init();

@@ -17,6 +17,17 @@ function personaCon({rolEmpresa,area}){
   return fetchPersonas([{id:'rec1',fields:{Nombre:'X',Mail:'x@beon.tech','Rol en empresa':rolEmpresa||'','Área':area||''}}]);
 }
 
+// Lista fija de emails con acceso total garantizado, independiente de
+// cualquier campo de Airtable — evita que un dato mal cargado a mano (Área,
+// Rol en empresa) deje afuera a alguien que sí o sí tiene que ver todo.
+test('resolverAccesoPorEmail: emails de la lista fija son "full" sin importar Personas', async()=>{
+  for(const email of ['valentina.vellon@beon.tech','VICTORIA.FRANCO@beon.tech']){
+    const r=await resolverAccesoPorEmail(email,fetchPersonas([]));
+    assert.equal(r.rol,'full',`${email} debería resolver a full`);
+    assert.equal(r.grupoBeneficios,null);
+  }
+});
+
 // Reportado por un usuario con Área="People" (el equipo de People en
 // general) al que el código anterior buscaba por error en "Rol en empresa"
 // y por eso no le daba acceso total.

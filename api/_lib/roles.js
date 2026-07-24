@@ -38,6 +38,11 @@ function valorArea(fields){
   return fields?.['Área']||fields?.['Area']||'';
 }
 
+// Seguro aparte, independiente de Airtable: gente que tiene que tener
+// acceso total pase lo que pase con el campo Área/Rol en empresa (evita que
+// un dato mal cargado a mano la deje afuera, como ya pasó antes).
+const EMAILS_ACCESO_FULL=new Set(['valentina.vellon@beon.tech','victoria.franco@beon.tech']);
+
 const AREA_ACCESO_FULL=setNormalizado(['People']);
 const ROLES_ACCESO_FULL=setNormalizado(['COO','Founder']);
 const ROLES_ACCESO_HR=setNormalizado(['Recruiting']);
@@ -75,6 +80,8 @@ async function buscarPersonaPorEmail(email,fetchImpl){
 // Beneficios que puede ver ese rol ('Engineers'|'Core Team'), o null si ve
 // ambos grupos sin restricción (full/tem/manager).
 async function resolverAccesoPorEmail(email,fetchImpl){
+  if(EMAILS_ACCESO_FULL.has(String(email||'').toLowerCase())) return {rol:'full',grupoBeneficios:null};
+
   const persona=await buscarPersonaPorEmail(email,fetchImpl);
   const rolEmpresa=persona?.fields?.['Rol en empresa']||'';
   const rolNormalizado=normalizarRol(rolEmpresa);

@@ -96,3 +96,26 @@ test('calcularEtapa: el ítem inactivo no bloquea el avance de etapa aunque est�
   const hoy=new Date().toISOString().split('T')[0];
   assert.equal(ctx.calcularEtapa('Ingreso',rol,chk,hoy),'Primer día');
 });
+
+// Ítems de Egreso dados de baja: ya automáticos en el Hub (Cumpleaños/
+// Aniversarios/Glassdoor) o procesos que ya no se usan (sheet de accounting,
+// métricas de offboarding). Quedan en el array (activo:false) para no correr
+// los índices de checklists de Egreso ya guardados.
+test('getItemsMap: los ítems de Egreso dados de baja siguen en el array pero inactivos', ()=>{
+  const items=ctx.getItemsMap('Egreso','—');
+  const bajas=['Eliminar aniversario en Hub','Eliminar cumpleaños en Hub','Eliminar reminder de review Glassdoor (si aplica)','Sacar de la lista de mails del sheet accounting','Completar sheet métricas offboarding'];
+  for(const t of bajas){
+    const item=items.find(it=>it.t===t);
+    assert.ok(item,`el ítem "${t}" debería seguir en el array`);
+    assert.equal(item.activo,false,`"${t}" debería estar marcado inactivo`);
+  }
+});
+
+test('getActiveIndexes: en Egreso no incluye las posiciones de los ítems dados de baja', ()=>{
+  const items=ctx.getItemsMap('Egreso','—');
+  const activos=ctx.getActiveIndexes('Egreso','—');
+  const idxsInactivos=items.reduce((a,it,i)=>{if(it.activo===false)a.push(i);return a;},[]);
+  assert.ok(idxsInactivos.length>0);
+  for(const idx of idxsInactivos) assert.ok(!activos.includes(idx));
+  assert.equal(activos.length,items.length-idxsInactivos.length);
+});

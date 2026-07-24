@@ -397,8 +397,10 @@ const FORMS={
       await atPost('Personas',fields);return true;
     }},
 
-  egresos:{title:'Nuevo egreso',html:()=>{
-    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+  egresos:{title:'Nuevo offboarding',html:()=>{
+    // Solo gente activa hoy — alguien que ya tiene Fecha de egreso cargada no
+    // tiene que volver a aparecer acá (ver yaEgreso() en js/personas.js).
+    const personas=cachePersonasRaw.filter(p=>!yaEgreso(p)).map(p=>p.fields.Nombre||'').filter(Boolean).sort();
     return`
 <div class="field-group"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-egr-persona">
@@ -419,7 +421,11 @@ const FORMS={
       await atPost('Checklist',{Persona:nombre,Tipo:'Egreso',Fecha:v('f-egr-fecha'),EstadoKanban:'Aviso dado'});
       const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
       if(persona) await atPatch(`Personas/${persona.id}`,{'Fecha de egreso':v('f-egr-ultimo-dia')});
-      sendSlack(`👋 *Egreso registrado en el Hub*\n${nombre} — último día: ${fmt(v('f-egr-ultimo-dia'))}`);
+      sendSlack(`👋 *Offboarding registrado en el Hub*\n${nombre} — último día: ${fmt(v('f-egr-ultimo-dia'))}`);
+      // Refresca el board de Offboarding ya mismo — si esperamos al loadAll()
+      // genérico (recarga todo el Hub en cadena), la tarjeta nueva tarda
+      // varios segundos en aparecer y da la sensación de que no se guardó.
+      await loadKanbanEgresos();
       return true;
     }},
 
@@ -429,7 +435,7 @@ const FORMS={
 <div class="field-group"><label class="field-label">Tipo *</label>
   <select class="field-input" id="f-tipo" onchange="toggleRol()">
     <option value="Ingreso">Ingreso</option>
-    <option value="Egreso">Egreso</option>
+    <option value="Egreso">Offboarding</option>
   </select>
 </div>
 <div class="field-group"><label class="field-label">Persona *</label>

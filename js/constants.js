@@ -21,20 +21,28 @@ const ITEMS_INGRESO_MAP=[
   {t:'Enviar 14 Lecciones Esenciales a la semana de ingresar',                                                                         e:'Primera semana', r:['Core Team','Ambos']},
   {t:'Revisar LinkedIn del BEONer — si no está actualizado, solicitar actualización por Slack y dejar registro en Trello',              e:'Primera semana', r:['Engineer','Ambos'], l:'https://www.notion.so/beon-tech/Cambio-de-empleo-en-LinkedIn-2d8e4b56540b80eb9d77d6c2b3d03c4f'},
 ];
+// Los "activo:false" se dejan en el array (no se borran) para no correr el
+// índice de los que ya estaban guardados en ItemsCompletados de checklists
+// existentes — mismo patrón que ya usa ITEMS_INGRESO_MAP más arriba.
 const ITEMS_EGRESO_MAP=[
   {t:'Fecha de offboarding registrada',                   e:'Aviso dado'},
   {t:'Avisar a Billy',                                    e:'Aviso dado'},
   {t:'Avisar a terapeutas',                               e:'Aviso dado'},
   {t:'Avisar a Viviana (portugués)',                      e:'Aviso dado'},
   {t:'Sacar del doc de Rewards Program',                  e:'En proceso'},
-  {t:'Eliminar aniversario en Hub',                       e:'En proceso'},
-  {t:'Eliminar cumpleaños en Hub',                        e:'En proceso'},
+  // Ya automático: Cumpleaños/Aniversarios se calculan en vivo desde Personas
+  // y excluyen a quien tiene Fecha de egreso — no hay nada que borrar a mano.
+  {t:'Eliminar aniversario en Hub',                       e:'En proceso', activo:false},
+  {t:'Eliminar cumpleaños en Hub',                        e:'En proceso', activo:false},
   {t:'Sacar cumpleaños del Calendar of Events',           e:'En proceso'},
-  {t:'Eliminar reminder de review Glassdoor (si aplica)', e:'En proceso'},
-  {t:'Sacar de la lista de mails del sheet accounting',   e:'En proceso'},
+  // Ya automático: la lista de Glassdoor (js/glassdoor.js) ahora excluye a
+  // quien ya egresó, no queda pendiente para siempre.
+  {t:'Eliminar reminder de review Glassdoor (si aplica)', e:'En proceso', activo:false},
+  // No se usan más.
+  {t:'Sacar de la lista de mails del sheet accounting',   e:'En proceso', activo:false},
   {t:'Eliminar de Brevo',                                 e:'En proceso'},
   {t:'Eliminar del Hall of Fame',                         e:'En proceso'},
-  {t:'Completar sheet métricas offboarding',              e:'En proceso'},
+  {t:'Completar sheet métricas offboarding',              e:'En proceso', activo:false},
   {t:'Sacar de AI Tools',                                 e:'En proceso'},
   {t:'Eliminar de la planilla de Beneficios',             e:'En proceso'},
 ];
@@ -123,8 +131,8 @@ const AW_RULES={
 };
 const ADD=['ingresos','egresos','engineers','coreteam','reviews','proyectos','tareas','checklist','beneficios','beneficios-asignados','ambassadors','offsites','gettogether','actividades'];
 const ADD_FULL_SECTIONS=['ingresos'];
-const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo egreso',engineers:'Nueva persona',coreteam:'Nueva persona',reviews:'Nuevo reminder',proyectos:'Nuevo proyecto',tareas:'Nueva tarea',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together',actividades:'Registrar actividad'};
-const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Egresos — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',tareas:'Tareas',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together',actividades:'Asistencia a Actividades'};
+const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo offboarding',engineers:'Nueva persona',coreteam:'Nueva persona',reviews:'Nuevo reminder',proyectos:'Nuevo proyecto',tareas:'Nueva tarea',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together',actividades:'Registrar actividad'};
+const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Offboarding — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',tareas:'Tareas',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together',actividades:'Asistencia a Actividades'};
 // Texto del "eyebrow" arriba del título en el topbar — solo las secciones listadas lo muestran.
 const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:'Comunidad BEON',engineers:'Directorio del equipo',egresos:'Offboarding'};
 // Grupo del menú lateral (dropdown) al que pertenece cada sección — usado

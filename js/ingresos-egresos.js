@@ -186,7 +186,7 @@ function renderEgresoCard(r){
     </div>
     <div class="eg-actions">
       <button class="eg-btn-edit" title="Editar persona" onclick="event.stopPropagation();abrirEdicionPersona('${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-pencil"></i></button>
-      <button class="eg-btn-del" title="Eliminar egreso" onclick="event.stopPropagation();confirmarEliminar('${r.id}','${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+      <button class="eg-btn-del" title="Eliminar offboarding" onclick="event.stopPropagation();confirmarEliminar('${r.id}','${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
     </div>`;
   div.onclick=e=>{if(!e.defaultPrevented)openChecklistFromKanban(r.id,nombre,'Egreso',rol,f.Fecha,f.EstadoKanban);};
   div.draggable=true;
@@ -668,7 +668,7 @@ async function loadChecklist(){
     const rb=rol==='Engineer'?'badge-blue':rol==='Core Team'?'badge-purple':rol==='Ambos'?'badge-amber':'badge-gray';
     return`<tr>
       <td>${avH(f.Persona)}${f.Persona||'—'}</td>
-      <td><span class="badge ${tb2}">${tipo}</span></td>
+      <td><span class="badge ${tb2}">${tipo==='Egreso'?'Offboarding':tipo}</span></td>
       <td><span class="badge ${rb}">${rol}</span></td>
       <td>${fmt(f.Fecha)}</td>
       <td><span class="badge ${eb}">${pct===100?'Completo ✓':pct>0?'En progreso':'Pendiente'}</span></td>

@@ -27,9 +27,11 @@ async function loadReviews(){
     }
   }
 
-  // Solo Engineers — cruzar con cachePersonasRaw
+  // Solo Engineers activos — cruzar con cachePersonasRaw. Alguien que ya
+  // egresó no tiene que seguir apareciendo como pendiente de Glassdoor (el
+  // offboarding ya se encarga de eso, no hace falta borrar el reminder a mano).
   const engineerNames=new Set(
-    cachePersonasRaw.filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>(p.fields.Nombre||'').trim())
+    cachePersonasRaw.filter(p=>!yaEgreso(p)&&(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>(p.fields.Nombre||'').trim())
   );
   const gdRecs=recs.filter(r=>{
     if(r.fields.Tipo!=='Glassdoor') return false;

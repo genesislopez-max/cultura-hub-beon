@@ -243,7 +243,7 @@ async function cargarSeccionesIniciales(){
     loadKanbanEgresos(),
     loadReviews(),
   ]);
-  const nombres=['Cumpleaños','Aniversarios','Ingresos','Egresos','Glassdoor'];
+  const nombres=['Cumpleaños','Aniversarios','Ingresos','Offboarding','Glassdoor'];
   const fallidas=resultados.map((r,i)=>({nombre:nombres[i],r})).filter(({r})=>r.status==='rejected');
   fallidas.forEach(({nombre,r})=>console.error(`Error cargando "${nombre}":`,r.reason));
   if(fallidas.length) toast(`⚠️ No se pudo cargar: ${fallidas.map(f=>f.nombre).join(', ')}`,true);

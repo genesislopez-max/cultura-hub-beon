@@ -13,42 +13,63 @@
 // endpoint fijo + query param no depende de esa resolución de rutas.
 const {verifySession}=require('./_lib/session');
 
-// Control de acceso por rol — ver api/_lib/roles.js para cómo se resuelve
-// "rol" (una sola vez, en el login, embebido en el token de sesión).
-// Ingresos/Egresos (tabla Checklist) y Glassdoor (registros de Tipo
-// "Glassdoor" en Eventos) son exclusivos de People/HR; los montos/
-// presupuesto de Beneficios (Presupuesto Loyalty, y los campos
-// Valor/Monto en Beneficios/Beneficios Asignados) son exclusivos de
-// People/HR y TEM/Manager — el resto del equipo no los ve.
-const TABLAS_SOLO_HR=new Set(['Checklist']);
-const TABLAS_MONTO_SOLO_HR_TEM=new Set(['Presupuesto Loyalty']);
-const TABLAS_REDACTABLES=new Set(['Eventos','Beneficios','Beneficios Asignados']);
+// Control de acceso por rol — ver api/_lib/roles.js para cómo se resuelven
+// "rol"/"grupoBeneficios" (una sola vez, en el login, embebidos en el token
+// de sesión).
+//
+// - Ingresos/Egresos (tabla Checklist): exclusivo de full/hr.
+// - Glassdoor (registros de Tipo "Glassdoor" en Eventos): exclusivo de full.
+// - Beneficios/Presupuesto Loyalty/Beneficios Asignados: si el rol tiene
+//   grupoBeneficios seteado (hr → fijo "Core Team"; equipo → su propio
+//   grupo), solo ve los registros de ese grupo (o "Ambos"/sin grupo). Full,
+//   tem y manager no tienen grupoBeneficios — ven los dos grupos.
+const TABLAS_INGRESOS_EGRESOS=new Set(['Checklist']);
+const ROLES_VEN_INGRESOS_EGRESOS=new Set(['full','hr']);
+const TABLAS_GRUPO_BENEFICIOS=new Set(['Beneficios','Presupuesto Loyalty','Beneficios Asignados']);
 
-function estaBloqueadaDelTodo(tabla,rol){
-  return (TABLAS_SOLO_HR.has(tabla)&&rol!=='hr')||(TABLAS_MONTO_SOLO_HR_TEM.has(tabla)&&rol==='equipo');
+function pasaFiltroGrupo(grupoRecord,grupoPermitido){
+  return !grupoRecord||grupoRecord===grupoPermitido||grupoRecord==='Ambos';
 }
 
-// Filtra/redacta la respuesta de Airtable ya obtenida — solo aplica en GET,
-// para no romper Promise.all()s del cliente que asumen que estas lecturas
-// siempre resuelven (ej. loadBeneficios() en js/beneficios.js pide Beneficios
-// + Beneficios Asignados + Presupuesto Loyalty juntos).
-function redactarSegunRol(tabla,rol,data){
-  if(rol==='hr') return data;
-  if(tabla==='Eventos'){
-    data.records=(data.records||[]).filter(r=>r.fields?.Tipo!=='Glassdoor');
-  } else if(rol==='equipo'&&tabla==='Beneficios'){
-    data.records=(data.records||[]).map(r=>{
-      const fields={...r.fields};
-      delete fields.Valor;
-      return {...r,fields};
-    });
-  } else if(rol==='equipo'&&tabla==='Beneficios Asignados'){
-    data.records=(data.records||[]).map(r=>{
-      const fields={...r.fields};
-      delete fields.Monto;
-      return {...r,fields};
-    });
+// Beneficios Asignados no tiene su propio campo Grupo — se resuelve por el
+// Beneficio vinculado (linked record → id → Beneficios.Grupo). Fetch directo
+// y aparte (tabla chica), solo cuando hace falta filtrar por grupo. Devuelve
+// null si Airtable no respondió — el caller falla cerrado en ese caso (no
+// dejar pasar registros que no se pudieron verificar).
+async function fetchGrupoPorBeneficioId(token,base){
+  try{
+    const r=await fetch(`https://api.airtable.com/v0/${base}/Beneficios`,{headers:{'Authorization':`Bearer ${token}`}});
+    if(!r.ok) return null;
+    const data=await r.json();
+    const mapa={};
+    (data.records||[]).forEach(rec=>{ mapa[rec.id]=rec.fields?.Grupo||''; });
+    return mapa;
+  }catch(e){
+    return null;
   }
+}
+
+async function filtrarPorGrupoBeneficios(tabla,grupoPermitido,data,token,base){
+  if(tabla==='Beneficios'||tabla==='Presupuesto Loyalty'){
+    data.records=(data.records||[]).filter(r=>pasaFiltroGrupo(r.fields?.Grupo,grupoPermitido));
+    return data;
+  }
+  // tabla==='Beneficios Asignados'
+  const mapa=await fetchGrupoPorBeneficioId(token,base);
+  if(!mapa){
+    data.records=[]; // fail closed — no se pudo resolver el grupo de nadie
+    return data;
+  }
+  data.records=(data.records||[]).filter(r=>{
+    const ids=Array.isArray(r.fields?.Beneficio)?r.fields.Beneficio:(r.fields?.Beneficio?[r.fields.Beneficio]:[]);
+    if(!ids.length) return true; // sin beneficio vinculado, nada que filtrar
+    return ids.some(id=>pasaFiltroGrupo(mapa[id],grupoPermitido));
+  });
+  return data;
+}
+
+function filtrarGlassdoor(data){
+  data.records=(data.records||[]).filter(r=>r.fields?.Tipo!=='Glassdoor');
   return data;
 }
 
@@ -62,6 +83,7 @@ module.exports=async(req,res)=>{
   // Sesiones firmadas antes de este cambio no tienen rol — se tratan como el
   // nivel más restrictivo hasta que esa persona vuelva a loguearse.
   const rol=verificado.rol||'equipo';
+  const grupoBeneficios=verificado.grupoBeneficios||null;
 
   const token=process.env.AIRTABLE_TOKEN;
   const base=process.env.AIRTABLE_BASE;
@@ -77,7 +99,7 @@ module.exports=async(req,res)=>{
   }
 
   const tabla=String(path).split('/')[0];
-  if(estaBloqueadaDelTodo(tabla,rol)){
+  if(TABLAS_INGRESOS_EGRESOS.has(tabla)&&!ROLES_VEN_INGRESOS_EGRESOS.has(rol)){
     if(req.method==='GET'){
       // Degradación silenciosa — sin esto, un Promise.all() en el cliente
       // que pide esta tabla junto con otras rompería la carga entera.
@@ -113,12 +135,19 @@ module.exports=async(req,res)=>{
 
   const text=await airtableRes.text();
 
-  if(req.method==='GET'&&airtableRes.ok&&rol!=='hr'&&TABLAS_REDACTABLES.has(tabla)){
-    let data;
+  if(req.method==='GET'&&airtableRes.ok){
+    let data=null;
     try{ data=JSON.parse(text); }catch(e){ data=null; }
     if(data){
-      res.status(airtableRes.status).json(redactarSegunRol(tabla,rol,data));
-      return;
+      if(tabla==='Eventos'&&rol!=='full'){
+        res.status(airtableRes.status).json(filtrarGlassdoor(data));
+        return;
+      }
+      if(grupoBeneficios&&TABLAS_GRUPO_BENEFICIOS.has(tabla)){
+        const filtrado=await filtrarPorGrupoBeneficios(tabla,grupoBeneficios,data,token,base);
+        res.status(airtableRes.status).json(filtrado);
+        return;
+      }
     }
   }
 

@@ -20,13 +20,24 @@ function decodeJwt(token){
 function getIdToken(){ return localStorage.getItem('hub_session_token')||''; }
 
 // Rol de acceso resuelto por el servidor al loguear (ver api/_lib/roles.js) —
-// 'hr' | 'tem' | 'equipo'. Se usa para ocultar secciones/datos restringidos
-// del lado del cliente (el bloqueo real ya pasó en el servidor).
+// 'full' | 'hr' | 'tem' | 'manager' | 'equipo'. Se usa para ocultar
+// secciones/datos restringidos del lado del cliente (el bloqueo real ya
+// pasó en el servidor).
 function rolUsuarioActual(){
   try{
     return JSON.parse(localStorage.getItem('hub_user')||'{}').rol||'equipo';
   }catch(e){
     return 'equipo';
+  }
+}
+
+// Único grupo de Beneficios que puede ver este rol ('Engineers'|'Core Team'),
+// o null si ve los dos grupos sin restricción (full/tem/manager).
+function grupoBeneficiosActual(){
+  try{
+    return JSON.parse(localStorage.getItem('hub_user')||'{}').grupoBeneficios||null;
+  }catch(e){
+    return null;
   }
 }
 
@@ -84,7 +95,7 @@ async function onGoogleSignIn(response){
   }
 
   localStorage.setItem('hub_session_token',sesion.token);
-  localStorage.setItem('hub_user',JSON.stringify({email,nombre:payload.name||email,foto:payload.picture||'',rol:sesion.rol||'equipo'}));
+  localStorage.setItem('hub_user',JSON.stringify({email,nombre:payload.name||email,foto:payload.picture||'',rol:sesion.rol||'equipo',grupoBeneficios:sesion.grupoBeneficios||null}));
   const err=document.getElementById('login-error');
   if(err) err.style.display='none';
   mostrarSesionActiva();

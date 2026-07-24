@@ -5,50 +5,67 @@ const assert=require('node:assert/strict');
 process.env.AIRTABLE_TOKEN='tok123';
 process.env.AIRTABLE_BASE='appXXX';
 
-const {resolverRolAcceso,buscarPersonaPorEmail}=require('../api/_lib/roles');
+const {resolverAccesoPorEmail,buscarPersonaPorEmail,grupoDeRolEmpresa}=require('../api/_lib/roles');
 
 function fetchPersonas(records){
-  return async(url)=>({ok:true,json:async()=>({records})});
+  return async()=>({ok:true,json:async()=>({records})});
+}
+function personaConRol(rolEmpresa){
+  return fetchPersonas([{id:'rec1',fields:{Nombre:'X',Mail:'x@beon.tech','Rol en empresa':rolEmpresa}}]);
 }
 
-test('resolverRolAcceso: email en HR_EMAILS es "hr" sin consultar Airtable', async()=>{
-  const original=process.env.HR_EMAILS;
-  process.env.HR_EMAILS='hr@beon.tech, Otro@Beon.Tech';
-  let llamadas=0;
-  const fetchImpl=async()=>{ llamadas++; return {ok:true,json:async()=>({records:[]})}; };
-  try{
-    assert.equal(await resolverRolAcceso('hr@beon.tech',fetchImpl),'hr');
-    // case-insensitive
-    assert.equal(await resolverRolAcceso('OTRO@beon.tech',fetchImpl),'hr');
-    assert.equal(llamadas,0);
-  }finally{
-    process.env.HR_EMAILS=original;
+test('resolverAccesoPorEmail: People/COO/Founder son "full" (ven todo, grupoBeneficios null)', async()=>{
+  for(const rolEmpresa of ['People','COO','Founder']){
+    const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol(rolEmpresa));
+    assert.equal(r.rol,'full');
+    assert.equal(r.grupoBeneficios,null);
   }
 });
 
-test('resolverRolAcceso: Persona con Rol en empresa de liderazgo es "tem"', async()=>{
-  const original=process.env.HR_EMAILS;
-  process.env.HR_EMAILS='';
-  try{
-    const fetchImpl=fetchPersonas([{id:'rec1',fields:{Nombre:'Vicky',Mail:'vicky@beon.tech','Rol en empresa':'TEM'}}]);
-    assert.equal(await resolverRolAcceso('vicky@beon.tech',fetchImpl),'tem');
-  }finally{
-    process.env.HR_EMAILS=original;
+test('resolverAccesoPorEmail: Recruiting es "hr" con grupoBeneficios fijo en "Core Team"', async()=>{
+  const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol('Recruiting'));
+  assert.equal(r.rol,'hr');
+  assert.equal(r.grupoBeneficios,'Core Team');
+});
+
+test('resolverAccesoPorEmail: TEM es "tem" sin restricción de grupo', async()=>{
+  const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol('TEM'));
+  assert.equal(r.rol,'tem');
+  assert.equal(r.grupoBeneficios,null);
+});
+
+test('resolverAccesoPorEmail: Manager/Lead/Supervisor son "manager" sin restricción de grupo', async()=>{
+  for(const rolEmpresa of ['Manager','Lead','Supervisor']){
+    const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol(rolEmpresa));
+    assert.equal(r.rol,'manager');
+    assert.equal(r.grupoBeneficios,null);
   }
 });
 
-test('resolverRolAcceso: Persona sin rol de liderazgo (o no encontrada) es "equipo"', async()=>{
-  const original=process.env.HR_EMAILS;
-  process.env.HR_EMAILS='';
-  try{
-    const conEngineer=fetchPersonas([{id:'rec2',fields:{Nombre:'Ana',Mail:'ana@beon.tech','Rol en empresa':'Engineer'}}]);
-    assert.equal(await resolverRolAcceso('ana@beon.tech',conEngineer),'equipo');
+test('resolverAccesoPorEmail: Engineer es "equipo" con grupoBeneficios "Engineers" (su propio grupo)', async()=>{
+  const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol('Engineer'));
+  assert.equal(r.rol,'equipo');
+  assert.equal(r.grupoBeneficios,'Engineers');
+});
 
-    const sinMatch=fetchPersonas([]);
-    assert.equal(await resolverRolAcceso('nadie@beon.tech',sinMatch),'equipo');
-  }finally{
-    process.env.HR_EMAILS=original;
-  }
+test('resolverAccesoPorEmail: Core Team raso es "equipo" con grupoBeneficios "Core Team" (su propio grupo)', async()=>{
+  const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol('Core Team'));
+  assert.equal(r.rol,'equipo');
+  assert.equal(r.grupoBeneficios,'Core Team');
+});
+
+test('resolverAccesoPorEmail: sin Persona encontrada, cae a "equipo"/"Engineers" (el fallback de grupoDeRolEmpresa)', async()=>{
+  const r=await resolverAccesoPorEmail('nadie@beon.tech',fetchPersonas([]));
+  assert.equal(r.rol,'equipo');
+  assert.equal(r.grupoBeneficios,'Engineers');
+});
+
+test('grupoDeRolEmpresa: mismo criterio que getRolGroup() del cliente', ()=>{
+  assert.equal(grupoDeRolEmpresa('Engineer'),'Engineers');
+  assert.equal(grupoDeRolEmpresa('Core Team'),'Core Team');
+  assert.equal(grupoDeRolEmpresa('TEM'),'Core Team');
+  assert.equal(grupoDeRolEmpresa('Manager'),'Core Team');
+  assert.equal(grupoDeRolEmpresa('Otro'),'Engineers');
 });
 
 test('buscarPersonaPorEmail: si Airtable falla, devuelve null en vez de explotar', async()=>{

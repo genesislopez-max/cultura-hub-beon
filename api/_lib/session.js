@@ -21,8 +21,8 @@ function getSecret(){
   return secret;
 }
 
-function signSession({email,name,rol},ttlMs=DEFAULT_TTL_MS){
-  const payload={email,name,rol,exp:Date.now()+ttlMs};
+function signSession({email,name,rol,grupoBeneficios},ttlMs=DEFAULT_TTL_MS){
+  const payload={email,name,rol,grupoBeneficios,exp:Date.now()+ttlMs};
   const payloadB64=b64url(Buffer.from(JSON.stringify(payload)));
   const sig=crypto.createHmac('sha256',getSecret()).update(payloadB64).digest();
   return `${payloadB64}.${b64url(sig)}`;
@@ -48,9 +48,10 @@ function verifySession(token){
     return {ok:false,error:'Sesión corrupta.'};
   }
   if(!payload.exp||Date.now()>payload.exp) return {ok:false,error:'Tu sesión expiró — iniciá sesión de nuevo.'};
-  // rol puede venir undefined en tokens firmados antes de este cambio —
-  // el caller (api/airtable.js) lo trata como el nivel más restrictivo.
-  return {ok:true,email:payload.email,name:payload.name,rol:payload.rol};
+  // rol/grupoBeneficios pueden venir undefined en tokens firmados antes de
+  // este cambio — el caller (api/airtable.js) los trata como el nivel más
+  // restrictivo.
+  return {ok:true,email:payload.email,name:payload.name,rol:payload.rol,grupoBeneficios:payload.grupoBeneficios};
 }
 
 module.exports={signSession,verifySession,DEFAULT_TTL_MS};

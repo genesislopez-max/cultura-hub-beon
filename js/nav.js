@@ -231,7 +231,11 @@ async function saveRecord(){
 async function cargarSeccionesIniciales(){
   const personas=await loadPersonas();
   await loadProyectos();
-  await sincronizarPersonasEnKanban(personas);
+  // Escribe en Checklist (crea/completa tarjetas) — el servidor ya bloquea esas
+  // escrituras para roles sin acceso a Ingresos/Egresos (403), así que ni
+  // vale la pena intentarlo: solo generaría una tanda de errores en consola
+  // para cualquier rol que no sea full/hr.
+  if(SECCION_ROLES_PERMITIDOS.ingresos.has(rolUsuarioActual())) await sincronizarPersonasEnKanban(personas);
   const resultados=await Promise.allSettled([
     loadCumpleanos(personas),
     loadAniversarios(personas),

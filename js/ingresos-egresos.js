@@ -186,7 +186,7 @@ function renderEgresoCard(r){
     </div>
     <div class="eg-actions">
       <button class="eg-btn-edit" title="Editar persona" onclick="event.stopPropagation();abrirEdicionPersona('${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-pencil"></i></button>
-      <button class="eg-btn-del" title="Eliminar offboarding" onclick="event.stopPropagation();confirmarEliminar('${r.id}','${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
+      <button class="eg-btn-del" title="Eliminar offboarding" onclick="event.stopPropagation();confirmarEliminarEgreso('${r.id}','${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-trash"></i></button>
     </div>`;
   div.onclick=e=>{if(!e.defaultPrevented)openChecklistFromKanban(r.id,nombre,'Egreso',rol,f.Fecha,f.EstadoKanban);};
   div.draggable=true;
@@ -220,6 +220,33 @@ function confirmarEliminar(checklistId, nombre){
     `Se borrará el registro de Checklist, la persona de la tabla Personas y todos los reminders/eventos creados para ${nombre}. Esta acción no se puede deshacer.`,
     ()=>deleteIngreso(checklistId, nombre)
   );
+}
+
+// A diferencia de un Ingreso (donde cancelar el alta significa que la
+// persona nunca estuvo de verdad, así que se borra todo), cancelar un
+// Offboarding es deshacer un registro de salida de alguien que sigue en la
+// empresa — NO hay que borrar su Persona ni sus eventos, solo la tarjeta de
+// Checklist y la Fecha de egreso que quedó cargada.
+function confirmarEliminarEgreso(checklistId, nombre){
+  showConfirm(
+    `¿Eliminar el offboarding de ${nombre}?`,
+    `Se borrará solo el registro de Checklist y se le va a quitar la Fecha de egreso a ${nombre}, que vuelve a figurar como activo. No se toca su registro en Personas ni sus eventos (cumpleaños, aniversario, etc.).`,
+    ()=>deleteEgreso(checklistId, nombre)
+  );
+}
+async function deleteEgreso(checklistId, nombre){
+  await atDelete('Checklist', checklistId).catch(()=>{});
+
+  const pRecs=await atGet('Personas',`&filterByFormula={Nombre}="${nombre.replace(/"/g,'\\"')}"`).then(d=>d.records||[]).catch(()=>[]);
+  for(const p of pRecs){
+    await atPatch(`Personas/${p.id}`,{'Fecha de egreso':''}).catch(()=>{});
+  }
+
+  delete clState[checklistId];
+  delete recMeta[checklistId];
+
+  toast(`Offboarding de ${nombre} eliminado ✓ — vuelve a figurar como activo`);
+  await loadAll();
 }
 
 async function loadKanbans(){

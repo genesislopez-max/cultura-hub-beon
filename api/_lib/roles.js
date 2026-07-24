@@ -15,16 +15,27 @@
 // - "equipo": cualquier otro rol (Engineer, Core Team, Otro, etc.) — Inicio +
 //             Beneficios de su propio grupo únicamente (un Engineer ve
 //             Engineers, un Core Team ve Core Team).
-const ROLES_ACCESO_FULL=new Set(['People','COO','Founder']);
-const ROLES_ACCESO_HR=new Set(['Recruiting']);
-const ROLES_ACCESO_TEM=new Set(['TEM']);
-const ROLES_ACCESO_MANAGER=new Set(['Manager','Lead','Supervisor']);
+// Comparación case-insensitive (y sin espacios de más, incluidos los no-
+// separables tipo &nbsp;) — un Single Select de Airtable tipeado a mano
+// puede tener "people"/"People "/etc., y un match exacto ahí dejaba a gente
+// con acceso total afuera por una simple diferencia de mayúsculas.
+function normalizarRol(rolEmpresa){
+  return String(rolEmpresa||'').replace(/\s+/g,' ').trim().toLowerCase();
+}
+function setNormalizado(valores){
+  return new Set(valores.map(normalizarRol));
+}
+
+const ROLES_ACCESO_FULL=setNormalizado(['People','COO','Founder']);
+const ROLES_ACCESO_HR=setNormalizado(['Recruiting']);
+const ROLES_ACCESO_TEM=setNormalizado(['TEM']);
+const ROLES_ACCESO_MANAGER=setNormalizado(['Manager','Lead','Supervisor']);
 
 // Mismo criterio que getRolGroup() en js/utils.js (cliente) — no se
 // reimporta porque este archivo corre en Node (CommonJS), no en el browser.
-const ROLES_GRUPO_CORE_TEAM=new Set(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
+const ROLES_GRUPO_CORE_TEAM=setNormalizado(['Core Team','Supervisor','TEM','Lead','Manager','COO','Founder']);
 function grupoDeRolEmpresa(rolEmpresa){
-  return ROLES_GRUPO_CORE_TEAM.has(rolEmpresa)?'Core Team':'Engineers';
+  return ROLES_GRUPO_CORE_TEAM.has(normalizarRol(rolEmpresa))?'Core Team':'Engineers';
 }
 
 // Fetch directo a Airtable (no por api/airtable.js) — mismo patrón que ya usa
@@ -52,13 +63,14 @@ async function buscarPersonaPorEmail(email,fetchImpl){
 // ambos grupos sin restricción (full/tem/manager).
 async function resolverAccesoPorEmail(email,fetchImpl){
   const persona=await buscarPersonaPorEmail(email,fetchImpl);
-  const rolEmpresa=(persona?.fields?.['Rol en empresa']||'').trim();
+  const rolEmpresa=persona?.fields?.['Rol en empresa']||'';
+  const rolNormalizado=normalizarRol(rolEmpresa);
 
   let rol;
-  if(ROLES_ACCESO_FULL.has(rolEmpresa)) rol='full';
-  else if(ROLES_ACCESO_HR.has(rolEmpresa)) rol='hr';
-  else if(ROLES_ACCESO_TEM.has(rolEmpresa)) rol='tem';
-  else if(ROLES_ACCESO_MANAGER.has(rolEmpresa)) rol='manager';
+  if(ROLES_ACCESO_FULL.has(rolNormalizado)) rol='full';
+  else if(ROLES_ACCESO_HR.has(rolNormalizado)) rol='hr';
+  else if(ROLES_ACCESO_TEM.has(rolNormalizado)) rol='tem';
+  else if(ROLES_ACCESO_MANAGER.has(rolNormalizado)) rol='manager';
   else rol='equipo';
 
   const grupoBeneficios=

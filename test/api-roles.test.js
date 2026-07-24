@@ -22,6 +22,17 @@ test('resolverAccesoPorEmail: People/COO/Founder son "full" (ven todo, grupoBene
   }
 });
 
+// Reportado por un usuario que debía ser "full" y terminó sin acceso —
+// un Single Select de Airtable tipeado a mano puede no coincidir en
+// mayúsculas/espacios con lo que espera el código.
+test('resolverAccesoPorEmail: el match no distingue mayúsculas ni espacios de más', async()=>{
+  const variantes=['people',' People ','PEOPLE','people  '];
+  for(const rolEmpresa of variantes){
+    const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol(rolEmpresa));
+    assert.equal(r.rol,'full',`"${rolEmpresa}" debería resolver a full`);
+  }
+});
+
 test('resolverAccesoPorEmail: Recruiting es "hr" con grupoBeneficios fijo en "Core Team"', async()=>{
   const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol('Recruiting'));
   assert.equal(r.rol,'hr');

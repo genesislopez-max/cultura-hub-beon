@@ -13,24 +13,47 @@ function fetchPersonas(records){
 function personaConRol(rolEmpresa){
   return fetchPersonas([{id:'rec1',fields:{Nombre:'X',Mail:'x@beon.tech','Rol en empresa':rolEmpresa}}]);
 }
+function personaCon({rolEmpresa,area}){
+  return fetchPersonas([{id:'rec1',fields:{Nombre:'X',Mail:'x@beon.tech','Rol en empresa':rolEmpresa||'','Área':area||''}}]);
+}
 
-test('resolverAccesoPorEmail: People/COO/Founder son "full" (ven todo, grupoBeneficios null)', async()=>{
-  for(const rolEmpresa of ['People','COO','Founder']){
-    const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol(rolEmpresa));
+// Reportado por un usuario con Área="People" (el equipo de People en
+// general) al que el código anterior buscaba por error en "Rol en empresa"
+// y por eso no le daba acceso total.
+test('resolverAccesoPorEmail: Área="People" es "full" (ven todo, grupoBeneficios null)', async()=>{
+  const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({rolEmpresa:'Core Team',area:'People'}));
+  assert.equal(r.rol,'full');
+  assert.equal(r.grupoBeneficios,null);
+});
+
+test('resolverAccesoPorEmail: COO/Founder (Rol en empresa) son "full" aunque su Área no sea "People"', async()=>{
+  for(const rolEmpresa of ['COO','Founder']){
+    const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({rolEmpresa,area:'Leadership'}));
     assert.equal(r.rol,'full');
     assert.equal(r.grupoBeneficios,null);
   }
 });
 
-// Reportado por un usuario que debía ser "full" y terminó sin acceso —
-// un Single Select de Airtable tipeado a mano puede no coincidir en
-// mayúsculas/espacios con lo que espera el código.
+// Un Single Select/campo de texto de Airtable tipeado a mano puede no
+// coincidir en mayúsculas/espacios con lo que espera el código — no importa
+// si la variante está en "Rol en empresa" (COO/Founder) o en "Área" (People).
 test('resolverAccesoPorEmail: el match no distingue mayúsculas ni espacios de más', async()=>{
-  const variantes=['people',' People ','PEOPLE','people  '];
-  for(const rolEmpresa of variantes){
-    const r=await resolverAccesoPorEmail('x@beon.tech',personaConRol(rolEmpresa));
-    assert.equal(r.rol,'full',`"${rolEmpresa}" debería resolver a full`);
+  for(const area of ['people',' People ','PEOPLE','people  ']){
+    const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({area}));
+    assert.equal(r.rol,'full',`Área="${area}" debería resolver a full`);
   }
+  for(const rolEmpresa of ['coo',' Founder ']){
+    const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({rolEmpresa}));
+    assert.equal(r.rol,'full',`Rol en empresa="${rolEmpresa}" debería resolver a full`);
+  }
+});
+
+// Alguien de Recruiting puede pertenecer también al Área "People" — pero por
+// ser recruiter le corresponde el nivel "hr" (más acotado), no "full".
+test('resolverAccesoPorEmail: Recruiting con Área="People" sigue siendo "hr", no "full"', async()=>{
+  const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({rolEmpresa:'Recruiting',area:'People'}));
+  assert.equal(r.rol,'hr');
+  assert.equal(r.grupoBeneficios,'Core Team');
 });
 
 test('resolverAccesoPorEmail: Recruiting es "hr" con grupoBeneficios fijo en "Core Team"', async()=>{

@@ -572,44 +572,69 @@
       <!-- REVIEWS -->
       <div class="section-page" id="page-reviews">
 
-        <div class="metrics-2">
-          <div class="metric"><div class="metric-label">Glassdoor pendientes</div><div class="metric-val" style="color:var(--amber)" id="rv-gd-pend">—</div><div class="metric-sub">para solicitar</div></div>
-          <div class="metric"><div class="metric-label">Próxima a solicitar</div><div class="metric-val" style="color:var(--blue);font-size:15px" id="rv-gd-prox">—</div><div class="metric-sub" id="rv-gd-prox-dias"></div></div>
+        <div class="gd-kpi-grid">
+          <div class="gd-kpi-card">
+            <div class="gd-kpi-top">
+              <span class="gd-kpi-label">Glassdoor pendientes</span>
+              <div class="gd-kpi-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-hourglass"></i></div>
+            </div>
+            <div class="gd-kpi-val" style="color:var(--amber)" id="rv-gd-pend">—</div>
+            <div class="gd-kpi-sub">para solicitar</div>
+          </div>
+          <div class="gd-kpi-card">
+            <div class="gd-kpi-top">
+              <span class="gd-kpi-label">Próxima a solicitar</span>
+              <div class="gd-kpi-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-user-check"></i></div>
+            </div>
+            <div class="gd-kpi-name" id="rv-gd-prox">—</div>
+            <div class="gd-kpi-sub" id="rv-gd-prox-dias"></div>
+          </div>
         </div>
 
         <!-- GLASSDOOR -->
         <div id="rv-tab-glassdoor">
-          <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:16px">
-            <div class="table-head">
-              <span class="table-head-title">Glassdoor Reviews — Engineers</span>
-              <span class="badge badge-blue" id="rv-badge-gd">—</span>
-              <button onclick="sincronizarGlassdoor()" id="btn-sync-reminders" style="background:none;border:1px solid var(--border);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
-                <i class="ti ti-refresh"></i> Sincronizar Glassdoor
-              </button>
-              <button onclick="limpiarGlassdoorCoreTeam()" id="btn-clean-reminders" style="background:none;border:1px solid var(--critical-border);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:600;color:var(--critical);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;display:flex;align-items:center;gap:5px;transition:all 0.15s;">
-                <i class="ti ti-trash"></i> Limpiar Core Team
-              </button>
-            </div>
-            <div class="search-bar">
-              <div class="search-wrap"><i class="ti ti-search search-icon"></i>
-                <input class="search-input" id="gd-search" placeholder="Buscar persona…" oninput="filtrarGD()">
+          <div class="gd-panel">
+            <div class="gd-panel-head">
+              <div class="gd-panel-title-wrap">
+                <span class="gd-panel-title">Glassdoor Reviews — Engineers</span>
+                <span class="badge badge-blue" id="rv-badge-gd">—</span>
               </div>
-              <select class="filter-select" id="gd-estado" onchange="filtrarGD()">
-                <option value="">Todos</option>
-                <option value="pendiente">Pendientes</option>
-                <option value="solicitada">Solicitadas</option>
-                <option value="no-aplica">No aplica</option>
-              </select>
-              <select class="filter-select" id="gd-manager" onchange="filtrarGD()">
-                <option value="">Todos los managers</option>
-              </select>
+              <div class="gd-panel-actions">
+                <button class="gd-btn-sync" onclick="sincronizarGlassdoor()" id="btn-sync-reminders">
+                  <i class="ti ti-refresh"></i> Sincronizar Glassdoor
+                </button>
+                <button class="gd-btn-clean" onclick="limpiarGlassdoorCoreTeam()" id="btn-clean-reminders">
+                  <i class="ti ti-trash"></i> Limpiar Core Team
+                </button>
+              </div>
             </div>
-            <div class="table-scroll">
-            <table class="data-table">
-              <thead><tr><th>Persona</th><th>Fecha a solicitar</th><th>Estado</th><th>Fecha solicitada</th><th></th></tr></thead>
-              <tbody id="tbody-glassdoor"></tbody>
-            </table>
-          </div>
+            <div class="et-toolbar">
+              <div class="et-search-wrap">
+                <i class="ti ti-search"></i>
+                <input class="et-search" id="gd-search" placeholder="Buscar persona…" oninput="filtrarGD()">
+              </div>
+              <div class="et-filters">
+                <div class="et-sel-wrap">
+                  <select class="et-sel" id="gd-estado" onchange="filtrarGD()" style="padding-left:14px;min-width:130px">
+                    <option value="">Todos</option>
+                    <option value="pendiente">Pendientes</option>
+                    <option value="solicitada">Solicitadas</option>
+                    <option value="no-aplica">No aplica</option>
+                  </select>
+                  <i class="ti ti-chevron-down et-sel-chevron"></i>
+                </div>
+                <div class="et-sel-wrap">
+                  <select class="et-sel" id="gd-manager" onchange="filtrarGD()" style="padding-left:14px;min-width:180px">
+                    <option value="">Todos los managers</option>
+                  </select>
+                  <i class="ti ti-chevron-down et-sel-chevron"></i>
+                </div>
+              </div>
+            </div>
+            <div class="gd-thead">
+              <div>Persona</div><div>Fecha a solicitar</div><div>Estado</div><div>Fecha solicitada</div><div style="text-align:right">Acciones</div>
+            </div>
+            <div class="gd-rows" id="tbody-glassdoor"></div>
           </div>
         </div>
 

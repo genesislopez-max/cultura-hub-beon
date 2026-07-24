@@ -476,11 +476,14 @@ async function loadKanbanEgresos(){
   document.getElementById('me-offboard-mes').textContent=esteM.length;
   document.getElementById('me-offboard-total').textContent=recs.length;
 
-  const personasMap={};
-  cachePersonasRaw.forEach(p=>{if(p.fields.Nombre)personasMap[p.fields.Nombre.trim()]=p.fields['Fecha de ingreso'];});
-  const estadias=recs.map(r=>{
-    const nombre=(r.fields.Persona||'').trim();
-    const fi=personasMap[nombre],fe=r.fields.Fecha;
+  // Directo desde Personas (no desde las tarjetas del Kanban) para que
+  // entre todo el histórico: incluye tanto los offboardings hechos acá como
+  // las "cargas históricas" de gente que ya no estaba desde antes de usar el
+  // Hub — esas nunca tienen tarjeta de Checklist a propósito (ver forms.js),
+  // pero sí tienen Fecha de ingreso/egreso cargadas. De paso usa la Fecha de
+  // egreso real (último día) en vez de la fecha de aviso del Checklist.
+  const estadias=cachePersonasRaw.map(p=>{
+    const fi=p.fields['Fecha de ingreso'],fe=p.fields['Fecha de egreso'];
     if(!fi||!fe)return null;
     const m=(new Date(fe+'T12:00:00')-new Date(fi+'T12:00:00'))/(1000*60*60*24*30.44);
     return m>0?m:null;

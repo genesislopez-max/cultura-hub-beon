@@ -45,19 +45,24 @@ function renderCumpleHero(rows){
   const avatarEl=document.getElementById('cumple-hero-avatar');
   const nombreEl=document.getElementById('cumple-hero-nombre');
   const subEl=document.getElementById('cumple-hero-sub');
+  const otrosEl=document.getElementById('cumple-hero-otros');
   const hoy=rows.filter(r=>r.days===0);
   if(!hoy.length){
     avatarEl.textContent='🎂';
     nombreEl.textContent='Nadie cumple hoy';
     const prox=rows[0];
     subEl.textContent=prox?`El próximo es ${prox.nombre}, en ${prox.days===1?'1 día':prox.days+' días'}`:'Sin cumpleaños cargados';
+    otrosEl.innerHTML='';
     return;
   }
   const [primero,...resto]=hoy;
   const fechaLarga=primero.proximo.toLocaleDateString('es-AR',{day:'numeric',month:'long'});
   avatarEl.textContent=ini(primero.nombre);
   nombreEl.textContent=primero.nombre;
-  subEl.textContent=`Cumple ${fechaLarga}`+(resto.length?` · ${resto.map(r=>r.nombre).join(', ')}`:'');
+  subEl.textContent=`Cumple ${fechaLarga}`;
+  // Si más de una persona cumple hoy, el resto se lista aparte (uno por
+  // línea) en vez de amontonarlos en la misma línea que la fecha.
+  otrosEl.innerHTML=resto.map(r=>`<div class="cumple-hero-otro">🎉 ${r.nombre}</div>`).join('');
 }
 
 function setCumpleSegmento(seg,btn){

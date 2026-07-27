@@ -103,12 +103,20 @@ test('calcularEtapa: el ítem inactivo no bloquea el avance de etapa aunque est�
 // los índices de checklists de Egreso ya guardados.
 test('getItemsMap: los ítems de Egreso dados de baja siguen en el array pero inactivos', ()=>{
   const items=ctx.getItemsMap('Egreso','—');
-  const bajas=['Eliminar aniversario en Hub','Eliminar cumpleaños en Hub','Eliminar reminder de review Glassdoor (si aplica)','Sacar de la lista de mails del sheet accounting','Completar sheet métricas offboarding'];
+  const bajas=['Fecha de offboarding registrada','Eliminar aniversario en Hub','Eliminar cumpleaños en Hub','Eliminar reminder de review Glassdoor (si aplica)','Sacar de la lista de mails del sheet accounting','Completar sheet métricas offboarding','Sacar de AI Tools','Eliminar de la planilla de Beneficios'];
   for(const t of bajas){
     const item=items.find(it=>it.t===t);
     assert.ok(item,`el ítem "${t}" debería seguir en el array`);
     assert.equal(item.activo,false,`"${t}" debería estar marcado inactivo`);
   }
+});
+
+test('getItemsMap: "Sacar del doc de Rewards Program" y "Eliminar de Brevo" tienen link', ()=>{
+  const items=ctx.getItemsMap('Egreso','—');
+  const rewards=items.find(it=>it.t==='Sacar del doc de Rewards Program');
+  const brevo=items.find(it=>it.t==='Eliminar de Brevo');
+  assert.equal(rewards.l,'https://docs.google.com/spreadsheets/d/1VzmvwzYDnBwEOfaai40kzZEbY_M311rpRI-YHndTOWc/edit?gid=304848196#gid=304848196');
+  assert.equal(brevo.l,'https://app.brevo.com/contact/list');
 });
 
 test('getActiveIndexes: en Egreso no incluye las posiciones de los ítems dados de baja', ()=>{

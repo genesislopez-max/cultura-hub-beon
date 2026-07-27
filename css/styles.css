@@ -714,7 +714,11 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .cumple-rows{max-height:520px;overflow-y:auto;}
 .cumple-rows::-webkit-scrollbar{width:8px;}
 .cumple-rows::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
-.cumple-mes-header{position:sticky;top:0;z-index:1;font-size:14px;font-weight:800;color:var(--text);padding:12px 20px 12px 17px;background:var(--bg);border-bottom:1px solid var(--border);border-left:3px solid var(--blue);}
+/* No sticky: con bloques de mes de altura variable (a veces apenas más
+   altos que el propio panel), el header se queda "resbalando" hacia abajo
+   antes de soltarse — se ve como si tapara las filas de abajo en vez de
+   quedar prolijamente fijo arriba. Mejor un header fijo en su lugar. */
+.cumple-mes-header{font-size:14px;font-weight:800;color:var(--text);padding:12px 20px 12px 17px;background:var(--bg);border-bottom:1px solid var(--border);border-left:3px solid var(--blue);}
 .cumple-panel.core .cumple-mes-header{border-left-color:var(--purple);}
 .cumple-mes-count{font-weight:500;color:var(--text3);font-size:12px;}
 .cumple-row{display:grid;grid-template-columns:2.2fr 1.6fr 1.5fr 1.2fr;gap:16px;align-items:center;padding:12px 20px;border-bottom:1px solid var(--border);transition:background 0.12s;}

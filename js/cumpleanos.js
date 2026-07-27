@@ -108,11 +108,10 @@ function badgeCumpleIcono(days){
 
 function filaCumpleRow(r){
   const dl=r.days===0?'¡Hoy!':r.days===1?'Mañana':`en ${r.days} días`;
-  const fechaBase=new Date(r.fecha+'T12:00:00');
-  const mesAbrev=fechaBase.toLocaleDateString('es-AR',{month:'short'}).replace('.','');
-  const dia=String(fechaBase.getDate()).padStart(2,'0');
-  const mesLargo=fechaBase.toLocaleDateString('es-AR',{month:'long'});
-  const proximoTxt=`${r.proximo.getDate()} de ${mesAbrev} de ${r.proximo.getFullYear()}`;
+  const mesAbrev=r.proximo.toLocaleDateString('es-AR',{month:'short'}).replace('.','');
+  const dia=String(r.proximo.getDate()).padStart(2,'0');
+  const mesLargo=r.proximo.toLocaleDateString('es-AR',{month:'long'});
+  const fechaCompleta=`${r.proximo.getDate()} de ${mesLargo} de ${r.proximo.getFullYear()}`;
   return`<div class="cumple-row">
     <div class="cumple-row-persona">
       ${avH(r.nombre)}
@@ -123,9 +122,8 @@ function filaCumpleRow(r){
     </div>
     <div class="cumple-row-fecha">
       <div class="cumple-date-tile"><span class="cumple-date-mes">${mesAbrev}</span><span class="cumple-date-dia">${dia}</span></div>
-      <span>${dia} ${mesLargo}</span>
+      <span>${fechaCompleta}</span>
     </div>
-    <div class="cumple-row-proximo">${proximoTxt}</div>
     <span class="badge ${badgeCumpleClase(r.days)}"><i class="ti ${badgeCumpleIcono(r.days)}"></i> ${dl}</span>
   </div>`;
 }

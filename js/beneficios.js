@@ -47,7 +47,30 @@ function poblarFiltroBeneficioNombre(){
 // beneficio al catálogo en "Catálogo", o asignación de un beneficio a una
 // persona puntual en "Por persona" (FORMS['beneficios-asignados'] ya existía
 // pero no estaba conectado a ningún botón).
+// HR y Manager no ven la pestaña de Métricas (cinturón de seguridad además
+// de ocultar el botón — por si algo la dispara directamente).
+const BENEF_ROLES_SIN_METRICAS=new Set(['hr','manager']);
+
+// Se llama al arrancar (ver aplicarRestriccionesDeAcceso() en nav.js) —
+// oculta/fija controles de Beneficios según el rol. Los elementos ya están
+// en el DOM desde que carga index.html, así que no hace falta esperar a
+// loadBeneficios() (que recién corre cuando el usuario entra a la sección).
+function aplicarRestriccionesBeneficios(){
+  const rol=rolUsuarioActual();
+  if(BENEF_ROLES_SIN_METRICAS.has(rol)){
+    document.querySelector('.benef-tab[onclick*="metricas"]')?.style.setProperty('display','none');
+  }
+  if(rol==='hr'){
+    const sel=document.getElementById('benef-persona-grupo');
+    if(sel){ sel.value='Core Team'; sel.disabled=true; }
+  }
+}
+
 function switchBenefTab(tab, btn){
+  if(tab==='metricas'&&BENEF_ROLES_SIN_METRICAS.has(rolUsuarioActual())){
+    tab='catalogo';
+    btn=document.querySelector('.benef-tab[onclick*="catalogo"]');
+  }
   document.querySelectorAll('.benef-tab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
   document.getElementById('benef-tab-catalogo').style.display=tab==='catalogo'?'':'none';
@@ -156,12 +179,13 @@ function renderBenefMetricas(){
       if(benef?.fields.Valor) totalUsado+=Number(benef.fields.Valor)||0;
     }
   });
-  // "Resto del equipo" ve el catálogo/asignaciones de su propio grupo, pero
-  // no el agregado de gasto total — se oculta la tarjeta entera (no solo el
-  // número) para no dejar la etiqueta sin nada al lado.
+  // "Resto del equipo", HR y Manager ven el catálogo/asignaciones de su
+  // grupo, pero no el agregado de gasto total — se oculta la tarjeta entera
+  // (no solo el número) para no dejar la etiqueta sin nada al lado. TEM y
+  // Full sí lo ven.
   const presupuestoEl=document.getElementById('mb-presupuesto');
   const presupuestoCard=presupuestoEl?.closest('.metric');
-  if(rolUsuarioActual()==='equipo'){
+  if(['equipo','hr','manager'].includes(rolUsuarioActual())){
     if(presupuestoCard) presupuestoCard.style.display='none';
   } else {
     if(presupuestoCard) presupuestoCard.style.display='';
@@ -585,7 +609,10 @@ function cambiarPaginaBenefPersonas(dir){
 
 function renderBenefPersonas(){
   const q=(document.getElementById('benef-persona-search')?.value||'').toLowerCase();
-  const grupoFil=document.getElementById('benef-persona-grupo')?.value||'';
+  // HR solo puede ver Core Team acá — se fuerza el filtro sin importar lo
+  // que diga el selector (que además queda deshabilitado, ver
+  // aplicarRestriccionesBeneficios()).
+  const grupoFil=rolUsuarioActual()==='hr'?'Core Team':(document.getElementById('benef-persona-grupo')?.value||'');
   const loyaltyFil=document.getElementById('benef-persona-loyalty')?.value||'';
   const temFil=document.getElementById('benef-persona-tem')?.value||'';
 

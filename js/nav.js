@@ -51,7 +51,7 @@ function aplicarSidebarColapsado(){
 // ─── CONTROL DE ACCESO POR ROL ────────────────────────────────────────────────
 // Secciones restringidas → id de la tarjeta resumen de Inicio que muestra
 // datos de esa sección (para ocultarla también, no solo el ítem del sidebar).
-const SECCION_TARJETA_INICIO={ingresos:'sc-ingresos',egresos:'sc-offboard',reviews:'sc-glassdoor'};
+const SECCION_TARJETA_INICIO={ingresos:'sc-ingresos',egresos:'sc-offboard',reviews:'sc-glassdoor',cumpleanos:'sc-cumple',aniversarios:'sc-aniv'};
 
 // Se llama al arrancar — oculta del menú lateral y del dashboard de Inicio las
 // secciones que el rol actual no puede ver. El bloqueo real de los datos ya
@@ -65,6 +65,7 @@ function aplicarRestriccionesDeAcceso(){
     const tarjetaId=SECCION_TARJETA_INICIO[nombre];
     if(tarjetaId) document.getElementById(tarjetaId)?.closest('.summary-card')?.style.setProperty('display','none');
   });
+  aplicarRestriccionesBeneficios();
 }
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────

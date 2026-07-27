@@ -152,13 +152,11 @@ function renderEgresoCard(r){
   const proyecto=pf.Proyecto||f.Proyecto;
   const mail=pf.Mail||f.Mail;
   const pais=pf['País']||f['País'];
-  const cumple=pf['Fecha de cumpleaños'];
   const completo=pct===100;
   const metaRows=[
     mail&&{icon:'ti-mail',label:'Correo',value:mail},
     pais&&{icon:'ti-world',label:'País',value:pais},
     f.Fecha&&{icon:'ti-calendar-x',label:'Fecha de salida',value:fmt(f.Fecha)},
-    cumple&&{icon:'ti-cake',label:'Cumpleaños',value:fmt(cumple)},
   ].filter(Boolean);
   const div=document.createElement('div');
   div.className='eg-card';

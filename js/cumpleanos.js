@@ -5,10 +5,11 @@ async function loadCumpleanos(personas){
   const mesActual=now.getMonth(),mesProximo=(now.getMonth()+1)%12;
   const rows=(personas||[]).filter(r=>!yaEgreso(r)&&r.fields['Fecha de cumpleaños']).map(r=>{
     const f=r.fields;
+    const rol=(f['Rol en empresa']||'').trim();
     const fecha=f['Fecha de cumpleaños'];
     const days=daysTo(fecha);
     const proximo=new Date(now.getTime()+days*86400000);
-    return{nombre:f.Nombre,fecha,days,proximo,manager:f.Manager||''};
+    return{nombre:f.Nombre,fecha,days,proximo,grupo:CORE_TEAM_ROLES.has(rol)?'core':'eng',manager:f.Manager||''};
   }).sort((a,b)=>a.days-b.days);
   cacheCumpleRows=rows;
   poblarSelectorTEM('cumple-tem');
@@ -80,12 +81,16 @@ function filtrarCumpleanos(){
     (!temFil||r.manager===temFil)&&
     (cumpleSegmento==='todos'||(cumpleSegmento==='30'&&r.days<=30)||(cumpleSegmento==='7'&&r.days<=7))
   );
-  document.getElementById('badge-cumple-total').textContent=`${filtrados.length} persona${filtrados.length!==1?'s':''}`;
-  renderCumpleLista(filtrados);
+  const engRows=filtrados.filter(r=>r.grupo==='eng');
+  const coreRows=filtrados.filter(r=>r.grupo==='core');
+  document.getElementById('badge-cumple-eng').textContent=`${engRows.length} persona${engRows.length!==1?'s':''}`;
+  document.getElementById('badge-cumple-core').textContent=`${coreRows.length} persona${coreRows.length!==1?'s':''}`;
+  renderCumpleLista('cumple-eng-container',engRows);
+  renderCumpleLista('cumple-core-container',coreRows);
 }
 
-// Escala de color pedida: hoy → rosa, mañana → rojo, ≤7d → ámbar, ≤30d →
-// azul, resto → gris.
+// Escala de color/ícono pedida: hoy → rosa, mañana → rojo, ≤7d → ámbar,
+// ≤30d → azul, resto → gris.
 function badgeCumpleClase(days){
   if(days===0) return 'badge-pink';
   if(days===1) return 'badge-red';
@@ -93,19 +98,35 @@ function badgeCumpleClase(days){
   if(days<=30) return 'badge-blue';
   return 'badge-gray';
 }
+function badgeCumpleIcono(days){
+  if(days===0) return 'ti-confetti';
+  if(days===1) return 'ti-sunrise';
+  if(days<=7) return 'ti-clock';
+  if(days<=30) return 'ti-calendar';
+  return 'ti-calendar-event';
+}
 
 function filaCumpleRow(r){
-  const dl=r.days===0?'¡Hoy! 🎉':r.days===1?'Mañana':`en ${r.days} días`;
+  const dl=r.days===0?'¡Hoy!':r.days===1?'Mañana':`en ${r.days} días`;
   const fechaBase=new Date(r.fecha+'T12:00:00');
-  const diaMes=fechaBase.toLocaleDateString('es-AR',{day:'2-digit',month:'short'});
+  const mesAbrev=fechaBase.toLocaleDateString('es-AR',{month:'short'}).replace('.','');
+  const dia=String(fechaBase.getDate()).padStart(2,'0');
+  const mesLargo=fechaBase.toLocaleDateString('es-AR',{month:'long'});
+  const proximoTxt=`${r.proximo.getDate()} de ${mesAbrev} de ${r.proximo.getFullYear()}`;
   return`<div class="cumple-row">
-    ${avH(r.nombre)}
-    <div class="cumple-row-info">
-      <div class="cumple-row-name">${r.nombre}</div>
-      ${r.manager?`<div class="cumple-row-manager">${r.manager}</div>`:''}
+    <div class="cumple-row-persona">
+      ${avH(r.nombre)}
+      <div class="cumple-row-info">
+        <div class="cumple-row-name">${r.nombre}</div>
+        ${r.manager?`<div class="cumple-row-manager">${r.manager}</div>`:''}
+      </div>
     </div>
-    <span class="cumple-chip-fecha">${diaMes}</span>
-    <span class="badge ${badgeCumpleClase(r.days)}">${dl}</span>
+    <div class="cumple-row-fecha">
+      <div class="cumple-date-tile"><span class="cumple-date-mes">${mesAbrev}</span><span class="cumple-date-dia">${dia}</span></div>
+      <span>${dia} ${mesLargo}</span>
+    </div>
+    <div class="cumple-row-proximo">${proximoTxt}</div>
+    <span class="badge ${badgeCumpleClase(r.days)}"><i class="ti ${badgeCumpleIcono(r.days)}"></i> ${dl}</span>
   </div>`;
 }
 
@@ -127,8 +148,8 @@ function bloqueMesCumple(offset,rows,now){
     ${delMes.map(filaCumpleRow).join('')}`;
 }
 
-function renderCumpleLista(rows){
-  const container=document.getElementById('cumple-lista-container');
+function renderCumpleLista(containerId,rows){
+  const container=document.getElementById(containerId);
   if(!container) return;
   if(!rows.length){
     container.innerHTML='<div class="cumple-empty">Sin cumpleaños para este filtro.</div>';

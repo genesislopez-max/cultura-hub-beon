@@ -610,6 +610,28 @@ const FORMS={
       await atPost('Off Sites',fields);
       sendSlack(`✈️ *Off Site registrado en el Hub*\n${v('f-os-persona')} — ${v('f-os-destino')} (${fmt(v('f-os-inicio'))} → ${fmt(v('f-os-fin'))})`);
       return true;
+    }},
+
+  // Accesible desde cualquier pantalla (botón en el sidebar, no depende de
+  // ninguna sección) — Persona/Mail se completan solos con la sesión activa.
+  feedback:{title:'Enviar feedback',html:()=>`
+<div class="field-group"><label class="field-label">Categoría *</label>
+  <select class="field-input" id="f-fb-categoria">
+    <option value="Sugerencia">Sugerencia</option>
+    <option value="Bug">Bug</option>
+    <option value="Otro">Otro</option>
+  </select>
+</div>
+<div class="field-group"><label class="field-label">Mensaje *</label><textarea class="field-input" id="f-fb-mensaje" placeholder="Contanos qué mejorarías, qué encontraste raro, o qué te gustaría que el Hub tenga…" rows="5"></textarea></div>
+`,
+    save:async()=>{
+      const v=id=>document.getElementById(id)?.value||'';
+      const mensaje=v('f-fb-mensaje').trim();
+      if(!mensaje){toast('El mensaje es obligatorio',true);return false;}
+      const u=usuarioActual();
+      const hoy=new Date().toISOString().slice(0,10);
+      await atPost('Feedback',{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:v('f-fb-categoria')||'Otro',Mensaje:mensaje});
+      return true;
     }}
 };
 FORMS.coreteam=FORMS.engineers; // Engineers & Tech y Core Team comparten el mismo alta de persona

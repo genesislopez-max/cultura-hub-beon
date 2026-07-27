@@ -19,6 +19,15 @@ function decodeJwt(token){
 
 function getIdToken(){ return localStorage.getItem('hub_session_token')||''; }
 
+// Datos del usuario logueado (nombre/email/etc.) — ver onGoogleSignIn().
+function usuarioActual(){
+  try{
+    return JSON.parse(localStorage.getItem('hub_user')||'{}');
+  }catch(e){
+    return {};
+  }
+}
+
 // Rol de acceso resuelto por el servidor al loguear (ver api/_lib/roles.js) —
 // 'full' | 'hr' | 'tem' | 'manager' | 'equipo'. Se usa para ocultar
 // secciones/datos restringidos del lado del cliente (el bloqueo real ya

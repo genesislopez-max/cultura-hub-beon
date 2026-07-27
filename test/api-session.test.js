@@ -48,13 +48,13 @@ test('api/session: intercambia un ID token de Google válido por un token de ses
   }
 });
 
-test('api/session: resuelve y devuelve el rol de acceso (vía Rol en empresa en Personas)', async()=>{
+test('api/session: resuelve y devuelve el rol de acceso (vía Acceso en Personas)', async()=>{
   const original=global.fetch;
   process.env.AIRTABLE_TOKEN='tok123';
   process.env.AIRTABLE_BASE='appXXX';
   global.fetch=fakeGoogleYPersonas(
     {aud:GOOGLE_CLIENT_ID,email_verified:'true',email:'gustavo@beon.tech',hd:'beon.tech',name:'Gustavo'},
-    [{id:'rec1',fields:{Nombre:'Gustavo',Mail:'gustavo@beon.tech','Rol en empresa':'Recruiting'}}],
+    [{id:'rec1',fields:{Nombre:'Gustavo',Mail:'gustavo@beon.tech',Acceso:'HR'}}],
   );
   try{
     const req={method:'POST',body:{idToken:'google-id-token'}};

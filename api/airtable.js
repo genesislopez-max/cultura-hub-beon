@@ -85,6 +85,16 @@ module.exports=async(req,res)=>{
   const rol=verificado.rol||'equipo';
   const grupoBeneficios=verificado.grupoBeneficios||null;
 
+  // "No access" (Acceso="No access" en Personas): bloqueo total, para
+  // cualquier tabla — cinturón de seguridad además del bloqueo del lado del
+  // cliente (ver js/auth.js), por si alguien llega a este endpoint sin pasar
+  // por la pantalla bloqueada.
+  if(rol==='bloqueado'){
+    if(req.method==='GET') res.status(200).json({records:[]});
+    else res.status(403).json({error:{message:'No autorizado.'}});
+    return;
+  }
+
   const token=process.env.AIRTABLE_TOKEN;
   const base=process.env.AIRTABLE_BASE;
   if(!token||!base){

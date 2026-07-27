@@ -68,13 +68,45 @@
 
         <div class="login-security-note">
           <i class="ti ti-shield-check"></i>
-          <div>Solo cuentas <strong>@beon.tech</strong> pueden acceder. Si tenés problemas, escribí a People Ops.</div>
+          <div>Solo cuentas <strong>@beon.tech</strong> pueden acceder. Si tenés problemas, escribí a <a href="https://beonstudio.slack.com/team/U040WKRSYKA" target="_blank" rel="noopener" style="color:inherit;font-weight:600;text-decoration:underline;">People Ops</a>.</div>
         </div>
 
         <div class="login-footer">© <span id="login-year"></span> BEON.tech · Uso interno del equipo</div>
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- PANTALLA DE "NO ACCESS" — se muestra en vez del Hub si Acceso="No access"
+     en Personas (ver js/auth.js: mostrarSinAcceso()). -->
+<div class="login-screen" id="no-access-screen" style="display:none">
+  <div class="login-grid">
+    <div class="login-brand">
+      <div class="login-halo login-halo-1"></div>
+      <div class="login-halo login-halo-2"></div>
+      <div class="login-halo login-halo-3"></div>
+      <div class="login-brand-logo">
+        <img src="assets/beon-logo.png" alt="BEON.tech">
+      </div>
+      <div class="login-brand-mid">
+        <div class="login-brand-pill"><span class="login-brand-dot"></span>BEON.tech Hub</div>
+        <h1 class="login-brand-h1">El equipo,<br>en un solo lugar.</h1>
+        <div class="login-brand-rule"></div>
+        <p class="login-brand-p">Beneficios, cumpleaños, get togethers y off sites de todo BEON — reunidos en un solo Hub para el equipo.</p>
+      </div>
+      <div class="login-brand-spacer"></div>
+    </div>
+    <div class="login-auth">
+      <div class="login-auth-inner">
+        <div class="login-auth-logo"><img src="assets/beon-logo.png" alt="BEON.tech"></div>
+        <div class="login-auth-eyebrow">Acceso restringido</div>
+        <h2 class="login-auth-h2">Todavía no tenés acceso</h2>
+        <p class="login-auth-p">Tu cuenta (<strong id="no-access-email"></strong>) no tiene acceso habilitado al Hub. Si creés que esto es un error, escribí a <a href="https://beonstudio.slack.com/team/U040WKRSYKA" target="_blank" rel="noopener" style="color:var(--blue);font-weight:600;">People Ops</a>.</p>
+        <button class="btn-primary" onclick="cerrarSesion()" style="margin-top:8px;width:100%;justify-content:center;"><i class="ti ti-logout"></i>Cerrar sesión</button>
+        <div class="login-footer" style="margin-top:24px">© <span id="no-access-year"></span> BEON.tech · Uso interno del equipo</div>
+      </div>
+    </div>
   </div>
 </div>
 

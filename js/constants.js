@@ -27,7 +27,7 @@ const ITEMS_INGRESO_MAP=[
 const ITEMS_EGRESO_MAP=[
   // Ya lo dice el título de la tarjeta/etapa — no hace falta un paso aparte.
   {t:'Fecha de offboarding registrada',                   e:'Aviso dado', activo:false},
-  {t:'Avisar a Billy',                                    e:'Aviso dado'},
+  {t:'Avisar a Billy',                                    e:'Aviso dado', l:'https://beonstudio.slack.com/archives/D04RDKVQGNR'},
   {t:'Avisar a terapeutas',                               e:'Aviso dado'},
   {t:'Avisar a Viviana (portugués)',                      e:'Aviso dado'},
   {t:'Sacar del doc de Rewards Program',                  e:'En proceso', l:'https://docs.google.com/spreadsheets/d/1VzmvwzYDnBwEOfaai40kzZEbY_M311rpRI-YHndTOWc/edit?gid=304848196#gid=304848196'},

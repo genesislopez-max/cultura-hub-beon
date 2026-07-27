@@ -66,6 +66,17 @@ function aplicarRestriccionesDeAcceso(){
     if(tarjetaId) document.getElementById(tarjetaId)?.closest('.summary-card')?.style.setProperty('display','none');
   });
   aplicarRestriccionesBeneficios();
+  // Si a un grupo del menú (Eventos, Gestión, Beneficios...) no le queda
+  // ningún ítem visible para este rol, ocultar también su header — un grupo
+  // vacío y desplegable no aporta nada.
+  document.querySelectorAll('.sb-group').forEach(grupo=>{
+    const algunoVisible=[...grupo.querySelectorAll('.sb-item')].some(item=>item.style.display!=='none');
+    const header=grupo.previousElementSibling;
+    if(!algunoVisible){
+      grupo.style.setProperty('display','none');
+      header?.style.setProperty('display','none');
+    }
+  });
 }
 
 // ─── NAV ─────────────────────────────────────────────────────────────────────

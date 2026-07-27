@@ -144,8 +144,15 @@ function bloqueMesCumple(offset,rows,now){
   if(!delMes.length) return '';
   const nombreMes=new Date(now.getFullYear(),now.getMonth()+offset,1).toLocaleString('es-AR',{month:'long',year:'numeric'});
   const nombreCap=nombreMes.charAt(0).toUpperCase()+nombreMes.slice(1);
-  return`<div class="cumple-mes-header">${nombreCap} <span class="cumple-mes-count">(${delMes.length})</span></div>
-    ${delMes.map(filaCumpleRow).join('')}`;
+  // El header (sticky) y sus filas van envueltos juntos en su propio bloque
+  // — si quedaran como hermanos sueltos dentro de .cumple-rows, todos
+  // comparten el mismo "contenedor de anclaje" para el sticky (el panel
+  // entero) y el navegador los va apilando a todos arriba a medida que se
+  // scrollea, en vez de soltar cada uno cuando termina su propio mes.
+  return`<div class="cumple-mes-bloque">
+    <div class="cumple-mes-header">${nombreCap} <span class="cumple-mes-count">(${delMes.length})</span></div>
+    ${delMes.map(filaCumpleRow).join('')}
+  </div>`;
 }
 
 function renderCumpleLista(containerId,rows){

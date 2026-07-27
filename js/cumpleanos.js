@@ -47,16 +47,17 @@ function renderCumpleHero(rows){
   const subEl=document.getElementById('cumple-hero-sub');
   const hoy=rows.filter(r=>r.days===0);
   if(!hoy.length){
-    avatarEl.innerHTML='<div class="avatar" style="background:rgba(255,255,255,0.18);color:#fff;">🎂</div>';
+    avatarEl.textContent='🎂';
     nombreEl.textContent='Nadie cumple hoy';
     const prox=rows[0];
     subEl.textContent=prox?`El próximo es ${prox.nombre}, en ${prox.days===1?'1 día':prox.days+' días'}`:'Sin cumpleaños cargados';
     return;
   }
-  const nombres=hoy.map(r=>r.nombre);
-  avatarEl.innerHTML=avH(nombres[0]);
-  nombreEl.textContent=nombres.length===1?nombres[0]:`${nombres[0]} +${nombres.length-1} más`;
-  subEl.textContent=nombres.length===1?'¡Hoy cumple años! 🎉':`Hoy cumplen años: ${nombres.join(', ')} 🎉`;
+  const [primero,...resto]=hoy;
+  const fechaLarga=primero.proximo.toLocaleDateString('es-AR',{day:'numeric',month:'long'});
+  avatarEl.textContent=ini(primero.nombre);
+  nombreEl.textContent=primero.nombre;
+  subEl.textContent=`Cumple ${fechaLarga}`+(resto.length?` · ${resto.map(r=>r.nombre).join(', ')}`:'');
 }
 
 function setCumpleSegmento(seg,btn){

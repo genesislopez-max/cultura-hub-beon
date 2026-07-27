@@ -25,11 +25,12 @@ const ITEMS_INGRESO_MAP=[
 // índice de los que ya estaban guardados en ItemsCompletados de checklists
 // existentes — mismo patrón que ya usa ITEMS_INGRESO_MAP más arriba.
 const ITEMS_EGRESO_MAP=[
-  {t:'Fecha de offboarding registrada',                   e:'Aviso dado'},
-  {t:'Avisar a Billy',                                    e:'Aviso dado'},
+  // Ya lo dice el título de la tarjeta/etapa — no hace falta un paso aparte.
+  {t:'Fecha de offboarding registrada',                   e:'Aviso dado', activo:false},
+  {t:'Avisar a Billy',                                    e:'Aviso dado', l:'https://beonstudio.slack.com/archives/D04RDKVQGNR'},
   {t:'Avisar a terapeutas',                               e:'Aviso dado'},
   {t:'Avisar a Viviana (portugués)',                      e:'Aviso dado'},
-  {t:'Sacar del doc de Rewards Program',                  e:'En proceso'},
+  {t:'Sacar del doc de Rewards Program',                  e:'En proceso', l:'https://docs.google.com/spreadsheets/d/1VzmvwzYDnBwEOfaai40kzZEbY_M311rpRI-YHndTOWc/edit?gid=304848196#gid=304848196'},
   // Ya automático: Cumpleaños/Aniversarios se calculan en vivo desde Personas
   // y excluyen a quien tiene Fecha de egreso — no hay nada que borrar a mano.
   {t:'Eliminar aniversario en Hub',                       e:'En proceso', activo:false},
@@ -40,11 +41,11 @@ const ITEMS_EGRESO_MAP=[
   {t:'Eliminar reminder de review Glassdoor (si aplica)', e:'En proceso', activo:false},
   // No se usan más.
   {t:'Sacar de la lista de mails del sheet accounting',   e:'En proceso', activo:false},
-  {t:'Eliminar de Brevo',                                 e:'En proceso'},
+  {t:'Eliminar de Brevo',                                 e:'En proceso', l:'https://app.brevo.com/contact/list'},
   {t:'Eliminar del Hall of Fame',                         e:'En proceso'},
   {t:'Completar sheet métricas offboarding',              e:'En proceso', activo:false},
-  {t:'Sacar de AI Tools',                                 e:'En proceso'},
-  {t:'Eliminar de la planilla de Beneficios',             e:'En proceso'},
+  {t:'Sacar de AI Tools',                                 e:'En proceso', activo:false},
+  {t:'Eliminar de la planilla de Beneficios',             e:'En proceso', activo:false},
 ];
 const ETAPAS_INGRESO=['Pre-ingreso','Primer día','Primera semana','Onboarding completo'];
 const ETAPAS_EGRESO=['Aviso dado','En proceso','Offboarding completo'];

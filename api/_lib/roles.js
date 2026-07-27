@@ -5,18 +5,20 @@
 // pedidos no necesita volver a consultar Airtable.
 //
 // Niveles válidos en "Acceso" (de mayor a menor acceso):
-// - "Full"   : ve todo, sin restricciones.
-// - "HR"     : Inicio + Ingresos/Egresos + Beneficios, pero solo del grupo
-//              Core Team (sin Glassdoor, sin Beneficios Engineers).
-// - "TEM"    : Inicio + Beneficios (Engineers y Core Team, sin
-//              Ingresos/Egresos ni Glassdoor).
-// - "Manager": mismo acceso que "TEM".
-// - "Equipo" : Inicio + Beneficios de su propio grupo únicamente (según su
-//              "Rol en empresa" — un Engineer ve Engineers, un Core Team ve
-//              Core Team).
+// - "Full"     : ve todo, sin restricciones.
+// - "HR"       : Inicio + Ingresos/Egresos + Beneficios, pero solo del
+//                grupo Core Team (sin Glassdoor, sin Beneficios Engineers).
+// - "TEM"      : Inicio + Beneficios (Engineers y Core Team, sin
+//                Ingresos/Egresos ni Glassdoor).
+// - "Manager"  : mismo acceso que "TEM".
+// - "Equipo"   : Inicio + Beneficios de su propio grupo únicamente (según
+//                su "Rol en empresa" — un Engineer ve Engineers, un Core
+//                Team ve Core Team).
+// - "No access": no entra al Hub — ni siquiera Inicio. Ve una pantalla
+//                bloqueada en vez del contenido (ver js/auth.js).
 // Si el campo está vacío o tiene un valor que no reconocemos, cae a
-// "Equipo" (el nivel más restrictivo) hasta que se cargue bien — fail
-// closed, no fail open.
+// "Equipo" (el nivel más restrictivo entre los que SÍ dan acceso) hasta
+// que se cargue bien — fail closed, no fail open.
 //
 // Antes esto se armaba cruzando "Rol en empresa" + "Área", lo que resultó
 // frágil (data cargada a mano en campos pensados para otra cosa). Con
@@ -33,7 +35,17 @@ function normalizarValor(valor){
 // cargado o directamente vacío la deje afuera).
 const EMAILS_ACCESO_FULL=new Set(['valentina.vellon@beon.tech','victoria.franco@beon.tech']);
 
-const NIVELES_ACCESO=new Set(['full','hr','tem','manager','equipo']);
+// Valor de Airtable (normalizado) → código interno de rol. "No access" se
+// mapea a "bloqueado" (nombre interno más claro que repetir el string con
+// espacio en todas las comparaciones del resto del código).
+const NIVELES_ACCESO=new Map([
+  ['full','full'],
+  ['hr','hr'],
+  ['tem','tem'],
+  ['manager','manager'],
+  ['equipo','equipo'],
+  ['no access','bloqueado'],
+]);
 
 // Mismo criterio que getRolGroup() en js/utils.js (cliente) — no se
 // reimporta porque este archivo corre en Node (CommonJS), no en el browser.
@@ -70,7 +82,7 @@ async function resolverAccesoPorEmail(email,fetchImpl){
 
   const persona=await buscarPersonaPorEmail(email,fetchImpl);
   const accesoNormalizado=normalizarValor(persona?.fields?.['Acceso']);
-  const rol=NIVELES_ACCESO.has(accesoNormalizado)?accesoNormalizado:'equipo';
+  const rol=NIVELES_ACCESO.get(accesoNormalizado)||'equipo';
 
   const rolEmpresa=persona?.fields?.['Rol en empresa']||'';
   const grupoBeneficios=

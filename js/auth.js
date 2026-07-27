@@ -78,6 +78,19 @@ function mostrarErrorLogin(msg){
   el.style.display='block';
 }
 
+// Acceso="No access" en Personas — la sesión es válida (Google la autenticó
+// bien) pero el Hub no le muestra nada, ni siquiera Inicio. El bloqueo real
+// ya pasó en el servidor (api/airtable.js); esto es la pantalla que ve en
+// vez del contenido.
+function mostrarSinAcceso(){
+  document.getElementById('login-screen').style.display='none';
+  const emailEl=document.getElementById('no-access-email');
+  if(emailEl) emailEl.textContent=usuarioActual().email||'';
+  const anioEl=document.getElementById('no-access-year');
+  if(anioEl) anioEl.textContent=new Date().getFullYear();
+  document.getElementById('no-access-screen').style.display='block';
+}
+
 // Callback que dispara Google Identity Services al elegir una cuenta
 async function onGoogleSignIn(response){
   let payload;
@@ -107,6 +120,7 @@ async function onGoogleSignIn(response){
   localStorage.setItem('hub_user',JSON.stringify({email,nombre:payload.name||email,foto:payload.picture||'',rol:sesion.rol||'equipo',grupoBeneficios:sesion.grupoBeneficios||null}));
   const err=document.getElementById('login-error');
   if(err) err.style.display='none';
+  if(sesion.rol==='bloqueado'){ mostrarSinAcceso(); return; }
   mostrarSesionActiva();
   document.getElementById('login-screen').style.display='none';
   aplicarRestriccionesDeAcceso();

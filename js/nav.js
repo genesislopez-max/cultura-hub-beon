@@ -323,6 +323,7 @@ async function init(){
   actualizarIconoTema(document.documentElement.getAttribute('data-theme')||'light');
   aplicarSidebarColapsado();
   if(!checkSesion()) return; // muestra la pantalla de login; onGoogleSignIn() llama a iniciarHub()
+  if(rolUsuarioActual()==='bloqueado'){ mostrarSinAcceso(); return; }
   aplicarRestriccionesDeAcceso();
   await iniciarHub();
 }

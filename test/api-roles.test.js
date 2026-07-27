@@ -36,6 +36,12 @@ test('resolverAccesoPorEmail: toma el nivel directo del campo Acceso', async()=>
   }
 });
 
+test('resolverAccesoPorEmail: "No access" resuelve a "bloqueado", sin grupoBeneficios', async()=>{
+  const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({acceso:'No access',rolEmpresa:'Engineer'}));
+  assert.equal(r.rol,'bloqueado');
+  assert.equal(r.grupoBeneficios,null);
+});
+
 test('resolverAccesoPorEmail: "Equipo" usa su propio grupo (según Rol en empresa) para Beneficios', async()=>{
   const rEngineer=await resolverAccesoPorEmail('x@beon.tech',personaCon({acceso:'Equipo',rolEmpresa:'Engineer'}));
   assert.equal(rEngineer.rol,'equipo');

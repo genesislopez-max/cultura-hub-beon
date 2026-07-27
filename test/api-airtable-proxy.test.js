@@ -99,6 +99,29 @@ const TOKEN_EQUIPO_ENG=signSession({email:'ana@beon.tech',name:'Ana',rol:'equipo
 const TOKEN_EQUIPO_CORE=signSession({email:'beto@beon.tech',name:'Beto',rol:'equipo',grupoBeneficios:'Core Team'});
 // Sesión firmada antes de este cambio — sin rol/grupoBeneficios en el payload.
 const TOKEN_SIN_ROL=signSession({email:'viejo@beon.tech',name:'Viejo'});
+const TOKEN_BLOQUEADO=signSession({email:'sinacceso@beon.tech',name:'Sin Acceso',rol:'bloqueado'});
+
+test('api/airtable: rol "bloqueado" (Acceso="No access") — bloqueo total para cualquier tabla, sin llamar a Airtable', async()=>{
+  const {calls,fetchImpl}=fakeAirtable({ok:true,status:200,text:async()=>JSON.stringify({records:[{id:'rec1'}]})});
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const reqGet={headers:{authorization:`Bearer ${TOKEN_BLOQUEADO}`},method:'GET',query:{path:'Personas'}};
+    const resGet=fakeRes();
+    await handler(reqGet,resGet);
+    assert.equal(resGet.statusCode,200);
+    assert.deepEqual(resGet.body,{records:[]});
+
+    const reqPost={headers:{authorization:`Bearer ${TOKEN_BLOQUEADO}`},method:'POST',query:{path:'Personas'},body:{fields:{}}};
+    const resPost=fakeRes();
+    await handler(reqPost,resPost);
+    assert.equal(resPost.statusCode,403);
+
+    assert.equal(calls.length,0,'no debería haber llamado a Airtable en ningún caso');
+  }finally{
+    global.fetch=original;
+  }
+});
 
 test('api/airtable: Checklist (Ingresos/Egresos) — 200 con records vacíos para tem/manager/equipo, sin llamar a Airtable', async()=>{
   for(const token of [TOKEN_TEM,TOKEN_MANAGER,TOKEN_EQUIPO_ENG,TOKEN_SIN_ROL]){

@@ -111,14 +111,16 @@ test('getItemsMap: los ítems de Egreso dados de baja siguen en el array pero in
   }
 });
 
-test('getItemsMap: "Sacar del doc de Rewards Program", "Eliminar de Brevo" y "Avisar a Billy" tienen link', ()=>{
+test('getItemsMap: "Sacar del doc de Rewards Program", "Eliminar de Brevo", "Avisar a Billy" y "Eliminar del Hall of Fame" tienen link', ()=>{
   const items=ctx.getItemsMap('Egreso','—');
   const rewards=items.find(it=>it.t==='Sacar del doc de Rewards Program');
   const brevo=items.find(it=>it.t==='Eliminar de Brevo');
   const billy=items.find(it=>it.t==='Avisar a Billy');
+  const hof=items.find(it=>it.t==='Eliminar del Hall of Fame');
   assert.equal(rewards.l,'https://docs.google.com/spreadsheets/d/1VzmvwzYDnBwEOfaai40kzZEbY_M311rpRI-YHndTOWc/edit?gid=304848196#gid=304848196');
   assert.equal(brevo.l,'https://app.brevo.com/contact/list');
   assert.equal(billy.l,'https://beonstudio.slack.com/archives/D04RDKVQGNR');
+  assert.equal(hof.l,'https://sites.google.com/beon.studio/internalsite/loyalty-program/hall-of-fame?authuser=0');
 });
 
 test('getActiveIndexes: en Egreso no incluye las posiciones de los ítems dados de baja', ()=>{

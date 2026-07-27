@@ -148,4 +148,13 @@ const SECCION_ROLES_PERMITIDOS={
   ingresos:new Set(['full','hr']),
   egresos:new Set(['full','hr']),
   reviews:new Set(['full']), // Glassdoor
+  cumpleanos:new Set(['full','equipo']),
+  aniversarios:new Set(['full','equipo']),
+  proyectos:new Set(['full','equipo']),
+  tareas:new Set(['full','equipo']),
+  ambassadors:new Set(['full','tem','manager','equipo']), // HR no ve Ambassador Week
+  offsites:new Set(['full','tem','manager','equipo']), // HR no ve Off Sites
+  gettogether:new Set(['full','tem','manager','equipo']), // HR no ve Get Together
+  actividades:new Set(['full','tem','manager','equipo']), // HR no ve Asistencia a Actividades
+  coreteam:new Set(['full','hr','manager','equipo']), // TEM no ve la pestaña Core Team
 };

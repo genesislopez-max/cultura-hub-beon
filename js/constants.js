@@ -42,7 +42,7 @@ const ITEMS_EGRESO_MAP=[
   // No se usan más.
   {t:'Sacar de la lista de mails del sheet accounting',   e:'En proceso', activo:false},
   {t:'Eliminar de Brevo',                                 e:'En proceso', l:'https://app.brevo.com/contact/list'},
-  {t:'Eliminar del Hall of Fame',                         e:'En proceso'},
+  {t:'Eliminar del Hall of Fame',                         e:'En proceso', l:'https://sites.google.com/beon.studio/internalsite/loyalty-program/hall-of-fame?authuser=0'},
   {t:'Completar sheet métricas offboarding',              e:'En proceso', activo:false},
   {t:'Sacar de AI Tools',                                 e:'En proceso', activo:false},
   {t:'Eliminar de la planilla de Beneficios',             e:'En proceso', activo:false},

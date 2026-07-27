@@ -382,16 +382,47 @@
 
       <!-- CUMPLEAÑOS -->
       <div class="section-page" id="page-cumpleanos">
-        <div class="metrics">
-          <div class="metric"><div class="metric-label">Este mes</div><div class="metric-val" style="color:var(--purple)" id="mc-este-mes">—</div><div class="metric-sub" id="mc-este-mes-sub">—</div></div>
-          <div class="metric"><div class="metric-label">Próximo mes</div><div class="metric-val" style="color:var(--text-pink-accent)" id="mc-proximo-mes">—</div><div class="metric-sub" id="mc-proximo-mes-sub">—</div></div>
-          <div class="metric"><div class="metric-label">Próximos 7 días</div><div class="metric-val" style="color:var(--urgent)" id="mc-proximos-7">—</div><div class="metric-sub">muy pronto</div></div>
-          <div class="metric"><div class="metric-label">Total en el equipo</div><div class="metric-val" id="mc-total">—</div><div class="metric-sub">con fecha cargada</div></div>
+        <div class="cumple-hero-grid">
+          <div class="cumple-hero-primary">
+            <div class="cumple-hero-glow"></div>
+            <div class="cumple-hero-avatar" id="cumple-hero-avatar"></div>
+            <div class="cumple-hero-body">
+              <div class="cumple-hero-label">🎂 Cumple hoy</div>
+              <div class="cumple-hero-nombre" id="cumple-hero-nombre">—</div>
+              <div class="cumple-hero-sub" id="cumple-hero-sub"></div>
+            </div>
+          </div>
+          <div class="cumple-kpi-card">
+            <div class="cumple-kpi-top"><span class="cumple-kpi-label">Este mes</span><div class="cumple-kpi-icon" style="background:var(--tinte-core);color:var(--purple)"><i class="ti ti-calendar-event"></i></div></div>
+            <div class="cumple-kpi-val" style="color:var(--purple)" id="mc-este-mes">—</div>
+            <div class="cumple-kpi-sub" id="mc-este-mes-sub">—</div>
+          </div>
+          <div class="cumple-kpi-card">
+            <div class="cumple-kpi-top"><span class="cumple-kpi-label">Próximo mes</span><div class="cumple-kpi-icon" style="background:var(--tinte-pink);color:var(--text-pink-accent)"><i class="ti ti-calendar-plus"></i></div></div>
+            <div class="cumple-kpi-val" style="color:var(--text-pink-accent)" id="mc-proximo-mes">—</div>
+            <div class="cumple-kpi-sub" id="mc-proximo-mes-sub">—</div>
+          </div>
+          <div class="cumple-kpi-card">
+            <div class="cumple-kpi-top"><span class="cumple-kpi-label">Próximos 7 días</span><div class="cumple-kpi-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-alarm"></i></div></div>
+            <div class="cumple-kpi-val" style="color:var(--amber)" id="mc-proximos-7">—</div>
+            <div class="cumple-kpi-sub">muy pronto</div>
+          </div>
+          <div class="cumple-kpi-card">
+            <div class="cumple-kpi-top"><span class="cumple-kpi-label">Total en el equipo</span><div class="cumple-kpi-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-users"></i></div></div>
+            <div class="cumple-kpi-val" id="mc-total">—</div>
+            <div class="cumple-kpi-sub">con fecha cargada</div>
+          </div>
         </div>
-        <div class="search-bar" style="background:transparent;border:none;padding:0 0 14px;">
-          <div class="search-wrap">
+
+        <div class="cumple-toolbar">
+          <div class="search-wrap" style="flex:1;min-width:200px;">
             <i class="ti ti-search search-icon"></i>
             <input class="search-input" id="cumple-search" placeholder="Buscar persona…" oninput="filtrarCumpleanos()">
+          </div>
+          <div class="cumple-segbar">
+            <button type="button" class="cumple-seg active" onclick="setCumpleSegmento('todos',this)">Todos</button>
+            <button type="button" class="cumple-seg" onclick="setCumpleSegmento('30',this)">30 días</button>
+            <button type="button" class="cumple-seg" onclick="setCumpleSegmento('7',this)">7 días</button>
           </div>
           <div style="position:relative">
             <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
@@ -400,19 +431,13 @@
             </select>
           </div>
         </div>
-        <div class="table-wrap" style="border-radius:13px;margin-bottom:16px;">
-          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-eng) 0%,var(--bg2) 100%);border-left:3px solid var(--blue);border-radius:13px 13px 0 0;">
-            <span class="table-head-title" style="color:var(--text-eng-accent)">Engineers & Tech</span>
-            <span class="badge badge-blue" id="badge-cumple-eng">—</span>
+
+        <div class="cumple-panel">
+          <div class="table-head">
+            <span class="table-head-title">Cumpleaños</span>
+            <span class="badge badge-blue" id="badge-cumple-total">—</span>
           </div>
-          <div id="cumple-eng-container" class="table-scroll"></div>
-        </div>
-        <div class="table-wrap" style="border-radius:13px;">
-          <div class="table-head" style="background:linear-gradient(90deg,var(--tinte-core) 0%,var(--bg2) 100%);border-left:3px solid var(--purple);border-radius:13px 13px 0 0;">
-            <span class="table-head-title" style="color:var(--text-core-accent)">Core Team</span>
-            <span class="badge badge-purple" id="badge-cumple-core">—</span>
-          </div>
-          <div id="cumple-core-container" class="table-scroll"></div>
+          <div id="cumple-lista-container" class="cumple-rows"></div>
         </div>
       </div>
 

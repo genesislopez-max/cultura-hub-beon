@@ -59,7 +59,7 @@ let avAsistentesPreseleccionados=new Set();
 
 // Panel lateral persona
 let cacheCapacitaciones=[], cacheGetTogetherRaw=[];
-let cacheCumpleRows=[]; // filas ya calculadas (nombre/fecha/días/grupo) — para filtrar sin recalcular
+let cacheCumpleRows=[]; // filas ya calculadas (nombre/fecha/días/manager) — para filtrar sin recalcular
 let spBenefAsigActual=[]; // Beneficios Asignados de la persona con el panel abierto — para editar/eliminar sin recargar
 
 // Tareas (Kanban + Calendario)

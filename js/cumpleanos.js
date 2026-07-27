@@ -1,13 +1,14 @@
+let cumpleSegmento='todos';
+
 async function loadCumpleanos(personas){
   const now=new Date();now.setHours(0,0,0,0);
   const mesActual=now.getMonth(),mesProximo=(now.getMonth()+1)%12;
   const rows=(personas||[]).filter(r=>!yaEgreso(r)&&r.fields['Fecha de cumpleaños']).map(r=>{
     const f=r.fields;
-    const rol=(f['Rol en empresa']||'').trim();
     const fecha=f['Fecha de cumpleaños'];
     const days=daysTo(fecha);
     const proximo=new Date(now.getTime()+days*86400000);
-    return{nombre:f.Nombre,fecha,days,proximo,grupo:CORE_TEAM_ROLES.has(rol)?'core':'eng',manager:f.Manager||''};
+    return{nombre:f.Nombre,fecha,days,proximo,manager:f.Manager||''};
   }).sort((a,b)=>a.days-b.days);
   cacheCumpleRows=rows;
   poblarSelectorTEM('cumple-tem');
@@ -23,6 +24,8 @@ async function loadCumpleanos(personas){
   document.getElementById('mc-proximos-7').textContent=rows.filter(r=>r.days<=7).length;
   document.getElementById('mc-total').textContent=rows.length;
 
+  renderCumpleHero(rows);
+
   // Card inicio con lista
   document.getElementById('sc-cumple').textContent=esteM.length;
   document.getElementById('sc-cumple-sub').textContent=mesNombre;
@@ -36,41 +39,77 @@ async function loadCumpleanos(personas){
   return rows.filter(r=>r.days<=60).map(r=>({nombre:r.nombre,evento:'Cumpleaños 🎂',fecha:r.fecha,days:r.days}));
 }
 
+// Hero "Cumple hoy" — muestra a quien(es) cumplan hoy (days===0); si nadie
+// cumple, cae a un mensaje amistoso con el próximo cumpleaños en camino.
+function renderCumpleHero(rows){
+  const avatarEl=document.getElementById('cumple-hero-avatar');
+  const nombreEl=document.getElementById('cumple-hero-nombre');
+  const subEl=document.getElementById('cumple-hero-sub');
+  const hoy=rows.filter(r=>r.days===0);
+  if(!hoy.length){
+    avatarEl.innerHTML='<div class="avatar" style="background:rgba(255,255,255,0.18);color:#fff;">🎂</div>';
+    nombreEl.textContent='Nadie cumple hoy';
+    const prox=rows[0];
+    subEl.textContent=prox?`El próximo es ${prox.nombre}, en ${prox.days===1?'1 día':prox.days+' días'}`:'Sin cumpleaños cargados';
+    return;
+  }
+  const nombres=hoy.map(r=>r.nombre);
+  avatarEl.innerHTML=avH(nombres[0]);
+  nombreEl.textContent=nombres.length===1?nombres[0]:`${nombres[0]} +${nombres.length-1} más`;
+  subEl.textContent=nombres.length===1?'¡Hoy cumple años! 🎉':`Hoy cumplen años: ${nombres.join(', ')} 🎉`;
+}
+
+function setCumpleSegmento(seg,btn){
+  cumpleSegmento=seg;
+  document.querySelectorAll('.cumple-seg').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  filtrarCumpleanos();
+}
+
 function filtrarCumpleanos(){
-  const now=new Date();now.setHours(0,0,0,0);
   const q=(document.getElementById('cumple-search')?.value||'').trim().toLowerCase();
   const temFil=document.getElementById('cumple-tem')?.value||'';
-  const filtrados=cacheCumpleRows.filter(r=>(!q||r.nombre.toLowerCase().includes(q))&&(!temFil||r.manager===temFil));
-  const engRows=filtrados.filter(r=>r.grupo==='eng');
-  const coreRows=filtrados.filter(r=>r.grupo==='core');
-  document.getElementById('badge-cumple-eng').textContent=`${engRows.length} persona${engRows.length!==1?'s':''}`;
-  document.getElementById('badge-cumple-core').textContent=`${coreRows.length} persona${coreRows.length!==1?'s':''}`;
-  renderCumpleGrupo('cumple-eng-container',engRows,now,'eng');
-  renderCumpleGrupo('cumple-core-container',coreRows,now,'core');
+  const filtrados=cacheCumpleRows.filter(r=>
+    (!q||r.nombre.toLowerCase().includes(q))&&
+    (!temFil||r.manager===temFil)&&
+    (cumpleSegmento==='todos'||(cumpleSegmento==='30'&&r.days<=30)||(cumpleSegmento==='7'&&r.days<=7))
+  );
+  document.getElementById('badge-cumple-total').textContent=`${filtrados.length} persona${filtrados.length!==1?'s':''}`;
+  renderCumpleLista(filtrados);
 }
 
-function filaCumple(r,now){
+// Escala de color pedida: hoy → rosa, mañana → rojo, ≤7d → ámbar, ≤30d →
+// azul, resto → gris.
+function badgeCumpleClase(days){
+  if(days===0) return 'badge-pink';
+  if(days===1) return 'badge-red';
+  if(days<=7) return 'badge-amber';
+  if(days<=30) return 'badge-blue';
+  return 'badge-gray';
+}
+
+function filaCumpleRow(r){
   const dl=r.days===0?'¡Hoy! 🎉':r.days===1?'Mañana':`en ${r.days} días`;
-  const b=r.days<=7?'badge-red':r.days<=30?'badge-amber':'badge-blue';
   const fechaBase=new Date(r.fecha+'T12:00:00');
-  const proxStr=r.proximo.toLocaleDateString('es-AR',{day:'2-digit',month:'short',year:'numeric'});
-  const diaMes=fechaBase.toLocaleDateString('es-AR',{day:'2-digit',month:'long'});
-  return`<tr><td>${avH(r.nombre)}${r.nombre}</td><td>${diaMes}</td><td>${proxStr}</td><td><span class="badge ${b}">${dl}</span></td></tr>`;
+  const diaMes=fechaBase.toLocaleDateString('es-AR',{day:'2-digit',month:'short'});
+  return`<div class="cumple-row">
+    ${avH(r.nombre)}
+    <div class="cumple-row-info">
+      <div class="cumple-row-name">${r.nombre}</div>
+      ${r.manager?`<div class="cumple-row-manager">${r.manager}</div>`:''}
+    </div>
+    <span class="cumple-chip-fecha">${diaMes}</span>
+    <span class="badge ${badgeCumpleClase(r.days)}">${dl}</span>
+  </div>`;
 }
 
-// Agrupa por "meses de distancia" desde hoy (0 = el próximo cumpleaños cae este
-// mes, 1 = el mes que sigue, etc.) en vez de por el mes calendario del
-// cumpleaños en sí. Esto evita que alguien cuyo cumpleaños ya pasó este año
-// (su próxima fecha real es el año que viene) quede mezclado y ordenado antes
-// que alguien que cumple efectivamente esta semana, solo porque comparten
-// nombre de mes. Los offsets más lejanos quedan colapsados atrás de "Ver más
-// adelante" para que la lista no se sienta interminable.
-// Colores por grupo — mismos que ya usan las cards "Engineers & Tech"/"Core
-// Team" de arriba, para que el header de cada mes se lea como parte de ese
-// mismo grupo en vez de mezclarse con el header de columnas de la tabla.
-const CUMPLE_ACCENT={eng:{borde:'#3A69FF',tinte:'var(--tinte-eng)'},core:{borde:'#7432FF',tinte:'var(--tinte-core)'}};
-
-function bloqueMesCumple(offset,rows,now,grupo){
+// Agrupa por "meses de distancia" desde hoy (0 = el próximo cumpleaños cae
+// este mes, 1 = el mes que sigue, etc.) en vez de por el mes calendario del
+// cumpleaños en sí — así alguien cuyo cumpleaños ya pasó este año (su
+// próxima fecha real es el año que viene) no queda mezclado antes que
+// alguien que cumple efectivamente esta semana solo por compartir nombre de
+// mes. Enero aparece después de diciembre automáticamente.
+function bloqueMesCumple(offset,rows,now){
   const delMes=rows.filter(r=>{
     const m=(r.proximo.getFullYear()-now.getFullYear())*12+(r.proximo.getMonth()-now.getMonth());
     return m===offset;
@@ -78,27 +117,24 @@ function bloqueMesCumple(offset,rows,now,grupo){
   if(!delMes.length) return '';
   const nombreMes=new Date(now.getFullYear(),now.getMonth()+offset,1).toLocaleString('es-AR',{month:'long',year:'numeric'});
   const nombreCap=nombreMes.charAt(0).toUpperCase()+nombreMes.slice(1);
-  const {borde,tinte}=CUMPLE_ACCENT[grupo]||CUMPLE_ACCENT.eng;
-  return`<div class="cumple-grupo-mes" style="border-radius:10px;overflow:hidden;border:1px solid var(--border);margin:0 14px 22px;">
-    <div style="font-size:13px;font-weight:700;color:var(--text);padding:10px 18px;background:linear-gradient(90deg,${tinte} 0%,var(--bg2) 100%);border-left:3px solid ${borde};">${nombreCap} <span style="font-weight:500;color:var(--text3);font-size:12px">(${delMes.length})</span></div>
-    <table class="data-table" style="border-radius:0"><thead><tr><th>Persona</th><th>Fecha</th><th>Próximo</th><th>Días restantes</th></tr></thead>
-    <tbody>${delMes.map(r=>filaCumple(r,now)).join('')}</tbody></table>
-  </div>`;
+  return`<div class="cumple-mes-header">${nombreCap} <span class="cumple-mes-count">(${delMes.length})</span></div>
+    ${delMes.map(filaCumpleRow).join('')}`;
 }
 
-function renderCumpleGrupo(containerId,rows,now,grupo){
-  const container=document.getElementById(containerId);
+function renderCumpleLista(rows){
+  const container=document.getElementById('cumple-lista-container');
   if(!container) return;
   if(!rows.length){
-    container.innerHTML='<div style="padding:32px;text-align:center;color:var(--text3);font-size:13px;">Sin cumpleaños cargados.</div>';
+    container.innerHTML='<div class="cumple-empty">Sin cumpleaños para este filtro.</div>';
     return;
   }
+  const now=new Date();now.setHours(0,0,0,0);
   const offsets=Array.from({length:13},(_,i)=>i); // 0..12: cubre el año completo, incluido "este mes pero ya pasó" (offset 12)
-  const cercanos=offsets.slice(0,3).map(o=>bloqueMesCumple(o,rows,now,grupo)).join('');
-  const lejanos=offsets.slice(3).map(o=>bloqueMesCumple(o,rows,now,grupo)).join('');
+  const cercanos=offsets.slice(0,3).map(o=>bloqueMesCumple(o,rows,now)).join('');
+  const lejanos=offsets.slice(3).map(o=>bloqueMesCumple(o,rows,now)).join('');
   container.innerHTML=cercanos+(lejanos?`
-    <details style="margin:0 14px 18px;">
-      <summary style="cursor:pointer;font-size:12px;font-weight:600;color:var(--blue);padding:10px 0;">Ver más adelante →</summary>
+    <details class="cumple-ver-mas">
+      <summary>Ver más adelante →</summary>
       ${lejanos}
     </details>`:'');
 }

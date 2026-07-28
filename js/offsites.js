@@ -22,10 +22,59 @@ async function loadOffsites(){
   poblarSelectorTEM('os-persona-tem');
   poblarSelectorTEM('os-hist-tem');
   renderOSMetricas();
+  renderOSDelMes();
   renderOSPersona();
   renderOSProyecto();
   renderOSHistorial();
   poblarOSFiltroProyecto();
+}
+
+// Spotlight "Off Site del mes" — a diferencia de las 4 KPI de arriba (un
+// número), acá se muestra el detalle del/los viaje(s) cuya Fecha inicio cae
+// en el mes en curso: destino, proyecto, fechas y quiénes viajan. Cada
+// record de cacheOSRaw es una persona, así que se agrupan por viaje real
+// (Destino + Fecha inicio) — mismo criterio que buildOSProyMap()/
+// renderOSMetricas() para no contar de más.
+function renderOSDelMes(){
+  const cont=document.getElementById('os-mes-body');
+  const badge=document.getElementById('os-mes-badge');
+  if(!cont) return;
+  const hoy=new Date();
+  const enMes=cacheOSRaw.filter(r=>{
+    const f=r.fields['Fecha inicio'];
+    if(!f) return false;
+    const d=new Date(f+'T12:00:00');
+    return d.getMonth()===hoy.getMonth()&&d.getFullYear()===hoy.getFullYear();
+  });
+
+  const viajes={};
+  enMes.forEach(r=>{
+    const f=r.fields;
+    const key=`${f.Destino||''}|${f['Fecha inicio']||''}`;
+    if(!viajes[key]) viajes[key]={destino:f.Destino||'Sin destino',fechaInicio:f['Fecha inicio'],fechaFin:f['Fecha fin'],proyecto:f.Proyecto||'',personas:new Set()};
+    const persona=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||''));
+    if(persona) viajes[key].personas.add(persona);
+  });
+  const lista=Object.values(viajes).sort((a,b)=>(a.fechaInicio||'').localeCompare(b.fechaInicio||''));
+
+  if(badge) badge.textContent=lista.length?`${lista.length} este mes`:'Sin novedades';
+
+  if(!lista.length){
+    cont.innerHTML='<div class="os-mes-empty"><i class="ti ti-calendar-off"></i><span>Sin Off Sites programados este mes</span></div>';
+    return;
+  }
+  cont.innerHTML=lista.map(v=>`
+    <div class="os-mes-row">
+      <div class="os-mes-row-main">
+        <span class="os-mes-dest"><i class="ti ti-map-pin"></i>${v.destino}</span>
+        ${v.proyecto?`<span class="os-mes-proj">💼 ${v.proyecto}</span>`:''}
+      </div>
+      <div class="os-mes-row-sub">
+        <span class="os-mes-fecha">📅 ${fmt(v.fechaInicio)}${v.fechaFin?' → '+fmt(v.fechaFin):''}</span>
+        <div class="os-mes-personas">${[...v.personas].map(p=>`<span class="os-mes-persona-chip">${avH(p)}${p}</span>`).join('')}</div>
+      </div>
+    </div>
+  `).join('');
 }
 
 function switchOSTab(tab,btn){

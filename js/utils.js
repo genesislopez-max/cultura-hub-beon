@@ -53,18 +53,27 @@ function listaTEMs(){
   // COO/Founder también — LIDER_ROLES cubre todos esos roles de liderazgo.
   return[...new Set(cachePersonasRaw.filter(p=>!yaEgreso(p)&&LIDER_ROLES.has((p.fields['Rol en empresa']||'').trim())).map(p=>p.fields.Nombre).filter(Boolean))].sort();
 }
+// Normaliza un nombre para comparar sin que un espacio de más, mayúscula
+// distinta, etc. haga fallar la búsqueda (ej. el nombre tipeado a mano en
+// Off Sites/Get Together no coincide caracter a caracter con el de
+// Personas) — misma idea que normalizarValor() en api/_lib/roles.js.
+function normalizarNombre(s){
+  return String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
+}
 // Resuelve el TEM de una persona a partir de su nombre — para tablas cuyas
 // filas ya no son el registro de Personas completo (ej. Off Sites, Get
 // Together: ahí solo queda el nombre resuelto, hay que volver a buscarlo).
 function managerDePersona(nombre){
-  const p=cachePersonasRaw.find(x=>(x.fields.Nombre||'').trim()===String(nombre||'').trim());
+  const buscado=normalizarNombre(nombre);
+  const p=cachePersonasRaw.find(x=>normalizarNombre(x.fields.Nombre)===buscado);
   return p?.fields.Manager||'';
 }
 // Si la persona ya no está en la empresa (Fecha de egreso pasada), los
 // listados "por persona"/historial no deben mostrarla — mismo criterio que
 // ya usan Personas/Cumpleaños/Aniversarios/Beneficios "Por persona".
 function personaActiva(nombre){
-  const p=cachePersonasRaw.find(x=>(x.fields.Nombre||'').trim()===String(nombre||'').trim());
+  const buscado=normalizarNombre(nombre);
+  const p=cachePersonasRaw.find(x=>normalizarNombre(x.fields.Nombre)===buscado);
   return!!p&&!yaEgreso(p);
 }
 // Puebla un <select id="selectId"> con "Todos los managers" + la lista de

@@ -166,6 +166,28 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .os-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--purple));}
 .os-count-chip{display:inline-grid;place-items:center;min-width:26px;height:26px;padding:0 8px;border-radius:8px;font-size:13px;font-weight:800;color:var(--blue);background:var(--tinte-eng);}
 
+/* OFF SITES — card "Off Site del mes": spotlight con el/los viaje(s) cuya
+   Fecha inicio cae en el mes en curso (destino, proyecto, fechas y quiénes
+   viajan), no solo un número — por eso vive aparte de las 4 KPI de arriba. */
+.os-mes-card{background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:20px 24px;box-shadow:var(--shadow-xs);margin-bottom:22px;}
+.os-mes-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.os-mes-title{display:flex;align-items:center;gap:8px;font-size:14.5px;font-weight:700;color:var(--text);}
+.os-mes-title i{font-size:17px;color:var(--blue);}
+.os-mes-badge{font-size:12px;font-weight:700;color:var(--blue);background:var(--tinte-eng);padding:4px 11px;border-radius:999px;}
+.os-mes-body{display:flex;flex-direction:column;gap:12px;}
+.os-mes-row{padding:12px 14px;border:1px solid var(--border);border-radius:13px;background:var(--bg);}
+.os-mes-row-main{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;flex-wrap:wrap;}
+.os-mes-dest{display:flex;align-items:center;gap:6px;font-size:14px;font-weight:700;color:var(--text);}
+.os-mes-dest i{color:var(--blue);}
+.os-mes-proj{font-size:12px;color:var(--text3);}
+.os-mes-row-sub{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+.os-mes-fecha{font-size:12px;color:var(--text2);font-weight:600;}
+.os-mes-personas{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.os-mes-persona-chip{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);background:var(--bg2);border:1px solid var(--border);border-radius:999px;padding:3px 10px 3px 3px;}
+.os-mes-persona-chip .avatar{width:20px;height:20px;font-size:9px;margin-right:0;}
+.os-mes-empty{display:flex;flex-direction:column;align-items:center;gap:8px;padding:24px 20px;color:var(--text3);font-size:12.5px;}
+.os-mes-empty i{font-size:22px;}
+
 .table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:18px;box-shadow:var(--shadow-xs);}
 .table-head{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
 .table-scroll{overflow-x:auto;}

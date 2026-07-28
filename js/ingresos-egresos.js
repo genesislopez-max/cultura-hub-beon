@@ -193,6 +193,52 @@ function renderEgresoCard(r){
   return div;
 }
 
+// Cargas históricas ("Cargar persona histórica" en Personas) traen la Fecha
+// de egreso puesta desde que se crean pero, a propósito, nunca tienen
+// registro en Checklist (ver forms.js) — por eso no aparecían en este board
+// aunque ya no estén activas. Se muestran como tarjeta de solo lectura en
+// "Offboarding completo" (no hay checklist que trackear ni etapa que mover):
+// sin drag y con un solo botón de Editar persona, que es donde se puede
+// corregir o borrar la Fecha de egreso si hizo falta cargarla por error.
+function renderEgresoHistoricoCard(p){
+  const f=p.fields,rol=f['Rol en empresa']||'Otro';
+  const rbc=rol==='Engineer'?'badge-blue':rol==='Core Team'?'badge-purple':rol==='Ambos'?'badge-amber':'badge-gray';
+  const nombre=f.Nombre||'—';
+  const metaRows=[
+    f.Mail&&{icon:'ti-mail',label:'Correo',value:f.Mail},
+    f['País']&&{icon:'ti-world',label:'País',value:f['País']},
+    f['Fecha de egreso']&&{icon:'ti-calendar-x',label:'Último día',value:fmt(f['Fecha de egreso'])},
+  ].filter(Boolean);
+  const div=document.createElement('div');
+  div.className='eg-card';
+  div.dataset.nombre=nombre.toLowerCase();
+  div.dataset.proyecto=(f.Proyecto||'').toLowerCase();
+  div.dataset.manager=(f.Manager||'').toLowerCase();
+  div.innerHTML=`
+    <div class="eg-card-top">
+      ${avH(nombre)}
+      <div class="eg-card-info">
+        <div class="eg-card-name">${nombre}</div>
+        ${f.Proyecto?`<div class="eg-card-proj"><i class="ti ti-folder"></i><span>${f.Proyecto}</span></div>`:''}
+      </div>
+      <span class="badge ${rbc}">${rol}</span>
+    </div>
+    ${metaRows.length?`<div class="eg-meta">
+      ${metaRows.map(m=>`<div class="eg-meta-row"><i class="ti ${m.icon}"></i><span class="eg-meta-label">${m.label}</span><span class="eg-meta-val">${m.value}</span></div>`).join('')}
+    </div>`:''}
+    <div class="eg-progress">
+      <div class="eg-progress-top">
+        <span class="eg-progress-label"><i class="ti ti-history"></i>Carga histórica</span>
+        <span class="eg-progress-frac" style="color:var(--text3)">Sin checklist</span>
+      </div>
+    </div>
+    <div class="eg-actions">
+      <button class="eg-btn-edit" title="Editar persona" onclick="event.stopPropagation();abrirEdicionPersona('${nombre.replace(/'/g,"\\'")}')"><i class="ti ti-pencil"></i></button>
+    </div>`;
+  div.onclick=e=>{if(!e.defaultPrevented)abrirEdicionPersona(nombre);};
+  return div;
+}
+
 // Filtro por nombre/proyecto sobre las tarjetas ya renderizadas — no hace
 // falta volver a pedir los datos ni re-renderizar el board, solo mostrar/
 // ocultar cards vía sus data-attributes.
@@ -423,7 +469,6 @@ async function loadKanbanIngresos(){
 async function loadKanbanEgresos(){
   const d=await atGet('Checklist','&filterByFormula={Tipo}="Egreso"').catch(()=>({records:[]}));
   const recs=d.records||[];
-  document.getElementById('bc-egresos').textContent=recs.length;
 
   recs.forEach(r=>{
     const items=getItems('Egreso','—');
@@ -456,6 +501,18 @@ async function loadKanbanEgresos(){
     const el=cid?document.getElementById(cid):null;
     if(el) el.appendChild(renderEgresoCard(r));
   });
+
+  // Cargas históricas: sin registro en Checklist, así que no están en `recs`
+  // — se agregan como tarjetas de solo lectura en "Offboarding completo".
+  const nombresConChecklist=new Set(recs.map(r=>(r.fields.Persona||'').trim().toLowerCase()));
+  const historicos=cachePersonasRaw.filter(p=>p.fields['Fecha de egreso']&&!nombresConChecklist.has((p.fields.Nombre||'').trim().toLowerCase()));
+  historicos.forEach(p=>{
+    counts['Offboarding completo']=(counts['Offboarding completo']||0)+1;
+    const el=document.getElementById(COL_ID_EGRESO['Offboarding completo']);
+    if(el) el.appendChild(renderEgresoHistoricoCard(p));
+  });
+  document.getElementById('bc-egresos').textContent=recs.length+historicos.length;
+
   ETAPAS_EGRESO.forEach(col=>{
     const cid=COL_ID_EGRESO[col];
     const cnt=COL_CNT_EGRESO[col];
@@ -472,7 +529,7 @@ async function loadKanbanEgresos(){
     return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
   });
   document.getElementById('me-offboard-mes').textContent=esteM.length;
-  document.getElementById('me-offboard-total').textContent=recs.length;
+  document.getElementById('me-offboard-total').textContent=recs.length+historicos.length;
 
   // Directo desde Personas (no desde las tarjetas del Kanban) para que
   // entre todo el histórico: incluye tanto los offboardings hechos acá como

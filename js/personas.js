@@ -324,6 +324,16 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   // Nombre de la persona para el recordatorio
   const nombre=persona?.fields?.Nombre||'esta persona';
 
+  // Registrar el cambio para el resumen mensual de Slack del último día hábil
+  // (ver api/cron-loyalty-mensual.js) — best-effort, no bloquea el flujo si
+  // falla (por ejemplo si todavía no se creó la tabla en Airtable).
+  await atPost('Historial Loyalty',{
+    Persona:nombre,
+    'Nivel anterior':nivelAnterior,
+    'Nivel nuevo':nuevoNivel,
+    Fecha:new Date().toISOString().slice(0,10),
+  }).catch(()=>{});
+
   // Notificar Slack
   const nivelEmojisSlack={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
   await sendSlack(`${nivelEmojisSlack[nuevoNivel]||'⭐'} *Cambio de nivel Loyalty*\n*${nombre}* pasó de *${nivelAnterior}* a *${nuevoNivel}* 💪`);

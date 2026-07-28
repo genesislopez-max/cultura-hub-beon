@@ -266,7 +266,24 @@ function toggleNivelDropdown(recordId){
   if(!dd) return;
   const wasOpen=dd.style.display==='block';
   document.querySelectorAll('.nivel-dropdown').forEach(d=>d.style.display='none');
-  dd.style.display=wasOpen?'none':'block';
+  if(wasOpen) return;
+  // El dropdown vive dentro de .et-panel, que tiene overflow:hidden para
+  // recortar sus bordes redondeados — con position:absolute (el default de
+  // .nivel-dropdown) eso lo recorta apenas la fila queda última visible
+  // (ej. al filtrar/buscar y quedar una sola persona). position:fixed con
+  // coordenadas calculadas desde el botón escapa de ese recorte sin tocar el
+  // overflow:hidden del panel.
+  const btn=dd.parentElement.querySelector('.nivel-badge-et');
+  const rect=btn.getBoundingClientRect();
+  dd.style.position='fixed';
+  dd.style.left=rect.left+'px';
+  dd.style.top=(rect.bottom+4)+'px';
+  dd.style.display='block';
+  // Si no entra hacia abajo dentro del viewport, abrir hacia arriba.
+  const ddRect=dd.getBoundingClientRect();
+  if(ddRect.bottom>window.innerHeight){
+    dd.style.top=(rect.top-ddRect.height-4)+'px';
+  }
 }
 
 async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){

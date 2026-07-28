@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/cron-ingresos", "schedule": "0 12 * * *" }
+    { "path": "/api/cron-ingresos", "schedule": "0 12 * * *" },
+    { "path": "/api/cron-loyalty-mensual", "schedule": "0 21 25-31 * *" }
   ]
 }

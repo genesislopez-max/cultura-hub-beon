@@ -2,16 +2,19 @@ const PAG_SIZE=50;
 // ─── CHECKLIST MAP ────────────────────────────────────────────────────────────
 const ITEMS_INGRESO_MAP=[
   {t:'Agregar al doc de Rewards Program',                                                                                              e:'Pre-ingreso',    r:['todos'],         l:'https://docs.google.com/spreadsheets/d/1VzmvwzYDnBwEOfaai40kzZEbY_M311rpRI-YHndTOWc/edit?gid=304848196#gid=304848196'},
-  {t:'Registrar fecha de ingreso en Hub para bienvenida por #general',                                                                 e:'Pre-ingreso',    r:['todos']},
-  {t:'Registrar aniversario en Hub (reminder automático)',                                                                              e:'Pre-ingreso',    r:['todos']},
+  // No se usan más.
+  {t:'Registrar fecha de ingreso en Hub para bienvenida por #general',                                                                 e:'Pre-ingreso',    r:['todos'],         activo:false},
+  {t:'Registrar aniversario en Hub (reminder automático)',                                                                              e:'Pre-ingreso',    r:['todos'],         activo:false},
   {t:'Registrar 4 meses de ingreso para pedir review Glassdoor',                                                                       e:'Pre-ingreso',    r:['todos']},
-  {t:'Agendar cumpleaños en Hub (reminder automático)',                                                                                 e:'Pre-ingreso',    r:['todos']},
+  // No se usa más.
+  {t:'Agendar cumpleaños en Hub (reminder automático)',                                                                                 e:'Pre-ingreso',    r:['todos'],         activo:false},
   {t:'Agendar cumpleaños en Google Calendar',                                                                                          e:'Pre-ingreso',    r:['todos']},
-  {t:'Sumar a lista "Todos los BEONers" en Brevo',                                                                                     e:'Pre-ingreso',    r:['todos']},
-  {t:'Sumar a lista latam / core team / brasil en Brevo',                                                                              e:'Pre-ingreso',    r:['todos']},
-  {t:'Sumar a lista por país en Brevo',                                                                                                e:'Pre-ingreso',    r:['todos']},
+  {t:'Sumar a lista "Todos los BEONers" en Brevo',                                                                                     e:'Pre-ingreso',    r:['todos'],         l:'https://app.brevo.com/contact/list'},
+  {t:'Sumar a lista latam / core team / brasil en Brevo',                                                                              e:'Pre-ingreso',    r:['todos'],         l:'https://app.brevo.com/contact/list'},
+  {t:'Sumar a lista por país en Brevo',                                                                                                e:'Pre-ingreso',    r:['todos'],         l:'https://app.brevo.com/contact/list'},
   {t:'Sumar a la lista de mails del sheet accounting',                                                                                 e:'Pre-ingreso',    r:['todos'],         l:'https://docs.google.com/spreadsheets/d/1fjbGd0j52S8JHqB9YNYh2OzChwL3A5TzuK_YPIlFNTY/edit?gid=1841043249#gid=1841043249', activo:false},
-  {t:'Agregar a planilla de Beneficios — Engineers',                                                                                   e:'Pre-ingreso',    r:['Engineer','Ambos','todos'], l:'https://docs.google.com/spreadsheets/d/1On6cf5i41qnln4DCBbgXjMj23XJhr4xx0X7cnP4LTQ0/edit?gid=2125161103#gid=2125161103'},
+  // No se usa más.
+  {t:'Agregar a planilla de Beneficios — Engineers',                                                                                   e:'Pre-ingreso',    r:['Engineer','Ambos','todos'], l:'https://docs.google.com/spreadsheets/d/1On6cf5i41qnln4DCBbgXjMj23XJhr4xx0X7cnP4LTQ0/edit?gid=2125161103#gid=2125161103', activo:false},
   {t:'Agregar a planilla de Beneficios — Core Team',                                                                                   e:'Pre-ingreso',    r:['Core Team','Ambos'],       l:'https://docs.google.com/spreadsheets/d/1jJSbyxWeZ4IlVyxId-cLK39waQfprhQknEJ0HGxSojA/edit?gid=2125161103#gid=2125161103'},
   {t:'Enviar mensaje de presentación y pedido de info al nuevo BEONer (CC Culture Leader)',                                            e:'Primer día',     r:['todos'],         l:'https://www.notion.so/beon-tech/Ingreso-y-presentaci-n-2d8e4b56540b80cf9cfdf10e2af7cb85'},
   {t:'Enviar mensaje de bienvenida por #general',                                                                                      e:'Primer día',     r:['todos'],         l:'https://www.notion.so/beon-tech/Ingreso-y-presentaci-n-2d8e4b56540b80cf9cfdf10e2af7cb85'},

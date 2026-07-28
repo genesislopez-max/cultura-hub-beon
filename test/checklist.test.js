@@ -63,21 +63,42 @@ test('getItemsMap: el ítem de accounting da de baja queda marcado inactivo, no 
   assert.equal(item.activo,false);
 });
 
-test('getActiveIndexes: no incluye la posición del ítem inactivo', ()=>{
+test('getItemsMap: los ítems de Ingreso dados de baja siguen en el array pero inactivos', ()=>{
   const items=ctx.getItemsMap('Ingreso','Engineer');
-  const idxInactivo=items.findIndex(it=>it.activo===false);
-  const activos=ctx.getActiveIndexes('Ingreso','Engineer');
-  assert.ok(!activos.includes(idxInactivo));
-  assert.equal(activos.length,items.length-1);
+  const bajas=['Registrar fecha de ingreso en Hub para bienvenida por #general','Registrar aniversario en Hub (reminder automático)','Agendar cumpleaños en Hub (reminder automático)','Agregar a planilla de Beneficios — Engineers'];
+  for(const t of bajas){
+    const item=items.find(it=>it.t===t);
+    assert.ok(item,`el ítem "${t}" debería seguir en el array`);
+    assert.equal(item.activo,false,`"${t}" debería estar marcado inactivo`);
+  }
 });
 
-test('contarProgreso: un ítem inactivo marcado true en datos viejos no cuenta ni infla el total', ()=>{
+test('getItemsMap: los ítems de Brevo en Ingreso tienen link a la lista de contactos', ()=>{
   const items=ctx.getItemsMap('Ingreso','Engineer');
-  const idxInactivo=items.findIndex(it=>it.activo===false);
-  const chkTodoFalseMenosInactivo=items.map((_,i)=>i===idxInactivo); // solo el inactivo en true
-  const {comp,total}=ctx.contarProgreso('Ingreso','Engineer',chkTodoFalseMenosInactivo);
+  const brevoItems=['Sumar a lista "Todos los BEONers" en Brevo','Sumar a lista latam / core team / brasil en Brevo','Sumar a lista por país en Brevo'];
+  for(const t of brevoItems){
+    const item=items.find(it=>it.t===t);
+    assert.ok(item,`el ítem "${t}" debería existir`);
+    assert.equal(item.l,'https://app.brevo.com/contact/list');
+  }
+});
+
+test('getActiveIndexes: no incluye las posiciones de los ítems inactivos', ()=>{
+  const items=ctx.getItemsMap('Ingreso','Engineer');
+  const idxsInactivos=items.reduce((a,it,i)=>{if(it.activo===false)a.push(i);return a;},[]);
+  assert.ok(idxsInactivos.length>0);
+  const activos=ctx.getActiveIndexes('Ingreso','Engineer');
+  for(const idx of idxsInactivos) assert.ok(!activos.includes(idx));
+  assert.equal(activos.length,items.length-idxsInactivos.length);
+});
+
+test('contarProgreso: ítems inactivos marcados true en datos viejos no cuentan ni inflan el total', ()=>{
+  const items=ctx.getItemsMap('Ingreso','Engineer');
+  const idxsInactivos=items.reduce((a,it,i)=>{if(it.activo===false)a.push(i);return a;},[]);
+  const chkSoloInactivos=items.map((_,i)=>idxsInactivos.includes(i)); // solo los inactivos en true
+  const {comp,total}=ctx.contarProgreso('Ingreso','Engineer',chkSoloInactivos);
   assert.equal(comp,0);
-  assert.equal(total,items.length-1);
+  assert.equal(total,items.length-idxsInactivos.length);
 });
 
 test('contarProgreso: da 100% cuando todos los ítems activos están en true, sin depender del inactivo', ()=>{

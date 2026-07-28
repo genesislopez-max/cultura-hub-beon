@@ -4,13 +4,6 @@ function toggleRol(){
   {const _e=document.getElementById('rem-preview');if(_e) _e.style.display=t==='Egreso'?'none':'block';}
 }
 
-function toggleTipoReminder(){
-  const t=document.getElementById('f-rv-tipo')?.value;
-  const esManual=t==='Manual';
-  {const _fg=document.getElementById('fg-rv-persona');if(_fg) _fg.style.display=esManual?'none':'block';}
-  {const _fg=document.getElementById('fg-rv-evento');if(_fg) _fg.style.display=esManual?'block':'none';}
-}
-
 // ─── TEMA (claro/oscuro) ─────────────────────────────────────────────────────
 function actualizarIconoTema(tema){
   const icon=document.getElementById('sb-theme-icon');

@@ -65,7 +65,7 @@ test('getItemsMap: el ítem de accounting da de baja queda marcado inactivo, no 
 
 test('getItemsMap: los ítems de Ingreso dados de baja siguen en el array pero inactivos', ()=>{
   const items=ctx.getItemsMap('Ingreso','Engineer');
-  const bajas=['Registrar fecha de ingreso en Hub para bienvenida por #general','Registrar aniversario en Hub (reminder automático)','Agendar cumpleaños en Hub (reminder automático)','Agregar a planilla de Beneficios — Engineers'];
+  const bajas=['Registrar fecha de ingreso en Hub para bienvenida por #general','Registrar aniversario en Hub (reminder automático)','Registrar 4 meses de ingreso para pedir review Glassdoor','Agendar cumpleaños en Hub (reminder automático)','Agregar a planilla de Beneficios — Engineers'];
   for(const t of bajas){
     const item=items.find(it=>it.t===t);
     assert.ok(item,`el ítem "${t}" debería seguir en el array`);

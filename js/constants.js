@@ -5,7 +5,9 @@ const ITEMS_INGRESO_MAP=[
   // No se usan más.
   {t:'Registrar fecha de ingreso en Hub para bienvenida por #general',                                                                 e:'Pre-ingreso',    r:['todos'],         activo:false},
   {t:'Registrar aniversario en Hub (reminder automático)',                                                                              e:'Pre-ingreso',    r:['todos'],         activo:false},
-  {t:'Registrar 4 meses de ingreso para pedir review Glassdoor',                                                                       e:'Pre-ingreso',    r:['todos']},
+  // Ya automático: sincronizarGlassdoor() (js/glassdoor.js) crea el reminder
+  // solo, a partir de la Fecha de ingreso + 4 meses.
+  {t:'Registrar 4 meses de ingreso para pedir review Glassdoor',                                                                       e:'Pre-ingreso',    r:['todos'],         activo:false},
   // No se usa más.
   {t:'Agendar cumpleaños en Hub (reminder automático)',                                                                                 e:'Pre-ingreso',    r:['todos'],         activo:false},
   {t:'Agendar cumpleaños en Google Calendar',                                                                                          e:'Pre-ingreso',    r:['todos']},

@@ -170,6 +170,7 @@
       </div>
       <div class="topbar-actions">
         <button class="btn-secondary" id="btn-inicio-exportar" onclick="exportarRosterExcel()" style="display:none"><i class="ti ti-download"></i><span>Exportar</span></button>
+        <button class="btn-secondary" id="btn-aniv-exportar" onclick="exportarAniversariosExcel()" style="display:none"><i class="ti ti-download"></i><span>Exportar</span></button>
         <button class="btn-primary" id="btn-inicio-agregar" onclick="_openFormModal(FORMS['ingresos'])" style="display:none;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%)"><i class="ti ti-user-plus"></i><span>Añadir persona</span></button>
         <button class="btn-secondary" id="btn-add-historico" onclick="openModalHistorico()" style="display:none"><i class="ti ti-history"></i><span>Carga histórica</span></button>
         <button class="btn-secondary" id="btn-add-full" onclick="openModalHR()" style="display:none"><i class="ti ti-bolt"></i><span>HR rápido</span></button>
@@ -487,26 +488,68 @@
 
       <!-- ANIVERSARIOS -->
       <div class="section-page" id="page-aniversarios">
-        <div class="metrics">
-          <div class="metric"><div class="metric-label">Este mes</div><div class="metric-val" style="color:var(--purple)" id="ma-este-mes">—</div><div class="metric-sub" id="ma-este-mes-sub">—</div></div>
-          <div class="metric"><div class="metric-label">Próximo mes</div><div class="metric-val" style="color:var(--text-pink-accent)" id="ma-proximo-mes">—</div><div class="metric-sub" id="ma-proximo-mes-sub">—</div></div>
-          <div class="metric"><div class="metric-label">Próximos 7 días</div><div class="metric-val" style="color:var(--urgent)" id="ma-proximos-7">—</div><div class="metric-sub">muy pronto</div></div>
-          <div class="metric"><div class="metric-label">Total en el equipo</div><div class="metric-val" id="ma-total">—</div><div class="metric-sub">con aniversario pendiente</div></div>
+        <div class="aniv-hero-grid">
+          <div class="aniv-hero-primary">
+            <div class="aniv-hero-glow"></div>
+            <div class="aniv-hero-eyebrow"><i class="ti ti-trophy"></i> Próximo aniversario</div>
+            <div class="aniv-hero-row">
+              <div class="aniv-hero-avatar" id="aniv-hero-avatar"></div>
+              <div class="aniv-hero-body">
+                <div class="aniv-hero-nombre" id="aniv-hero-nombre">—</div>
+                <div class="aniv-hero-sub" id="aniv-hero-sub"></div>
+              </div>
+            </div>
+            <div class="aniv-hero-chips" id="aniv-hero-chips"></div>
+          </div>
+          <div class="aniv-kpi-card">
+            <div class="aniv-kpi-top"><span class="aniv-kpi-label">Este mes</span><div class="aniv-kpi-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-cake"></i></div></div>
+            <div class="aniv-kpi-val" style="color:var(--blue)" id="ma-este-mes">—</div>
+            <div class="aniv-kpi-sub" id="ma-este-mes-sub">—</div>
+          </div>
+          <div class="aniv-kpi-card">
+            <div class="aniv-kpi-top"><span class="aniv-kpi-label">Próximo mes</span><div class="aniv-kpi-icon" style="background:var(--tinte-core);color:var(--purple)"><i class="ti ti-calendar-plus"></i></div></div>
+            <div class="aniv-kpi-val" style="color:var(--purple)" id="ma-proximo-mes">—</div>
+            <div class="aniv-kpi-sub" id="ma-proximo-mes-sub">—</div>
+          </div>
+          <div class="aniv-kpi-card">
+            <div class="aniv-kpi-top"><span class="aniv-kpi-label">Próximos 7 días</span><div class="aniv-kpi-icon" style="background:var(--tinte-pink);color:var(--text-pink-accent)"><i class="ti ti-clock"></i></div></div>
+            <div class="aniv-kpi-val" style="color:var(--text-pink-accent)" id="ma-proximos-7">—</div>
+            <div class="aniv-kpi-sub">muy pronto</div>
+          </div>
+          <div class="aniv-kpi-card">
+            <div class="aniv-kpi-top"><span class="aniv-kpi-label">Total en el equipo</span><div class="aniv-kpi-icon" style="background:var(--tinte-green-icon);color:var(--green)"><i class="ti ti-users"></i></div></div>
+            <div class="aniv-kpi-val" id="ma-total">—</div>
+            <div class="aniv-kpi-sub">con aniversario pendiente</div>
+          </div>
         </div>
+
+        <div class="aniv-mile-bar">
+          <div class="aniv-mile-head"><i class="ti ti-milestone"></i><span class="aniv-mile-title">Hitos de retención</span><span class="aniv-mile-sub">próximos 90 días</span></div>
+          <div class="aniv-mile-list" id="aniv-mile-list"></div>
+        </div>
+
         <div class="table-wrap">
-          <div class="table-head"><span class="table-head-title">Aniversarios en BEON</span><span class="badge badge-purple" id="badge-aniv-h">—</span></div>
+          <div class="aniv-table-head">
+            <div class="aniv-table-head-title"><i class="ti ti-cake"></i>Aniversarios en BEON</div>
+            <span class="badge badge-blue" id="badge-aniv-h">—</span>
+          </div>
           <div class="search-bar">
             <div class="search-wrap">
               <i class="ti ti-search search-icon"></i>
               <input class="search-input" id="aniv-search" placeholder="Buscar persona…" oninput="filtrarAniversarios()">
             </div>
-            <select class="filter-select" id="aniv-grupo" onchange="filtrarAniversarios()">
-              <option value="">Todos los grupos</option>
-              <option value="eng">Engineers & Tech</option>
-              <option value="core">Core Team</option>
-            </select>
-            <select class="filter-select" id="aniv-año" onchange="filtrarAniversarios()">
+            <div class="aniv-segbar">
+              <button type="button" class="aniv-seg active" onclick="setAnivRango('all',this)">Todos</button>
+              <button type="button" class="aniv-seg" onclick="setAnivRango('30',this)">30 días</button>
+              <button type="button" class="aniv-seg" onclick="setAnivRango('7',this)">7 días</button>
+            </div>
+            <select class="filter-select" id="aniv-años" onchange="filtrarAniversarios()">
               <option value="">Todos los años</option>
+              <option value="mile">Solo hitos</option>
+              <option value="1">1+ año</option>
+              <option value="3">3+ años</option>
+              <option value="5">5+ años</option>
+              <option value="10">10+ años</option>
             </select>
             <div style="position:relative">
               <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
@@ -515,7 +558,10 @@
               </select>
             </div>
           </div>
-          <div id="aniv-container" class="table-scroll"></div>
+          <div class="aniv-col-head">
+            <div>Persona</div><div>Fecha de ingreso</div><div>Próximo aniversario</div><div>Años · cuándo</div>
+          </div>
+          <div id="aniv-container" class="aniv-scroll"></div>
         </div>
       </div>
 

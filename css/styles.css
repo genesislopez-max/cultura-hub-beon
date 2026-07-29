@@ -860,8 +860,11 @@ textarea.field-input{resize:vertical;min-height:80px;}
    que .cumple-hero-grid/.gt-hero-primary/.os-hero-primary (hero a la
    izquierda ocupando 2 filas, 4 KPIs compactas armando un 2x2 a la derecha).
    El toolbar reutiliza .search-wrap/.search-input/.filter-select (genéricos,
-   ver arriba); la tabla reutiliza .table-wrap/.badge/.badge-*/.avatar. */
-.aniv-hero-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;grid-template-rows:repeat(2,1fr);gap:16px;margin-bottom:22px;}
+   ver arriba); la tabla reutiliza .table-wrap, .badge (y sus variantes) y .avatar. */
+/* Proporción tomada literal del mockup (grid-template-columns:1.12fr 1fr con
+   el 1fr de la derecha repartido en 2 columnas de KPIs) — a diferencia de
+   .cumple-hero-grid, acá el hero ocupa bastante más de la mitad del ancho. */
+.aniv-hero-grid{display:grid;grid-template-columns:2.24fr 1fr 1fr;grid-template-rows:repeat(2,1fr);gap:16px;margin-bottom:22px;}
 .aniv-hero-primary{grid-row:1 / span 2;position:relative;display:flex;flex-direction:column;justify-content:center;border-radius:20px;padding:20px 24px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);color:#fff;overflow:hidden;box-shadow:0 16px 36px -16px rgba(58,105,255,0.5);}
 .aniv-hero-glow{position:absolute;right:-30px;top:-40px;width:200px;height:200px;border-radius:999px;background:radial-gradient(circle,rgba(255,255,255,0.22),transparent 68%);}
 .aniv-hero-eyebrow{position:relative;display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.85);margin-bottom:12px;}

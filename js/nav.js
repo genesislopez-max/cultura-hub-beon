@@ -4,13 +4,6 @@ function toggleRol(){
   {const _e=document.getElementById('rem-preview');if(_e) _e.style.display=t==='Egreso'?'none':'block';}
 }
 
-function toggleTipoReminder(){
-  const t=document.getElementById('f-rv-tipo')?.value;
-  const esManual=t==='Manual';
-  {const _fg=document.getElementById('fg-rv-persona');if(_fg) _fg.style.display=esManual?'none':'block';}
-  {const _fg=document.getElementById('fg-rv-evento');if(_fg) _fg.style.display=esManual?'block':'none';}
-}
-
 // ─── TEMA (claro/oscuro) ─────────────────────────────────────────────────────
 function actualizarIconoTema(tema){
   const icon=document.getElementById('sb-theme-icon');
@@ -108,8 +101,10 @@ function showSection(name,btn){
   }
   const btnExportar=document.getElementById('btn-inicio-exportar');
   const btnAgregarPersona=document.getElementById('btn-inicio-agregar');
+  const btnAnivExportar=document.getElementById('btn-aniv-exportar');
   if(btnExportar) btnExportar.style.display=name==='inicio'?'flex':'none';
   if(btnAgregarPersona) btnAgregarPersona.style.display=name==='inicio'?'flex':'none';
+  if(btnAnivExportar) btnAnivExportar.style.display=name==='aniversarios'?'flex':'none';
   const ab=document.getElementById('btn-add');
   const abf=document.getElementById('btn-add-full');
   const abh=document.getElementById('btn-add-historico');

@@ -855,6 +855,79 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .sb-theme-toggle:hover{background:rgba(255,255,255,0.12);color:#fff;}
 .sb-theme-toggle i{font-size:15px;}
 
+/* ─── Aniversarios — rediseño (claude.ai/design "Aniversarios.dc.html").
+   Prefijo aniv-, exclusivo de esta tab. Hero + KPIs comparte el mismo recipe
+   que .cumple-hero-grid/.gt-hero-primary/.os-hero-primary (hero a la
+   izquierda ocupando 2 filas, 4 KPIs compactas armando un 2x2 a la derecha).
+   El toolbar reutiliza .search-wrap/.search-input/.filter-select (genéricos,
+   ver arriba); la tabla reutiliza .table-wrap/.badge/.badge-*/.avatar. */
+.aniv-hero-grid{display:grid;grid-template-columns:1.3fr 1fr 1fr;grid-template-rows:repeat(2,1fr);gap:16px;margin-bottom:22px;}
+.aniv-hero-primary{grid-row:1 / span 2;position:relative;display:flex;flex-direction:column;justify-content:center;border-radius:20px;padding:20px 24px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);color:#fff;overflow:hidden;box-shadow:0 16px 36px -16px rgba(58,105,255,0.5);}
+.aniv-hero-glow{position:absolute;right:-30px;top:-40px;width:200px;height:200px;border-radius:999px;background:radial-gradient(circle,rgba(255,255,255,0.22),transparent 68%);}
+.aniv-hero-eyebrow{position:relative;display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.85);margin-bottom:12px;}
+.aniv-hero-eyebrow i{font-size:14px;}
+.aniv-hero-row{position:relative;display:flex;align-items:center;gap:14px;}
+.aniv-hero-avatar{flex-shrink:0;width:52px;height:52px;border-radius:999px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,0.16);border:2px solid rgba(255,255,255,0.35);font-size:17px;font-weight:800;color:#fff;}
+.aniv-hero-body{min-width:0;}
+.aniv-hero-nombre{font-size:20px;font-weight:800;letter-spacing:-0.02em;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.aniv-hero-sub{font-size:12.5px;color:rgba(255,255,255,0.85);margin-top:3px;}
+.aniv-hero-chips{position:relative;display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap;}
+.aniv-hero-chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 13px;border-radius:999px;background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.3);font-size:12px;font-weight:700;color:#fff;white-space:nowrap;}
+
+.aniv-kpi-card{border-radius:16px;padding:14px 16px;background:var(--bg2);border:1px solid var(--border);box-shadow:var(--shadow-sm);display:flex;flex-direction:column;justify-content:center;}
+.aniv-kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;}
+.aniv-kpi-label{font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.aniv-kpi-icon{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;flex-shrink:0;font-size:13px;}
+.aniv-kpi-val{font-size:25px;font-weight:800;letter-spacing:-0.02em;line-height:1;}
+.aniv-kpi-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+
+/* Hitos de retención — cuántas personas llegan a un aniversario "redondo"
+   (1/3/5/10 años) en los próximos 90 días. No depende de los filtros de la
+   tabla (search/rango/manager): es una foto general, no del resultado filtrado. */
+.aniv-mile-bar{background:var(--bg2);border:1px solid var(--border);border-radius:18px;padding:16px 22px;margin-bottom:18px;box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;}
+.aniv-mile-head{display:flex;align-items:center;gap:9px;}
+.aniv-mile-head i{font-size:16px;color:var(--purple);}
+.aniv-mile-title{font-size:13px;font-weight:700;color:var(--text);}
+.aniv-mile-sub{font-size:12.5px;color:var(--text3);}
+.aniv-mile-list{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.aniv-mile-chip{display:flex;align-items:center;gap:9px;padding:7px 14px 7px 10px;border-radius:12px;}
+.aniv-mile-count{font-size:17px;font-weight:800;letter-spacing:-0.03em;line-height:1;}
+.aniv-mile-label{font-size:12px;font-weight:600;color:var(--text2);line-height:1.2;}
+
+.aniv-segbar{display:flex;gap:4px;padding:4px;background:var(--bg);border:1px solid var(--border);border-radius:12px;flex-shrink:0;}
+.aniv-seg{padding:7px 14px;border-radius:8px;border:none;background:none;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all 0.15s;white-space:nowrap;}
+.aniv-seg.active{color:#fff;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);box-shadow:0 6px 14px -6px rgba(58,105,255,0.6);}
+
+.aniv-table-head{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 22px;border-bottom:1px solid var(--border);background:linear-gradient(90deg,rgba(58,105,255,.06) 0%,rgba(58,105,255,0) 60%);border-left:3px solid var(--blue);}
+.aniv-table-head-title{display:flex;align-items:center;gap:10px;font-size:15.5px;font-weight:800;color:var(--text);letter-spacing:-0.01em;}
+.aniv-table-head-title i{font-size:16px;color:var(--blue);}
+.aniv-col-head{display:grid;grid-template-columns:2.4fr 1.2fr 1.2fr 1.4fr;gap:16px;padding:11px 22px;background:var(--bg);border-bottom:1px solid var(--border);font-size:11px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--text3);}
+.aniv-scroll{max-height:600px;overflow-y:auto;}
+.aniv-scroll::-webkit-scrollbar{width:8px;}
+.aniv-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+
+/* No sticky en el header de mes: con bloques de altura variable el header
+   se queda "resbalando" hacia abajo antes de soltarse en vez de fijarse
+   prolijo arriba (mismo problema ya visto en .cumple-mes-header). */
+.aniv-mes-header{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;color:var(--text);padding:12px 22px;background:var(--bg);border-bottom:1px solid var(--border);border-left:3px solid var(--blue);}
+.aniv-mes-count{margin-left:auto;font-weight:500;color:var(--text3);font-size:12px;}
+.aniv-row{display:grid;grid-template-columns:2.4fr 1.2fr 1.2fr 1.4fr;gap:16px;align-items:center;padding:13px 22px;border-bottom:1px solid var(--border);transition:background 0.12s;}
+.aniv-row:last-child{border-bottom:none;}
+.aniv-row:hover{background:var(--bg);}
+.aniv-row-persona{display:flex;align-items:center;gap:12px;min-width:0;}
+.aniv-row-info{min-width:0;}
+.aniv-row-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.aniv-row-manager{font-size:12px;color:var(--text3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.aniv-row .badge{white-space:nowrap;}
+.aniv-hito-tag{font-size:10.5px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;color:var(--purple);background:var(--tinte-core);padding:4px 9px;border-radius:999px;white-space:nowrap;}
+.aniv-empty{display:flex;flex-direction:column;align-items:center;gap:11px;padding:56px 20px;}
+.aniv-empty-icon{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;background:var(--bg);color:var(--text3);font-size:20px;}
+.aniv-empty-title{font-size:14px;color:var(--text2);font-weight:600;}
+.aniv-empty-sub{font-size:12.5px;color:var(--text3);}
+
+@media (max-width:900px){.aniv-hero-grid{grid-template-columns:1fr;grid-template-rows:none;}.aniv-hero-primary{grid-row:auto;}}
+@media (max-width:900px){.aniv-row{grid-template-columns:2fr 1fr;}.aniv-row>div:nth-child(2),.aniv-row>div:nth-child(3){display:none;}}
+
 /* ═══════════ MODO OSCURO ═══════════
    La sidebar ya es oscura siempre (usa --dark), así que no cambia entre
    temas. Acá solo se pisan: (1) la paleta base de variables, y (2) los

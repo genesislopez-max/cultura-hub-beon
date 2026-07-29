@@ -462,45 +462,26 @@ const FORMS={
       await atPost('Checklist',fields);return true;
     }},
 
-  // Cubre tanto los reminders de Glassdoor (elegís persona, se arma el texto
-  // solo) como reminders manuales sueltos (ej: "Renovación de visa") — antes
-  // eran dos formularios separados en pestañas distintas.
-  reviews:{title:'Nuevo reminder',html:()=>{
+  reviews:{title:'Nuevo reminder de Glassdoor',html:()=>{
     const personas=cachePersonasRaw.filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>p.fields.Nombre||'').filter(Boolean).sort();
     return`
-<div class="field-group"><label class="field-label">Tipo</label>
-  <select class="field-input" id="f-rv-tipo" onchange="toggleTipoReminder()">
-    <option value="Glassdoor">Glassdoor</option>
-    <option value="Manual">Manual</option>
-  </select>
-</div>
 <div class="field-group" id="fg-rv-persona"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-rv-persona">
     <option value="">Seleccioná una persona…</option>
     ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
   </select>
 </div>
-<div class="field-group" id="fg-rv-evento" style="display:none"><label class="field-label">Evento *</label>
-  <input class="field-input" id="f-rv-evento" placeholder="Ej: Renovación de visa — Juan Pérez">
-</div>
 <div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-rv-fecha" type="date"></div>
 `;},
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
-      const tipo=v('f-rv-tipo')||'Glassdoor';
       const fecha=v('f-rv-fecha');
       if(!fecha){toast('La fecha es obligatoria',true);return false;}
-      let evento;
-      if(tipo==='Manual'){
-        evento=v('f-rv-evento');
-        if(!evento){toast('El evento es obligatorio',true);return false;}
-      } else {
-        const persona=v('f-rv-persona');
-        if(!persona){toast('Seleccioná una persona',true);return false;}
-        evento=`📝 Review Glassdoor — ${persona}`;
-      }
-      await atPost('Eventos',{Evento:evento,Tipo:tipo,Fecha:fecha,Estado:'Pendiente'});
-      if(tipo==='Glassdoor') sendSlack(`📝 *Reminder de Glassdoor creado*\n${evento.replace(/.*—\s*/,'')} — a solicitar el ${fmt(fecha)}`);
+      const persona=v('f-rv-persona');
+      if(!persona){toast('Seleccioná una persona',true);return false;}
+      const evento=`📝 Review Glassdoor — ${persona}`;
+      await atPost('Eventos',{Evento:evento,Tipo:'Glassdoor',Fecha:fecha,Estado:'Pendiente'});
+      sendSlack(`📝 *Reminder de Glassdoor creado*\n${persona} — a solicitar el ${fmt(fecha)}`);
       return true;
     }},
 

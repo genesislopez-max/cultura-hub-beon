@@ -5,7 +5,9 @@ const ITEMS_INGRESO_MAP=[
   // No se usan más.
   {t:'Registrar fecha de ingreso en Hub para bienvenida por #general',                                                                 e:'Pre-ingreso',    r:['todos'],         activo:false},
   {t:'Registrar aniversario en Hub (reminder automático)',                                                                              e:'Pre-ingreso',    r:['todos'],         activo:false},
-  {t:'Registrar 4 meses de ingreso para pedir review Glassdoor',                                                                       e:'Pre-ingreso',    r:['todos']},
+  // Ya automático: sincronizarGlassdoor() (js/glassdoor.js) crea el reminder
+  // solo, a partir de la Fecha de ingreso + 4 meses.
+  {t:'Registrar 4 meses de ingreso para pedir review Glassdoor',                                                                       e:'Pre-ingreso',    r:['todos'],         activo:false},
   // No se usa más.
   {t:'Agendar cumpleaños en Hub (reminder automático)',                                                                                 e:'Pre-ingreso',    r:['todos'],         activo:false},
   {t:'Agendar cumpleaños en Google Calendar',                                                                                          e:'Pre-ingreso',    r:['todos']},
@@ -138,7 +140,7 @@ const ADD_FULL_SECTIONS=['ingresos'];
 const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo offboarding',engineers:'Nueva persona',coreteam:'Nueva persona',reviews:'Nuevo reminder',proyectos:'Nuevo proyecto',tareas:'Nueva tarea',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together',actividades:'Registrar actividad'};
 const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Offboarding — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',tareas:'Tareas',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together',actividades:'Asistencia a Actividades'};
 // Texto del "eyebrow" arriba del título en el topbar — solo las secciones listadas lo muestran.
-const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:'Comunidad BEON',engineers:'Directorio del equipo',egresos:'Offboarding',reviews:'People Ops'};
+const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:'Comunidad BEON',engineers:'Directorio del equipo',egresos:'Offboarding',reviews:'People Ops',aniversarios:'People Ops'};
 // Grupo del menú lateral (dropdown) al que pertenece cada sección — usado
 // para expandir el grupo automáticamente si showSection() navega a una
 // sección que está dentro de un grupo colapsado.

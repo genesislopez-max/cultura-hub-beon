@@ -32,11 +32,21 @@ function cambiarPaginaPersonas(grupo,dir){
   document.getElementById(`wrap-${grupo==='eng'?'engineers':'coreteam'}`)?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 // ─── PERSONAS ────────────────────────────────────────────────────────────────
-function calcAntiguedad(fechaStr){
+// Meses completos entre dos fechas, sin perder el día del mes: antes se
+// calculaba el año completo restando 1 si todavía no llegó el aniversario
+// (correcto), pero los meses salían de (hoy.mes - ingreso.mes), que ignora
+// por completo el día — a pocos días de un aniversario, esa cuenta de meses
+// daba 0 aunque casi se hubiera cumplido el año siguiente entero, mostrando
+// por ejemplo "1 año" en vez de "1 año y 11 meses" (ver Engineers & Tech /
+// Core Team, que mostraban una antigüedad muy por debajo de la real justo
+// antes del aniversario, mientras que Aniversarios sí calculaba bien).
+function calcAntiguedad(fechaStr,hoy=new Date()){
   if(!fechaStr) return '—';
-  const ing=new Date(fechaStr+'T12:00:00'), hoy=new Date();
-  const anos=hoy.getFullYear()-ing.getFullYear()-((hoy.getMonth()<ing.getMonth()||(hoy.getMonth()===ing.getMonth()&&hoy.getDate()<ing.getDate()))?1:0);
-  const meses=(hoy.getMonth()-ing.getMonth()+12)%12;
+  const ing=new Date(fechaStr+'T12:00:00');
+  let mesesTotales=(hoy.getFullYear()-ing.getFullYear())*12+(hoy.getMonth()-ing.getMonth());
+  if(hoy.getDate()<ing.getDate()) mesesTotales--;
+  mesesTotales=Math.max(0,mesesTotales);
+  const anos=Math.floor(mesesTotales/12), meses=mesesTotales%12;
   if(anos===0) return meses===0?'< 1 mes':`${meses} mes${meses!==1?'es':''}`;
   if(meses===0) return `${anos} año${anos!==1?'s':''}`;
   return `${anos} año${anos!==1?'s':''} y ${meses} mes${meses!==1?'es':''}`;

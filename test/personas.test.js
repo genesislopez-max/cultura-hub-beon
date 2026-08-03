@@ -36,6 +36,14 @@ test('calcAntiguedad: 24 meses exactos se muestran como "2 años" (sin "y 0 mese
   assert.equal(ctx.calcAntiguedad(fechaHaceMeses(24)),'2 años');
 });
 
+// Reportado en Engineers & Tech/Core Team: a un par de días de cumplir el
+// aniversario, la cuenta de meses no puede ignorar el día del mes — antes
+// (hoy.mes - ingreso.mes) daba 0 con el mes ya igualado, mostrando "1 año"
+// en vez de "1 año y 11 meses" (Aniversarios sí calculaba bien).
+test('calcAntiguedad: a 2 días de cumplir 2 años, muestra "1 año y 11 meses" (no "1 año")', ()=>{
+  assert.equal(ctx.calcAntiguedad('2024-08-05',new Date(2026,7,3)),'1 año y 11 meses');
+});
+
 function fechaOffsetDias(n){
   const d=new Date();
   d.setDate(d.getDate()+n);

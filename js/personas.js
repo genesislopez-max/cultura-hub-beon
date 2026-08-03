@@ -327,11 +327,16 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   // Registrar el cambio para el resumen mensual de Slack del último día hábil
   // (ver api/cron-loyalty-mensual.js) — best-effort, no bloquea el flujo si
   // falla (por ejemplo si todavía no se creó la tabla en Airtable).
+  // Fecha con los getters LOCALES (no toISOString, que pasa a UTC): un
+  // cambio hecho entre las 21:00 y medianoche en Argentina cae en el día
+  // siguiente en UTC, y podía quedar en el mes equivocado para el cron.
+  const hoyLocal=new Date();
+  const fechaHistorial=`${hoyLocal.getFullYear()}-${String(hoyLocal.getMonth()+1).padStart(2,'0')}-${String(hoyLocal.getDate()).padStart(2,'0')}`;
   await atPost('Historial Loyalty',{
     Persona:nombre,
     'Nivel anterior':nivelAnterior,
     'Nivel nuevo':nuevoNivel,
-    Fecha:new Date().toISOString().slice(0,10),
+    Fecha:fechaHistorial,
   }).catch(()=>{});
 
   // Notificar Slack

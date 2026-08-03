@@ -486,31 +486,40 @@ async function loadKanbanEgresos(){
     if(el) el.textContent='0';
   });
 
-  // Ordenar por fecha: más cercana primero
-  recs.sort((a,b)=>{
-    const fa=a.fields.Fecha||'9999', fb=b.fields.Fecha||'9999';
-    return fa.localeCompare(fb);
-  });
-
-  const counts={};
+  // Agrupar por columna antes de ordenar: "Offboarding completo" ya pasó, así
+  // que tiene más sentido ver lo más reciente arriba; las columnas todavía
+  // activas (Aviso dado/En proceso) se quedan con la fecha más próxima
+  // primero, para priorizar lo urgente.
+  const porColumna={};
   recs.forEach(r=>{
     let col=(r.fields.EstadoKanban||'').trim();
     if(!ETAPAS_EGRESO.includes(col)) col='Aviso dado';
-    counts[col]=(counts[col]||0)+1;
-    const cid=COL_ID_EGRESO[col];
-    const el=cid?document.getElementById(cid):null;
-    if(el) el.appendChild(renderEgresoCard(r));
+    (porColumna[col]=porColumna[col]||[]).push(r);
   });
 
-  // Cargas históricas: sin registro en Checklist, así que no están en `recs`
-  // — se agregan como tarjetas de solo lectura en "Offboarding completo".
+  const counts={};
+  ['Aviso dado','En proceso'].forEach(col=>{
+    const items=porColumna[col]||[];
+    items.sort((a,b)=>(a.fields.Fecha||'9999').localeCompare(b.fields.Fecha||'9999'));
+    counts[col]=items.length;
+    const cid=COL_ID_EGRESO[col];
+    const el=cid?document.getElementById(cid):null;
+    if(el) items.forEach(r=>el.appendChild(renderEgresoCard(r)));
+  });
+
+  // "Offboarding completo" mezcla dos fuentes (Checklist y cargas históricas
+  // sin registro en Checklist) — se combinan primero para ordenar por fecha
+  // real de la más reciente a la más vieja, en vez de que cada fuente quede
+  // ordenada por separado y las históricas siempre abajo.
   const nombresConChecklist=new Set(recs.map(r=>(r.fields.Persona||'').trim().toLowerCase()));
   const historicos=cachePersonasRaw.filter(p=>p.fields['Fecha de egreso']&&!nombresConChecklist.has((p.fields.Nombre||'').trim().toLowerCase()));
-  historicos.forEach(p=>{
-    counts['Offboarding completo']=(counts['Offboarding completo']||0)+1;
-    const el=document.getElementById(COL_ID_EGRESO['Offboarding completo']);
-    if(el) el.appendChild(renderEgresoHistoricoCard(p));
-  });
+  const completos=[
+    ...(porColumna['Offboarding completo']||[]).map(r=>({fecha:r.fields.Fecha||'',render:()=>renderEgresoCard(r)})),
+    ...historicos.map(p=>({fecha:p.fields['Fecha de egreso']||'',render:()=>renderEgresoHistoricoCard(p)})),
+  ].sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  counts['Offboarding completo']=completos.length;
+  const elCompleto=document.getElementById(COL_ID_EGRESO['Offboarding completo']);
+  if(elCompleto) completos.forEach(item=>elCompleto.appendChild(item.render()));
   document.getElementById('bc-egresos').textContent=recs.length+historicos.length;
 
   ETAPAS_EGRESO.forEach(col=>{

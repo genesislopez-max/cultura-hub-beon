@@ -793,6 +793,15 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .gd-rows{display:flex;flex-direction:column;max-height:560px;overflow-y:auto;}
 .gd-rows::-webkit-scrollbar{width:8px;}
 .gd-rows::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
+
+/* Modal "quién tiene este beneficio" (Catálogo) — el overlay .modal ya
+   scrollea entero (max-height:88vh;overflow-y:auto), pero esta instancia
+   fuerza overflow:hidden inline para que el header con el botón "×" no se
+   vea raro; sin este scroll propio, una lista larga de personas quedaba
+   cortada sin forma de verla completa. */
+.benef-detalle-scroll{max-height:420px;overflow-y:auto;}
+.benef-detalle-scroll::-webkit-scrollbar{width:8px;}
+.benef-detalle-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px;}
 .gd-row{display:grid;grid-template-columns:2.2fr 1.6fr 1.1fr 1.4fr 1.8fr;gap:16px;align-items:center;padding:13px 24px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.12s;}
 .gd-row:last-child{border-bottom:none;}
 .gd-row:hover{background:var(--bg);}

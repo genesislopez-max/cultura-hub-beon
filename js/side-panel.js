@@ -27,7 +27,12 @@ async function verBenefPersona(nombre, grupo, nivel){
   const [dBenefAsig, dCap, dAW, dOS, dGT] = await Promise.all([
     atGet('Beneficios Asignados',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
     atGet('Capacitaciones',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
-    atGet('Ambassador Week',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
+    // Ambassador Week no tiene campo "Fecha" (ver comentario en getEdicionAW,
+    // js/ambassador-week.js) — pedir sort[0][field]=Fecha hacía que Airtable
+    // rechazara el pedido entero (campo inexistente) y el .catch() de abajo
+    // lo convertía en 0 registros silenciosamente, sin importar si la persona
+    // sí tenía asistencias cargadas. Se ordena acá abajo por Edición AW.
+    atGet('Ambassador Week',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
     atGet('Off Sites',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha inicio&sort[0][direction]=desc`).catch(()=>({records:[]})),
     atGet('Get Together',`&filterByFormula=FIND("${nombre}",{BEONer})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
   ]);
@@ -35,7 +40,7 @@ async function verBenefPersona(nombre, grupo, nivel){
   const benefAsig=dBenefAsig.records||[];
   spBenefAsigActual=benefAsig;
   const caps=dCap.records||[];
-  const awRecs=dAW.records||[];
+  const awRecs=(dAW.records||[]).sort((a,b)=>(getEdicionAW(b.fields)||'').localeCompare(getEdicionAW(a.fields)||''));
   // Sumar monto de beneficios asignados con prioridad a campo Monto
   const usadoBenef=benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').reduce((s,a)=>{
     if(a.fields.Monto) return s+Number(a.fields.Monto);

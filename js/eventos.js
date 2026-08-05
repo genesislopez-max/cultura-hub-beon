@@ -186,9 +186,9 @@ function renderEventosTabla(filtrados){
     const src=EV_SRC_ICONO[ev.fuente]||EV_SRC_ICONO['Actividades'];
     const puntajeHtml=ev.puntaje!=null
       ?estrellasHtml(ev.puntaje)+(ev.respuestas?`<span style="font-size:11px;color:var(--text3);margin-left:6px">(${ev.respuestas} resp.)</span>`:'')
-      :'<span style="color:var(--text3);font-size:12px">— Sin encuesta</span>';
+      :'<span class="ev-sin-encuesta-pill"><i class="ti ti-circle-dot"></i>Sin encuesta</span>';
     const comentarioHtml=ev.comentario
-      ?`<i class="ti ti-message-circle-2-filled" style="color:var(--blue);margin-left:6px;cursor:default" title="${ev.comentario.replace(/"/g,'&quot;')}"></i>`
+      ?`<i class="ti ti-message-2" style="color:var(--blue);margin-left:6px;cursor:default" title="${ev.comentario.replace(/"/g,'&quot;')}"></i>`
       :'';
     const fuenteAttr=ev.fuente.replace(/"/g,'&quot;');
     const eventoAttr=ev.evento.replace(/"/g,'&quot;');
@@ -205,7 +205,13 @@ function renderEventosTabla(filtrados){
       <td>${puntajeHtml}${comentarioHtml}</td>
       <td style="text-align:right"><button class="ev-action-btn ${btnClase}"><i class="ti ${btnIcon}"></i>${ev.puntaje!=null?'Editar':'Cargar puntaje'}</button></td>
     </tr>`;
-  }).join('')||'<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
+  }).join('')||`<tr class="empty-row"><td colspan="6">
+      <div class="ev-empty">
+        <div class="ev-empty-icon"><i class="ti ti-search-off"></i></div>
+        <div class="ev-empty-title">Sin eventos que coincidan</div>
+        <div class="ev-empty-sub">Ajustá la búsqueda o los filtros</div>
+      </div>
+    </td></tr>`;
 }
 
 // ─── Modal "Cargar/editar puntaje" ────────────────────────────────────────────

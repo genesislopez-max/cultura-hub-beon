@@ -1012,8 +1012,30 @@ textarea.field-input{resize:vertical;min-height:80px;}
 :root[data-theme="dark"] .nivel-Thunder,:root[data-theme="dark"] .badge-nivel-Thunder{background:rgba(74,31,170,0.32);color:#CBB6FF;}
 
 /* EVENTOS — chips de ícono en los KPI, tabs de filtro rápido, ícono de fuente
-   por fila y modal de puntaje con header en gradiente (rediseño Eventos.dc.html) */
+   por fila y modal de puntaje con header en gradiente (rediseño Eventos.dc.html).
+   El mockup usa tarjetas/tabla más grandes que el resto del Hub, así que esas
+   medidas van scopeadas a #page-eventoshist en vez de tocar .metric/.table-wrap
+   (que comparten las otras ~15 secciones). */
+#page-eventoshist .metric{border-radius:20px;padding:19px 22px;}
+#page-eventoshist .metric-val{font-size:36px;}
+#page-eventoshist .metric-icon{width:32px;height:32px;border-radius:10px;font-size:17px;}
+#page-eventoshist .metric-sub{font-size:12.5px;}
+#page-eventoshist .table-wrap{border-radius:20px;}
+#page-eventoshist .data-table td{padding:14px 24px;}
+#page-eventoshist .data-table th{padding:12px 24px;}
+#page-eventoshist .search-bar{padding:16px 24px;}
+#page-eventoshist .table-head{padding:18px 24px;}
+#page-eventoshist .table-head-title{font-size:16px;font-weight:800;letter-spacing:-0.02em;}
 .ev-table-head{background:linear-gradient(90deg,color-mix(in srgb,var(--blue) 6%,transparent),transparent 60%);border-left:3px solid var(--blue);}
+.ev-sin-encuesta-pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text3);background:var(--bg);padding:4px 11px;border-radius:999px;white-space:nowrap;}
+/* El estado vacío de Eventos trae su propio ícono, así que anula el 🔍 y el
+   padding que .empty-row le pone por defecto a las demás tablas. */
+#page-eventoshist .empty-row td{padding:0;}
+#page-eventoshist .empty-row td::before{content:none;}
+.ev-empty{display:flex;flex-direction:column;align-items:center;gap:9px;padding:52px 20px;}
+.ev-empty-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text3);font-size:22px;}
+.ev-empty-title{font-size:14px;font-weight:600;color:var(--text2);}
+.ev-empty-sub{font-size:12.5px;color:var(--text3);}
 .ev-tabs{display:flex;gap:6px;padding:4px;background:var(--bg);border:1px solid var(--border);border-radius:13px;}
 .ev-tab{height:34px;padding:0 15px;border-radius:9px;border:none;background:transparent;color:var(--text2);font-size:12.5px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:background 0.14s,color 0.14s;white-space:nowrap;}
 .ev-tab:hover:not(.active){background:var(--bg2);}

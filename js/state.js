@@ -65,6 +65,7 @@ let spBenefAsigActual=[]; // Beneficios Asignados de la persona con el panel abi
 // satisfacción cargada a mano en la tabla "Eventos Feedback")
 let cacheEventosLista=[];       // lista ya combinada — ver combinarEventos() en js/eventos.js
 let cacheEventosFeedbackRaw=[]; // records crudos de "Eventos Feedback" — para poder editar/borrar sin re-pedir
+let evTabActual='all';          // tab rápido activo en Eventos: all | pend (sin encuesta) | top (4.5+)
 
 // Tareas (Kanban + Calendario)
 let cacheTareasRaw=[];

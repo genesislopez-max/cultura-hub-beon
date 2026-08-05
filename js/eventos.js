@@ -97,7 +97,9 @@ function renderEventosKpis(){
 
   const conPuntaje=cacheEventosLista.filter(e=>e.puntaje!=null);
   const prom=conPuntaje.length?conPuntaje.reduce((s,e)=>s+e.puntaje,0)/conPuntaje.length:null;
-  document.getElementById('ev-prom-satisfaccion').textContent=prom!=null?`${prom.toFixed(1)}★`:'—';
+  document.getElementById('ev-prom-satisfaccion').textContent=prom!=null?prom.toFixed(1):'—';
+  const star=document.getElementById('ev-prom-satisfaccion-star');
+  if(star) star.style.display=prom!=null?'inline':'none';
   document.getElementById('ev-prom-satisfaccion-sub').textContent=conPuntaje.length
     ?`sobre ${conPuntaje.length} evento${conPuntaje.length!==1?'s':''} con encuesta`
     :'sin encuestas cargadas';
@@ -112,17 +114,54 @@ function renderEventosKpis(){
   document.getElementById('ev-trimestre-sub').textContent=`Q${q} ${hoy.getFullYear()}`;
 }
 
-function filtrarEventos(){
+// Combina los selects (fuente/encuesta), la búsqueda y el tab rápido
+// (Todos/Sin encuesta/4.5+/-4.5) — todos los filtros aplican en simultáneo (AND).
+function eventosFiltrados(){
   const q=(document.getElementById('ev-search')?.value||'').toLowerCase();
   const fuenteFil=document.getElementById('ev-fuente')?.value||'';
   const encuestaFil=document.getElementById('ev-encuesta')?.value||'';
-  const filtrados=cacheEventosLista.filter(ev=>
+  return cacheEventosLista.filter(ev=>
     (!q||ev.evento.toLowerCase().includes(q))&&
     (!fuenteFil||ev.fuente===fuenteFil)&&
-    (!encuestaFil||(encuestaFil==='con'?ev.puntaje!=null:ev.puntaje==null))
+    (!encuestaFil||(encuestaFil==='con'?ev.puntaje!=null:ev.puntaje==null))&&
+    (evTabActual==='all'
+      ||(evTabActual==='pend'&&ev.puntaje==null)
+      ||(evTabActual==='top'&&ev.puntaje!=null&&ev.puntaje>=4.5)
+      ||(evTabActual==='low'&&ev.puntaje!=null&&ev.puntaje<4.5))
   );
+}
+
+function filtrarEventos(){
+  const filtrados=eventosFiltrados();
   document.getElementById('ev-badge').textContent=`${filtrados.length} evento${filtrados.length!==1?'s':''}`;
   renderEventosTabla(filtrados);
+}
+
+function filtrarEventosTab(tab,btn){
+  evTabActual=tab;
+  document.querySelectorAll('.ev-tab').forEach(b=>b.classList.remove('active'));
+  btn?.classList.add('active');
+  filtrarEventos();
+}
+
+function exportarEventosExcel(){
+  if(typeof XLSX==='undefined'){ toast('No se pudo cargar el generador de Excel',true); return; }
+  const filtrados=eventosFiltrados();
+  if(!filtrados.length){ toast('No hay eventos para exportar con este filtro',true); return; }
+  const filas=filtrados.map(e=>({
+    Evento:e.evento,
+    Fecha:fmt(e.fecha),
+    Fuente:e.fuente,
+    Asistentes:e.asistentes,
+    Puntaje:e.puntaje!=null?e.puntaje:'',
+    Respuestas:e.respuestas!=null?e.respuestas:'',
+    Comentario:e.comentario||'',
+  }));
+  const ws=XLSX.utils.json_to_sheet(filas);
+  ws['!cols']=[{wch:34},{wch:14},{wch:14},{wch:10},{wch:9},{wch:11},{wch:50}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Eventos');
+  XLSX.writeFile(wb,'Eventos.xlsx');
 }
 
 function estrellasHtml(puntaje){
@@ -132,46 +171,73 @@ function estrellasHtml(puntaje){
   return `<span style="display:inline-flex;gap:1px;vertical-align:middle;margin-right:6px">${out}</span>${puntaje.toFixed(1)}`;
 }
 
+// Mapa fuente → ícono/color del chip que identifica la fuente en cada fila
+// y en el header del modal (mismos colores que ya usan los badges de fuente).
+const EV_SRC_ICONO={
+  'Actividades':{icon:'ti-sparkles',color:'var(--blue)'},
+  'Get Together':{icon:'ti-users',color:'var(--purple)'},
+};
+
 function renderEventosTabla(filtrados){
   const tb=document.getElementById('ev-tbody');
   if(!tb) return;
-  tb.innerHTML=filtrados.map((ev,idx)=>{
-    const bg=idx%2===0?'background:var(--bg2)':'';
+  tb.innerHTML=filtrados.map(ev=>{
     const fuenteBadge=ev.fuente==='Get Together'?'badge-purple':'badge-blue';
+    const src=EV_SRC_ICONO[ev.fuente]||EV_SRC_ICONO['Actividades'];
     const puntajeHtml=ev.puntaje!=null
       ?estrellasHtml(ev.puntaje)+(ev.respuestas?`<span style="font-size:11px;color:var(--text3);margin-left:6px">(${ev.respuestas} resp.)</span>`:'')
-      :'<span style="color:var(--text3);font-size:12px">— Sin encuesta</span>';
+      :'<span class="ev-sin-encuesta-pill"><i class="ti ti-circle-dot"></i>Sin encuesta</span>';
     const comentarioHtml=ev.comentario
-      ?`<i class="ti ti-message-circle-2-filled" style="color:var(--blue);margin-left:6px;cursor:default" title="${ev.comentario.replace(/"/g,'&quot;')}"></i>`
+      ?`<i class="ti ti-message-2" style="color:var(--blue);margin-left:6px;cursor:default" title="${ev.comentario.replace(/"/g,'&quot;')}"></i>`
       :'';
-    return`<tr style="${bg}">
-      <td><strong>${ev.evento}</strong></td>
+    const fuenteAttr=ev.fuente.replace(/"/g,'&quot;');
+    const eventoAttr=ev.evento.replace(/"/g,'&quot;');
+    const btnIcon=ev.puntaje!=null?'ti-pencil':'ti-star';
+    const btnClase=ev.puntaje!=null?'':'ev-action-cargar';
+    return`<tr class="ev-row" data-fuente="${fuenteAttr}" data-evento="${eventoAttr}" data-fecha="${ev.fecha}" onclick="abrirPuntajeEventoModal(this.dataset.fuente,this.dataset.evento,this.dataset.fecha)" style="cursor:pointer">
+      <td><div style="display:flex;align-items:center;gap:11px;min-width:0">
+        <div class="ev-src-icon" style="background:color-mix(in srgb,${src.color} 12%,transparent);color:${src.color}"><i class="ti ${src.icon}"></i></div>
+        <strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.evento}</strong>
+      </div></td>
       <td style="font-size:12px;color:var(--text2)">${fmt(ev.fecha)}</td>
       <td><span class="badge ${fuenteBadge}">${ev.fuente}</span></td>
-      <td style="font-weight:600;color:var(--blue)">${ev.asistentes}</td>
+      <td style="font-weight:600;color:var(--blue);text-align:right">${ev.asistentes}</td>
       <td>${puntajeHtml}${comentarioHtml}</td>
-      <td style="text-align:right"><button onclick="abrirPuntajeEventoModal(this.dataset.fuente,this.dataset.evento,this.dataset.fecha)" data-fuente="${ev.fuente.replace(/"/g,'&quot;')}" data-evento="${ev.evento.replace(/"/g,'&quot;')}" data-fecha="${ev.fecha}" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">${ev.puntaje!=null?'Editar':'Cargar'} puntaje</button></td>
+      <td style="text-align:right"><button class="ev-action-btn ${btnClase}"><i class="ti ${btnIcon}"></i>${ev.puntaje!=null?'Editar':'Cargar puntaje'}</button></td>
     </tr>`;
-  }).join('')||'<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
+  }).join('')||`<tr class="empty-row"><td colspan="6">
+      <div class="ev-empty">
+        <div class="ev-empty-icon"><i class="ti ti-search-off"></i></div>
+        <div class="ev-empty-title">Sin eventos que coincidan</div>
+        <div class="ev-empty-sub">Ajustá la búsqueda o los filtros</div>
+      </div>
+    </td></tr>`;
 }
 
 // ─── Modal "Cargar/editar puntaje" ────────────────────────────────────────────
 // El puntaje sale de PROMEDIAR las respuestas de la encuesta post-evento, así
-// que rara vez es un entero (ej. 4.5, 3.8) — por eso es un input numérico con
-// vista previa de estrellas (relleno parcial vía overlay), no estrellas
-// clickeables de a una (que solo permitirían enteros de 1 a 5).
-let evPuntajeActual=null; // {fuente, evento, fecha} del evento con el modal abierto
+// que rara vez es un entero (ej. 4.5, 3.8) — por eso conviven dos formas de
+// cargarlo: 5 estrellas clickeables (para el caso común de un entero) y el
+// input numérico de al lado (para cuando hay que afinar con un decimal).
+let evPuntajeActual=null; // {fuente, evento, fecha, asistentes} del evento con el modal abierto
 
 function abrirPuntajeEventoModal(fuente,evento,fecha){
   const existente=cacheEventosLista.find(e=>e.fuente===fuente&&e.evento===evento&&e.fecha===fecha);
-  evPuntajeActual={fuente,evento,fecha};
+  evPuntajeActual={fuente,evento,fecha,asistentes:existente?.asistentes||0};
+
+  const src=EV_SRC_ICONO[fuente]||EV_SRC_ICONO['Actividades'];
   document.getElementById('ev-puntaje-titulo').textContent=evento;
-  document.getElementById('ev-puntaje-subtitulo').textContent=`${fuente} · ${fmt(fecha)}`;
+  document.getElementById('ev-puntaje-src-icon').className=`ti ${src.icon}`;
+  document.getElementById('ev-puntaje-fuente-label').textContent=fuente;
+  document.getElementById('ev-puntaje-fecha-label').textContent=fmt(fecha);
+  document.getElementById('ev-puntaje-asistentes-label').textContent=`${evPuntajeActual.asistentes} asistentes`;
+
   document.getElementById('ev-puntaje-valor').value=existente?.puntaje??'';
   document.getElementById('ev-puntaje-respuestas').value=existente?.respuestas??'';
   document.getElementById('ev-puntaje-comentario').value=existente?.comentario??'';
-  document.getElementById('ev-puntaje-btn-borrar').style.display=existente?.puntaje!=null?'block':'none';
+  document.getElementById('ev-puntaje-btn-borrar').style.display=existente?.puntaje!=null?'flex':'none';
   actualizarPreviewPuntaje();
+  actualizarTasaRespuesta();
   document.getElementById('ev-puntaje-overlay').style.display='flex';
 }
 
@@ -180,15 +246,38 @@ function cerrarPuntajeEventoModal(){
   evPuntajeActual=null;
 }
 
-// Relleno parcial de las estrellas por porcentaje (no por estrella entera) —
-// así un puntaje como 4.5 se ve con la quinta estrella a la mitad, en vez de
-// redondear a 4 o 5 llenas.
+// Fija el puntaje al hacer click en una de las 5 estrellas — solo permite
+// enteros; para un decimal (ej. 4.5) hay que escribirlo en el input de al lado.
+function setEstrellaModal(valor){
+  const input=document.getElementById('ev-puntaje-valor');
+  if(input) input.value=valor;
+  actualizarPreviewPuntaje();
+}
+
+// Pinta las 5 estrellas del picker según el valor actual del input — mismo
+// umbral que estrellasHtml()/starRow() (>=i-0.4) para que un 4.5 se vea con
+// la 5ta estrella todavía apagada, no a mitad de camino.
 function actualizarPreviewPuntaje(){
-  const fill=document.getElementById('ev-puntaje-preview-fill');
-  if(!fill) return;
-  const valor=Number(document.getElementById('ev-puntaje-valor')?.value)||0;
-  const pct=Math.max(0,Math.min(100,valor/5*100));
-  fill.style.width=`${pct}%`;
+  const valor=Number(document.getElementById('ev-puntaje-valor')?.value)||null;
+  document.querySelectorAll('#ev-puntaje-estrellas .ev-star-btn').forEach((btn,idx)=>{
+    const on=valor!=null&&valor>=(idx+1)-0.4;
+    btn.classList.toggle('filled',on);
+    const icon=btn.querySelector('i');
+    if(icon) icon.className=`ti ${on?'ti-star-filled':'ti-star'}`;
+  });
+}
+
+// Respuestas de la encuesta sobre el total de asistentes al evento — solo
+// informativo, no se guarda (Respuestas ya es el dato que se persiste).
+function actualizarTasaRespuesta(){
+  const el=document.getElementById('ev-puntaje-tasa');
+  if(!el||!evPuntajeActual) return;
+  const resp=Number(document.getElementById('ev-puntaje-respuestas')?.value)||0;
+  const asistentes=evPuntajeActual.asistentes||0;
+  if(!resp||!asistentes){ el.textContent='—'; el.style.color='var(--text2)'; return; }
+  const pct=Math.round((resp/asistentes)*100);
+  el.textContent=`${pct}%`;
+  el.style.color=pct>=50?'var(--green)':'var(--amber)';
 }
 
 function feedbackRawDe(fuente,evento,fecha){

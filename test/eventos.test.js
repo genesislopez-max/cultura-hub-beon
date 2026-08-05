@@ -63,6 +63,25 @@ test('combinarEventos: un feedback que no matchea ningún evento agrupado no gen
   assert.equal(lista[0].puntaje,null);
 });
 
+test('combinarEventos: trae el comentario destacado del feedback cuando está cargado', ()=>{
+  const avRows=[
+    {fields:{Evento:'Charla de Seguridad',Fecha:'2026-04-01',Grupo:'Todos',Persona:'Ana Test'}},
+  ];
+  const feedbackRows=[
+    {id:'fb1',fields:{Fuente:'Actividades',Evento:'Charla de Seguridad',Fecha:'2026-04-01',Puntaje:4.5,Comentario:'Muy insightful!'}},
+  ];
+  const lista=ctx.combinarEventos(avRows,[],feedbackRows);
+  assert.equal(lista[0].comentario,'Muy insightful!');
+});
+
+test('combinarEventos: un evento sin feedback tiene comentario null', ()=>{
+  const avRows=[
+    {fields:{Evento:'Charla de Seguridad',Fecha:'2026-04-01',Grupo:'Todos',Persona:'Ana Test'}},
+  ];
+  const lista=ctx.combinarEventos(avRows,[],[]);
+  assert.equal(lista[0].comentario,null);
+});
+
 test('combinarEventos: no cruza feedback entre fuentes distintas aunque coincidan Evento+Fecha', ()=>{
   const avRows=[
     {fields:{Evento:'Get Together — Buenos Aires',Fecha:'2026-03-10',Grupo:'Todos',Persona:'Ana Test'}},

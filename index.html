@@ -1620,8 +1620,14 @@
       <div id="ev-puntaje-subtitulo" style="font-size:13px;color:var(--text3);margin-bottom:20px"></div>
       <div class="field-group">
         <label class="field-label">Puntaje de satisfacción *</label>
-        <div id="ev-puntaje-estrellas" style="display:flex;gap:6px;font-size:26px;margin-bottom:4px"></div>
-        <div class="field-hint">Sacado de la encuesta que se manda post-evento a quienes asistieron.</div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px">
+          <div style="position:relative;display:inline-block;font-size:24px;line-height:1;letter-spacing:3px">
+            <div style="color:var(--border)">★★★★★</div>
+            <div id="ev-puntaje-preview-fill" style="position:absolute;top:0;left:0;overflow:hidden;width:0%;white-space:nowrap;color:var(--amber)">★★★★★</div>
+          </div>
+          <input class="field-input" id="ev-puntaje-valor" type="number" min="1" max="5" step="0.1" placeholder="1 a 5" style="width:90px" oninput="actualizarPreviewPuntaje()">
+        </div>
+        <div class="field-hint">Sacado de la encuesta que se manda post-evento a quienes asistieron — puede tener decimales (ej. 4.5).</div>
       </div>
       <div class="field-group"><label class="field-label">Respuestas de la encuesta</label><input class="field-input" id="ev-puntaje-respuestas" type="number" min="0" placeholder="Opcional"></div>
       <div style="display:flex;gap:8px;margin-top:8px">

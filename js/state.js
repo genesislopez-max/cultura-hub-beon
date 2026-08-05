@@ -61,6 +61,11 @@ let cacheCapacitaciones=[], cacheGetTogetherRaw=[];
 let cacheCumpleRows=[]; // filas ya calculadas (nombre/fecha/días/manager) — para filtrar sin recalcular
 let spBenefAsigActual=[]; // Beneficios Asignados de la persona con el panel abierto — para editar/eliminar sin recargar
 
+// Eventos (histórico de Asistencia a Actividades + Get Together, con
+// satisfacción cargada a mano en la tabla "Eventos Feedback")
+let cacheEventosLista=[];       // lista ya combinada — ver combinarEventos() en js/eventos.js
+let cacheEventosFeedbackRaw=[]; // records crudos de "Eventos Feedback" — para poder editar/borrar sin re-pedir
+
 // Tareas (Kanban + Calendario)
 let cacheTareasRaw=[];
 let tareasCalMes=null; // Date del primer día del mes mostrado en el calendario; null = mes actual

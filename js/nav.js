@@ -265,6 +265,7 @@ const SECCIONES_LAZY=[
   ['gettogether','Get Together',loadGetTogether],
   ['tareas','Tareas',loadTareas],
   ['actividades','Asistencia a Actividades',loadActividadesVirtuales],
+  ['eventoshist','Eventos',loadEventos],
 ];
 
 // Se llama al entrar a una sección — si ya se cargó antes en esta sesión, no repite el fetch

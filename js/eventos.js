@@ -115,7 +115,7 @@ function renderEventosKpis(){
 }
 
 // Combina los selects (fuente/encuesta), la búsqueda y el tab rápido
-// (Todos/Sin encuesta/4.5+) — todos los filtros aplican en simultáneo (AND).
+// (Todos/Sin encuesta/4.5+/-4.5) — todos los filtros aplican en simultáneo (AND).
 function eventosFiltrados(){
   const q=(document.getElementById('ev-search')?.value||'').toLowerCase();
   const fuenteFil=document.getElementById('ev-fuente')?.value||'';
@@ -124,7 +124,10 @@ function eventosFiltrados(){
     (!q||ev.evento.toLowerCase().includes(q))&&
     (!fuenteFil||ev.fuente===fuenteFil)&&
     (!encuestaFil||(encuestaFil==='con'?ev.puntaje!=null:ev.puntaje==null))&&
-    (evTabActual==='all'||(evTabActual==='pend'&&ev.puntaje==null)||(evTabActual==='top'&&ev.puntaje!=null&&ev.puntaje>=4.5))
+    (evTabActual==='all'
+      ||(evTabActual==='pend'&&ev.puntaje==null)
+      ||(evTabActual==='top'&&ev.puntaje!=null&&ev.puntaje>=4.5)
+      ||(evTabActual==='low'&&ev.puntaje!=null&&ev.puntaje<4.5))
   );
 }
 

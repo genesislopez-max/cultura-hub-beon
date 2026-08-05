@@ -1630,6 +1630,11 @@
         <div class="field-hint">Sacado de la encuesta que se manda post-evento a quienes asistieron — puede tener decimales (ej. 4.5).</div>
       </div>
       <div class="field-group"><label class="field-label">Respuestas de la encuesta</label><input class="field-input" id="ev-puntaje-respuestas" type="number" min="0" placeholder="Opcional"></div>
+      <div class="field-group">
+        <label class="field-label">Comentario destacado</label>
+        <textarea class="field-input" id="ev-puntaje-comentario" rows="3" placeholder="Ej: &quot;El workshop fue realmente útil para...&quot;"></textarea>
+        <div class="field-hint">Opcional — una frase de la encuesta que resuma bien el evento.</div>
+      </div>
       <div style="display:flex;gap:8px;margin-top:8px">
         <button onclick="guardarPuntajeEvento()" style="flex:1;padding:10px 16px;background:var(--blue);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Guardar</button>
         <button id="ev-puntaje-btn-borrar" onclick="borrarPuntajeEvento()" style="display:none;padding:10px 16px;background:none;border:1px solid var(--critical-border);color:var(--critical);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">Borrar</button>

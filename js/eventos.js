@@ -4,8 +4,8 @@
 // esas dos fuentes) y le suma el nivel de satisfacción que sale de la
 // encuesta que se manda post-evento solo a quienes asistieron. Ese puntaje
 // vive en una tabla aparte ("Eventos Feedback": Evento, Fecha, Fuente,
-// Puntaje 1-5, Respuestas) porque ninguna de las dos tablas de asistencia
-// tiene ni va a tener ese dato.
+// Puntaje 1-5, Respuestas, Comentario) porque ninguna de las dos tablas de
+// asistencia tiene ni va a tener ese dato.
 
 // Get Together no tiene un campo de nombre de evento (se identifica por
 // Ciudad+Fecha) — se sintetiza un nombre para poder tratarlo igual que un
@@ -38,6 +38,7 @@ function combinarEventos(avRows,gtRows,feedbackRows){
       id:r.id,
       puntaje:f.Puntaje!=null?Number(f.Puntaje):null,
       respuestas:f.Respuestas!=null?Number(f.Respuestas):null,
+      comentario:f.Comentario||null,
     };
   });
 
@@ -46,7 +47,7 @@ function combinarEventos(avRows,gtRows,feedbackRows){
     ...Object.values(gtMapa).map(e=>({fuente:'Get Together',evento:e.evento,fecha:e.fecha,asistentes:e.asistentes.length})),
   ].map(ev=>{
     const fb=feedbackPorClave[`${ev.fuente}|${ev.evento}|${ev.fecha}`];
-    return {...ev,puntaje:fb?fb.puntaje:null,respuestas:fb?fb.respuestas:null};
+    return {...ev,puntaje:fb?fb.puntaje:null,respuestas:fb?fb.respuestas:null,comentario:fb?fb.comentario:null};
   });
 
   lista.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
@@ -140,12 +141,15 @@ function renderEventosTabla(filtrados){
     const puntajeHtml=ev.puntaje!=null
       ?estrellasHtml(ev.puntaje)+(ev.respuestas?`<span style="font-size:11px;color:var(--text3);margin-left:6px">(${ev.respuestas} resp.)</span>`:'')
       :'<span style="color:var(--text3);font-size:12px">— Sin encuesta</span>';
+    const comentarioHtml=ev.comentario
+      ?`<i class="ti ti-message-circle-2-filled" style="color:var(--blue);margin-left:6px;cursor:default" title="${ev.comentario.replace(/"/g,'&quot;')}"></i>`
+      :'';
     return`<tr style="${bg}">
       <td><strong>${ev.evento}</strong></td>
       <td style="font-size:12px;color:var(--text2)">${fmt(ev.fecha)}</td>
       <td><span class="badge ${fuenteBadge}">${ev.fuente}</span></td>
       <td style="font-weight:600;color:var(--blue)">${ev.asistentes}</td>
-      <td>${puntajeHtml}</td>
+      <td>${puntajeHtml}${comentarioHtml}</td>
       <td style="text-align:right"><button onclick="abrirPuntajeEventoModal(this.dataset.fuente,this.dataset.evento,this.dataset.fecha)" data-fuente="${ev.fuente.replace(/"/g,'&quot;')}" data-evento="${ev.evento.replace(/"/g,'&quot;')}" data-fecha="${ev.fecha}" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">${ev.puntaje!=null?'Editar':'Cargar'} puntaje</button></td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
@@ -165,6 +169,7 @@ function abrirPuntajeEventoModal(fuente,evento,fecha){
   document.getElementById('ev-puntaje-subtitulo').textContent=`${fuente} · ${fmt(fecha)}`;
   document.getElementById('ev-puntaje-valor').value=existente?.puntaje??'';
   document.getElementById('ev-puntaje-respuestas').value=existente?.respuestas??'';
+  document.getElementById('ev-puntaje-comentario').value=existente?.comentario??'';
   document.getElementById('ev-puntaje-btn-borrar').style.display=existente?.puntaje!=null?'block':'none';
   actualizarPreviewPuntaje();
   document.getElementById('ev-puntaje-overlay').style.display='flex';
@@ -196,7 +201,8 @@ async function guardarPuntajeEvento(){
   if(!valor||valor<1||valor>5){ toast('Ingresá un puntaje entre 1 y 5 (puede tener decimales)',true); return; }
   const {fuente,evento,fecha}=evPuntajeActual;
   const respuestas=document.getElementById('ev-puntaje-respuestas')?.value;
-  const fields={Fuente:fuente,Evento:evento,Fecha:fecha,Puntaje:valor};
+  const comentario=(document.getElementById('ev-puntaje-comentario')?.value||'').trim();
+  const fields={Fuente:fuente,Evento:evento,Fecha:fecha,Puntaje:valor,Comentario:comentario};
   if(respuestas) fields.Respuestas=Number(respuestas);
 
   const existenteRaw=feedbackRawDe(fuente,evento,fecha);

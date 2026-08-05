@@ -146,7 +146,7 @@ function renderEventosTabla(filtrados){
       <td><span class="badge ${fuenteBadge}">${ev.fuente}</span></td>
       <td style="font-weight:600;color:var(--blue)">${ev.asistentes}</td>
       <td>${puntajeHtml}</td>
-      <td style="text-align:right"><button onclick="abrirPuntajeEventoModal('${ev.fuente}','${ev.evento.replace(/'/g,"\\'")}','${ev.fecha}')" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">${ev.puntaje!=null?'Editar':'Cargar'} puntaje</button></td>
+      <td style="text-align:right"><button onclick="abrirPuntajeEventoModal(this.dataset.fuente,this.dataset.evento,this.dataset.fecha)" data-fuente="${ev.fuente.replace(/"/g,'&quot;')}" data-evento="${ev.evento.replace(/"/g,'&quot;')}" data-fecha="${ev.fecha}" style="background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;">${ev.puntaje!=null?'Editar':'Cargar'} puntaje</button></td>
     </tr>`;
   }).join('')||'<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
 }

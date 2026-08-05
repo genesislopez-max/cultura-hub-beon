@@ -152,16 +152,21 @@ function renderEventosTabla(filtrados){
 }
 
 // ─── Modal "Cargar/editar puntaje" ────────────────────────────────────────────
-let evPuntajeActual=null; // {fuente, evento, fecha, valor} del evento con el modal abierto
+// El puntaje sale de PROMEDIAR las respuestas de la encuesta post-evento, así
+// que rara vez es un entero (ej. 4.5, 3.8) — por eso es un input numérico con
+// vista previa de estrellas (relleno parcial vía overlay), no estrellas
+// clickeables de a una (que solo permitirían enteros de 1 a 5).
+let evPuntajeActual=null; // {fuente, evento, fecha} del evento con el modal abierto
 
 function abrirPuntajeEventoModal(fuente,evento,fecha){
   const existente=cacheEventosLista.find(e=>e.fuente===fuente&&e.evento===evento&&e.fecha===fecha);
-  evPuntajeActual={fuente,evento,fecha,valor:existente?.puntaje||0};
+  evPuntajeActual={fuente,evento,fecha};
   document.getElementById('ev-puntaje-titulo').textContent=evento;
   document.getElementById('ev-puntaje-subtitulo').textContent=`${fuente} · ${fmt(fecha)}`;
+  document.getElementById('ev-puntaje-valor').value=existente?.puntaje??'';
   document.getElementById('ev-puntaje-respuestas').value=existente?.respuestas??'';
   document.getElementById('ev-puntaje-btn-borrar').style.display=existente?.puntaje!=null?'block':'none';
-  renderEstrellasSelector();
+  actualizarPreviewPuntaje();
   document.getElementById('ev-puntaje-overlay').style.display='flex';
 }
 
@@ -170,17 +175,15 @@ function cerrarPuntajeEventoModal(){
   evPuntajeActual=null;
 }
 
-function seleccionarEstrella(valor){
-  if(!evPuntajeActual) return;
-  evPuntajeActual.valor=valor;
-  renderEstrellasSelector();
-}
-
-function renderEstrellasSelector(){
-  const cont=document.getElementById('ev-puntaje-estrellas');
-  if(!cont||!evPuntajeActual) return;
-  const valor=evPuntajeActual.valor||0;
-  cont.innerHTML=[1,2,3,4,5].map(n=>`<i class="ti ${n<=valor?'ti-star-filled':'ti-star'}" style="cursor:pointer;color:${n<=valor?'var(--amber)':'var(--border)'}" onclick="seleccionarEstrella(${n})"></i>`).join('');
+// Relleno parcial de las estrellas por porcentaje (no por estrella entera) —
+// así un puntaje como 4.5 se ve con la quinta estrella a la mitad, en vez de
+// redondear a 4 o 5 llenas.
+function actualizarPreviewPuntaje(){
+  const fill=document.getElementById('ev-puntaje-preview-fill');
+  if(!fill) return;
+  const valor=Number(document.getElementById('ev-puntaje-valor')?.value)||0;
+  const pct=Math.max(0,Math.min(100,valor/5*100));
+  fill.style.width=`${pct}%`;
 }
 
 function feedbackRawDe(fuente,evento,fecha){
@@ -188,8 +191,10 @@ function feedbackRawDe(fuente,evento,fecha){
 }
 
 async function guardarPuntajeEvento(){
-  if(!evPuntajeActual||!evPuntajeActual.valor){ toast('Elegí un puntaje de 1 a 5 estrellas',true); return; }
-  const {fuente,evento,fecha,valor}=evPuntajeActual;
+  if(!evPuntajeActual) return;
+  const valor=Number(document.getElementById('ev-puntaje-valor')?.value);
+  if(!valor||valor<1||valor>5){ toast('Ingresá un puntaje entre 1 y 5 (puede tener decimales)',true); return; }
+  const {fuente,evento,fecha}=evPuntajeActual;
   const respuestas=document.getElementById('ev-puntaje-respuestas')?.value;
   const fields={Fuente:fuente,Evento:evento,Fecha:fecha,Puntaje:valor};
   if(respuestas) fields.Respuestas=Number(respuestas);

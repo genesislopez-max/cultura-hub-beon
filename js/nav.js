@@ -102,9 +102,11 @@ function showSection(name,btn){
   const btnExportar=document.getElementById('btn-inicio-exportar');
   const btnAgregarPersona=document.getElementById('btn-inicio-agregar');
   const btnAnivExportar=document.getElementById('btn-aniv-exportar');
+  const btnEventosExportar=document.getElementById('btn-eventos-exportar');
   if(btnExportar) btnExportar.style.display=name==='inicio'?'flex':'none';
   if(btnAgregarPersona) btnAgregarPersona.style.display=name==='inicio'?'flex':'none';
   if(btnAnivExportar) btnAnivExportar.style.display=name==='aniversarios'?'flex':'none';
+  if(btnEventosExportar) btnEventosExportar.style.display=name==='eventoshist'?'flex':'none';
   const ab=document.getElementById('btn-add');
   const abf=document.getElementById('btn-add-full');
   const abh=document.getElementById('btn-add-historico');

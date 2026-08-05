@@ -82,6 +82,9 @@ function showSection(name,btn){
     name='inicio';
     btn=document.querySelector('.sb-item[onclick*="inicio"]');
   }
+  // Se guarda el nombre YA resuelto (después del chequeo de rol de arriba), así
+  // nunca queda persistida una sección que este rol no puede ver.
+  localStorage.setItem('hub_seccion',name);
   document.querySelectorAll('.section-page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   document.querySelectorAll('.sb-item').forEach(b=>b.classList.remove('active'));
@@ -297,6 +300,23 @@ async function loadAll(){
   }
 }
 
+// Vuelve a la última sección visitada al recargar la página (Cmd/Ctrl+R) — sin
+// esto el Hub siempre arranca en Inicio. Se llama recién después de
+// cargarSeccionesIniciales() porque varias secciones resuelven sus linked
+// records contra cachePersonasRaw al cargarse: si corriera antes, esos nombres
+// quedarían sin resolver (se verían los IDs crudos de Airtable).
+function restaurarSeccionGuardada(){
+  const guardada=localStorage.getItem('hub_seccion');
+  // Inicio ya viene activa desde el HTML, no hace falta re-navegar.
+  if(!guardada||guardada==='inicio') return;
+  // La sección guardada puede ya no existir (renombrada o eliminada en un
+  // deploy posterior a la última visita del usuario).
+  if(!document.getElementById('page-'+guardada)) return;
+  // showSection() vuelve a chequear el rol, así que si el usuario perdió el
+  // acceso a esa sección desde la última vez, cae solo en Inicio.
+  showSection(guardada,document.querySelector(`.sb-item[onclick*="'${guardada}'"]`));
+}
+
 async function iniciarHub(){
   const fechaHoy=new Date().toLocaleDateString('es-AR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   document.getElementById('page-date').innerHTML=`<i class="ti ti-calendar"></i><span>${fechaHoy}</span>`;
@@ -313,6 +333,7 @@ async function iniciarHub(){
     setBanner('Hub conectado ✓','ok');
     document.getElementById('dot').className='dot ok';
     document.getElementById('conn-status').textContent='Conectado';
+    restaurarSeccionGuardada();
   }catch(e){
     // Si falla con 401/403, la sesión de Google venció o no es válida
     if(e.status===401||e.status===403){

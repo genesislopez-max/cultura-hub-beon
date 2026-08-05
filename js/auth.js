@@ -141,6 +141,9 @@ function mostrarSesionActiva(){
 function cerrarSesion(){
   localStorage.removeItem('hub_session_token');
   localStorage.removeItem('hub_user');
+  // Para que quien entre después en este navegador arranque en Inicio y no en
+  // la última sección del usuario anterior.
+  localStorage.removeItem('hub_seccion');
   // Limpieza de sesiones guardadas antes de este cambio (sessionStorage)
   sessionStorage.removeItem('hub_id_token');
   sessionStorage.removeItem('hub_user');

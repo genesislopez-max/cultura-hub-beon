@@ -76,6 +76,27 @@ function personaActiva(nombre){
   const p=cachePersonasRaw.find(x=>normalizarNombre(x.fields.Nombre)===buscado);
   return!!p&&!yaEgreso(p);
 }
+// Badge "ex" para las secciones históricas (Off Sites), donde a quien ya se fue
+// SÍ hay que mostrarlo — pasó de verdad — pero conviene aclarar que no sigue en
+// BEON. Devuelve '' si la persona sigue activa o si no se la puede identificar
+// (ej. el linked record quedó apuntando a una persona borrada de la tabla).
+function badgeExBeoner(nombre){
+  const buscado=normalizarNombre(nombre);
+  const p=cachePersonasRaw.find(x=>normalizarNombre(x.fields.Nombre)===buscado);
+  if(!p||!yaEgreso(p)) return '';
+  return `<span class="badge badge-gray" style="margin-left:7px;font-size:10px" title="Ya no trabaja en BEON">ex</span>`;
+}
+// Nombre a mostrar para un registro histórico cuyo vínculo con Personas está
+// incompleto: sin el campo Persona cargado, o apuntando a un record borrado
+// (en ese caso Airtable nos deja solo el ID crudo, que no le sirve a nadie).
+// Mostrar un placeholder explícito evita la celda en blanco, que se lee como
+// un bug de la app en vez de como un dato que falta cargar.
+function nombrePersonaHistorico(nombre){
+  const n=(nombre||'').trim();
+  if(!n) return '<span style="color:var(--text3);font-style:italic">Sin persona asignada</span>';
+  if(/^rec[A-Za-z0-9]{14}$/.test(n)) return '<span style="color:var(--text3);font-style:italic">Persona no encontrada</span>';
+  return n;
+}
 // Puebla un <select id="selectId"> con "Todos los managers" + la lista de
 // listaTEMs(), preservando la selección vigente si sigue siendo válida.
 // El copy dice "managers" y no "TEMs" porque este selector se usa en tablas

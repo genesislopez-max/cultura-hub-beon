@@ -7,6 +7,13 @@ function getEdicionAW(fields){
   return val;
 }
 
+// Ojo: el nivel SIEMPRE tiene que venir de normalizarNivel(), nunca crudo de
+// Airtable. AW_RULES se indexa por nivel, así que un "Thunder " con un espacio
+// de más (o distinta capitalización) no matchea ninguna regla y cae al
+// fallback de Spark: la persona pasa a figurar con 1 sola asistencia con vuelo
+// en vez de 2 y el Hub le dice "Sin cobertura de vuelo" cuando todavía le toca.
+// Mismo motivo por el que existe normalizarNivel() en personas.js.
+
 // Calcular % de vuelo cubierto según historial
 function calcPctVuelo(nombre, nivel, historial){
   const regla=AW_RULES[nivel]||AW_RULES.Spark;
@@ -136,7 +143,7 @@ function previewAWPct(){
   const preview=document.getElementById('aw-pct-preview');
   if(!preview||!nombre) return;
   const persona=cachePersonasRaw.find(p=>p.fields.Nombre===nombre);
-  const nivel=persona?.fields['Nivel Loyalty']||'Spark';
+  const nivel=normalizarNivel(persona?.fields['Nivel Loyalty']);
   const vecesPrev=cacheAWRaw.filter(r=>{
     const p=typeof r.fields.Persona==='string'?r.fields.Persona:(Array.isArray(r.fields.Persona)?r.fields.Persona[0]:'');
     return p.trim()===nombre.trim();
@@ -156,7 +163,7 @@ function openAWPerModal(nombre){
   // Info de la persona desde cachePersonasRaw
   const persona=cachePersonasRaw.find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
   const pf=persona?.fields||{};
-  const nivel=pf['Nivel Loyalty']||'Spark';
+  const nivel=normalizarNivel(pf['Nivel Loyalty']);
   const nivelColors2={'Spark':'badge-nivel-Spark','Ray':'badge-nivel-Ray','Lightning':'badge-nivel-Lightning','Thunder':'badge-nivel-Thunder','Storm':'badge-nivel-Storm'};
 
   document.getElementById('aw-per-nombre').textContent=nombre;
@@ -240,7 +247,7 @@ function renderAWPersonas(){
 
   const personas=cachePersonasRaw.filter(p=>{
     const nombre=(p.fields.Nombre||'').toLowerCase();
-    const nivel=p.fields['Nivel Loyalty']||'Spark';
+    const nivel=normalizarNivel(p.fields['Nivel Loyalty']);
     const matchQ=!q||nombre.includes(q);
     const matchL=!loyaltyFil||nivel===loyaltyFil;
     const matchTem=!temFil||(p.fields.Manager||'')===temFil;
@@ -255,7 +262,7 @@ function renderAWPersonas(){
 
   tb.innerHTML=personas.map((p,idx)=>{
     const nombre=p.fields.Nombre||'—';
-    const nivel=p.fields['Nivel Loyalty']||'Spark';
+    const nivel=normalizarNivel(p.fields['Nivel Loyalty']);
     const regla=AW_RULES[nivel]||AW_RULES.Spark;
     const data=asistMap[nombre]||{count:0,ediciones:[]};
     const veces=data.count;
@@ -311,7 +318,7 @@ function renderAWHistorial(){
     const f=r.fields;
     const nombre=Array.isArray(f.Persona)?f.Persona[0]:(f.Persona||'—');
     const persona=cachePersonasRaw.find(p=>p.fields.Nombre===nombre);
-    const nivel=persona?.fields['Nivel Loyalty']||'Spark';
+    const nivel=normalizarNivel(persona?.fields['Nivel Loyalty']);
     const edicion=getEdicionAW(f)||'—';
     const acomp=f['Acompañantes'];
     // Normalizar porcentaje: puede venir como 0.5/1 (decimal) o 50/100 (entero)

@@ -298,6 +298,11 @@ async function loadAll(){
   if(fallidas.length){
     toast(`⚠️ No se pudo cargar: ${fallidas.map(f=>f.label).join(', ')}`,true);
   }
+  // Eventos se deriva de los caches de "Asistencia a Actividades"/"Get
+  // Together", y acá todos los loaders corrieron en paralelo: loadEventos()
+  // pudo haber leído esos caches antes de que sus propios loaders los
+  // refrescaran. Se rearma al final, ya con los datos nuevos (no pega a la red).
+  if(typeof recombinarEventos==='function') recombinarEventos();
 }
 
 // Vuelve a la última sección visitada al recargar la página (Cmd/Ctrl+R) — sin

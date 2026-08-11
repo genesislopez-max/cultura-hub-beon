@@ -300,11 +300,11 @@ function openOSProyModal(proy){
         <span style="font-size:14px;font-weight:600;color:var(--text)">📍 ${dest}</span>
         <span style="font-size:12px;color:var(--text3)">${viajes.length} viaje${viajes.length!==1?'s':''} · ${diasDest} días</span>
       </div>
-      ${personas.map(p=>`
+      ${personas.length?personas.map(p=>`
         <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--border)">
           ${avH(p)}
-          <span style="font-size:13px">${p}</span>
-        </div>`).join('')}
+          <span style="font-size:13px">${nombrePersonaHistorico(p)}</span>${badgeExBeoner(p)}
+        </div>`).join(''):'<div style="font-size:12px;color:var(--text3);font-style:italic;padding:6px 0">Sin persona asignada en Airtable</div>'}
     </div>`;
   });
 
@@ -325,7 +325,10 @@ function renderOSPersona(){
   const mapa={};
   cacheOSRaw.forEach(r=>{
     const f=r.fields;
-    const nombre=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||'—'));
+    // Clave vacía (no '—') para los registros sin persona: así todos caen en un
+    // mismo grupo que nombrePersonaHistorico() rotula "Sin persona asignada",
+    // en vez de imprimir el guión dos veces (avatar + nombre).
+    const nombre=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||''));
     if(!mapa[nombre]) mapa[nombre]={count:0,destinos:new Set(),dias:0,ultFecha:''};
     mapa[nombre].count++;
     if(f.Destino) mapa[nombre].destinos.add(f.Destino.trim());
@@ -333,8 +336,12 @@ function renderOSPersona(){
     if(f['Fecha inicio']&&f['Fecha inicio']>mapa[nombre].ultFecha) mapa[nombre].ultFecha=f['Fecha inicio'];
   });
 
+  // A diferencia de Personas/Cumpleaños/Aniversarios, acá NO se filtra por
+  // personaActiva(): Off Sites es un registro histórico y el viaje pasó de
+  // verdad, así que quien ya se fue de BEON tiene que seguir apareciendo
+  // (marcado con el badge "ex").
   const filas=Object.entries(mapa)
-    .filter(([n])=>personaActiva(n)&&(!q||n.toLowerCase().includes(q))&&(!temFil||managerDePersona(n)===temFil))
+    .filter(([n])=>(!q||n.toLowerCase().includes(q))&&(!temFil||managerDePersona(n)===temFil))
     .sort((a,b)=>b[1].ultFecha.localeCompare(a[1].ultFecha));
 
   document.getElementById('os-badge-persona').textContent=`${filas.length} personas`;
@@ -344,7 +351,7 @@ function renderOSPersona(){
     const bg=idx%2===0?'background:var(--bg2)':'';
     const barW=maxDias?Math.round(d.dias/maxDias*100):0;
     return`<tr class="tr-clickable" style="${bg}" onclick="openOSPerModal(this.dataset.nombre)" data-nombre="${nombre.replace(/"/g,'&quot;')}">
-      <td>${avH(nombre)}${nombre}</td>
+      <td>${avH(nombre)}${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}</td>
       <td><span class="os-count-chip">${d.count}</span></td>
       <td>${destChipsOS(d.destinos)}</td>
       <td><div style="display:flex;align-items:center;gap:11px"><span style="font-size:13px;font-weight:700;min-width:48px">${d.dias||0} días</span><div class="os-bar-track"><div class="os-bar-fill" style="width:${barW}%"></div></div></div></td>
@@ -370,7 +377,9 @@ function renderOSProyecto(){
     return`<tr class="tr-clickable" style="${bg}" onclick="openOSProyModal(this.dataset.proy)" data-proy="${proy.replace(/"/g,'&quot;')}">
       <td><strong>${proy}</strong></td>
       <td><span class="os-count-chip">${d.viajesCount||d.viajesUnicos?.size||'—'}</span></td>
-      <td style="font-size:12px;color:var(--text2)">${[...d.personas].slice(0,4).join(', ')}${d.personas.size>4?` +${d.personas.size-4} más`:''}</td>
+      <td style="font-size:12px;color:var(--text2)">${d.personas.size
+        ?[...d.personas].slice(0,4).map(p=>nombrePersonaHistorico(p)).join(', ')+(d.personas.size>4?` +${d.personas.size-4} más`:'')
+        :'<span style="color:var(--text3);font-style:italic">Sin persona asignada</span>'}</td>
       <td>${destChipsOS(d.destinos)}</td>
       <td><div style="display:flex;align-items:center;gap:11px"><span style="font-size:13px;font-weight:700;min-width:48px">${d.diasUnicos||0} días</span><div class="os-bar-track"><div class="os-bar-fill" style="width:${barW}%"></div></div></div></td>
     </tr>`;
@@ -385,7 +394,10 @@ function renderOSHistorial(){
     const f=r.fields;
     const texto=`${f.Persona||''} ${f.Proyecto||''} ${f.Destino||''}`.toLowerCase();
     const nombrePersona=Array.isArray(f.Persona)?f.Persona[0]:(f.Persona||'');
-    return personaActiva(nombrePersona)&&(!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil)&&(!temFil||managerDePersona(nombrePersona)===temFil);
+    // Sin filtro por personaActiva(): el historial tiene que listar el viaje
+    // aunque la persona ya no esté en BEON — si no, se pierden registros
+    // pasados enteros al egresar alguien.
+    return (!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil)&&(!temFil||managerDePersona(nombrePersona)===temFil);
   });
   (()=>{const _e=document.getElementById('os-badge-historial');if(_e) _e.textContent=`${recs.length} registros`;})();
   const tb=document.getElementById('os-tbody-historial');
@@ -398,7 +410,7 @@ function renderOSHistorial(){
     const persona=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||''));
     const proyecto=Array.isArray(f.Proyecto)?f.Proyecto[0]:(f.Proyecto||'—');
     return`<tr style="${bg}">
-      <td>${avH(persona)}${persona||'—'}</td>
+      <td>${avH(persona)}${nombrePersonaHistorico(persona)}${badgeExBeoner(persona)}</td>
       <td style="font-size:12px;color:var(--text2)">${proyecto}</td>
       <td style="font-size:12px">${f.Destino||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha inicio'])}</td>

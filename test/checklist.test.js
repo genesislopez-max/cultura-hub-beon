@@ -140,7 +140,7 @@ test('getItemsMap: "Sacar del doc de Rewards Program", "Eliminar de Brevo", "Avi
   const hof=items.find(it=>it.t==='Eliminar del Hall of Fame');
   assert.equal(rewards.l,'https://docs.google.com/spreadsheets/d/1VzmvwzYDnBwEOfaai40kzZEbY_M311rpRI-YHndTOWc/edit?gid=304848196#gid=304848196');
   assert.equal(brevo.l,'https://app.brevo.com/contact/list');
-  assert.equal(billy.l,'https://slack.com/app_redirect?channel=D04RDKVQGNR');
+  assert.equal(billy.l,'https://beonstudio.slack.com/team/U02P92EEQ2H');
   assert.equal(hof.l,'https://sites.google.com/beon.studio/internalsite/loyalty-program/hall-of-fame?authuser=0');
 });
 

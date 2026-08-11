@@ -54,41 +54,82 @@ function combinarEventos(avRows,gtRows,feedbackRows){
   return lista;
 }
 
+function mostrarCargandoEventos(){
+  const tb=document.getElementById('ev-tbody');
+  if(!tb) return;
+  tb.innerHTML=`<tr class="empty-row"><td colspan="6">
+    <div class="ev-empty">
+      <div class="ev-empty-icon"><i class="ti ti-loader"></i></div>
+      <div class="ev-empty-title">Cargando eventos…</div>
+      <div class="ev-empty-sub">Juntando el histórico de Actividades y Get Together</div>
+    </div>
+  </td></tr>`;
+}
+
+// Índice id→Nombre de Personas. Las dos tablas de asistencia son las más
+// largas de la base (una fila por persona por evento), así que resolver cada
+// linked record con un cachePersonasRaw.find() lineal era O(filas × personas).
+function indicePersonasPorId(){
+  const idx=new Map();
+  (cachePersonasRaw||[]).forEach(p=>idx.set(p.id,p.fields.Nombre));
+  return idx;
+}
+
+// "Asistencia a Actividades" y "Get Together" son las dos tablas más grandes y
+// atGet() las pagina de 100 en 100 en requests secuenciales, así que bajarlas
+// de nuevo cuesta varios segundos. Si el usuario ya pasó por esas secciones,
+// sus caches están listos y con la misma resolución de linked records que
+// necesitamos acá, así que se reusan; y si Eventos es la primera sección que
+// se visita, se dejan poblados para que esas dos carguen instantáneo después.
 async function loadEventos(){
+  const faltaAV=!cacheAVRaw.length;
+  const faltaGT=!cacheGetTogetherRaw.length;
+  // Si hay que bajar las tablas de asistencia esto tarda unos segundos (son
+  // miles de filas y Airtable pagina de a 100), así que conviene decirlo en vez
+  // de dejar la tabla vacía como si no hubiera eventos.
+  if(faltaAV||faltaGT) mostrarCargandoEventos();
   const [dAV,dGT,dFB]=await Promise.all([
-    atGet('Asistencia a Actividades').catch(()=>({records:[]})),
-    atGet('Get Together').catch(()=>({records:[]})),
+    faltaAV?atGet('Asistencia a Actividades').catch(()=>({records:[]})):null,
+    faltaGT?atGet('Get Together').catch(()=>({records:[]})):null,
     atGet('Eventos Feedback').catch(()=>({records:[]})),
   ]);
 
-  // Resuelve linked records de forma independiente (no asume que ya están
-  // resueltas en cacheAVRaw/cacheGetTogetherRaw — Eventos puede ser la
-  // primera sección que se visita en la sesión), mismo criterio que ya usan
-  // actividades-virtuales.js/get-together.js.
-  const avRows=(dAV.records||[]).map(r=>{
-    const f={...r.fields};
-    if(Array.isArray(f.Persona)){
-      const match=cachePersonasRaw.find(p=>p.id===f.Persona[0]);
-      f.Persona=match?match.fields.Nombre:f.Persona[0];
-    }
-    return {...r,fields:f};
-  });
-  const gtRows=(dGT.records||[]).map(r=>{
-    const f={...r.fields};
-    if(Array.isArray(f.BEONer)){
-      const match=cachePersonasRaw.find(p=>p.id===f.BEONer[0]);
-      f.BEONer=match?match.fields.Nombre:f.BEONer[0];
-    }
-    if(Array.isArray(f.Ciudad)) f.Ciudad=f.Ciudad[0]||'';
-    if(Array.isArray(f['País'])) f['País']=f['País'][0]||'';
-    return {...r,fields:f};
-  });
+  const personas=indicePersonasPorId();
+  if(faltaAV){
+    cacheAVRaw=(dAV.records||[]).map(r=>{
+      const f={...r.fields};
+      if(Array.isArray(f.Persona)) f.Persona=personas.get(f.Persona[0])||f.Persona[0];
+      return {...r,fields:f};
+    });
+  }
+  if(faltaGT){
+    cacheGetTogetherRaw=(dGT.records||[]).map(r=>{
+      const f={...r.fields};
+      if(Array.isArray(f.BEONer)) f.BEONer=personas.get(f.BEONer[0])||f.BEONer[0];
+      if(Array.isArray(f.Ciudad)) f.Ciudad=f.Ciudad[0]||'';
+      if(Array.isArray(f['País'])) f['País']=f['País'][0]||'';
+      return {...r,fields:f};
+    });
+  }
 
   cacheEventosFeedbackRaw=dFB.records||[];
-  cacheEventosLista=combinarEventos(avRows,gtRows,cacheEventosFeedbackRaw);
+  recombinarEventos();
+}
 
+// Rearma la lista y repinta, sin tocar la red. Se usa después de guardar o
+// borrar un puntaje: ahí solo cambió "Eventos Feedback", así que volver a
+// bajar las dos tablas de asistencia (lo que hacía el loadEventos() completo)
+// era gratis en resultado y carísimo en tiempo.
+function recombinarEventos(){
+  cacheEventosLista=combinarEventos(cacheAVRaw,cacheGetTogetherRaw,cacheEventosFeedbackRaw);
   renderEventosKpis();
   filtrarEventos();
+}
+
+async function recargarFeedbackEventos(){
+  const dFB=await atGet('Eventos Feedback').catch(()=>({records:[]}));
+  cacheEventosFeedbackRaw=dFB.records||[];
+  recombinarEventos();
 }
 
 function renderEventosKpis(){
@@ -304,7 +345,7 @@ async function guardarPuntajeEvento(){
   }
   toast('✅ Puntaje guardado');
   cerrarPuntajeEventoModal();
-  await loadEventos();
+  await recargarFeedbackEventos();
 }
 
 async function borrarPuntajeEvento(){
@@ -321,5 +362,5 @@ async function borrarPuntajeEvento(){
   }
   toast('✅ Puntaje borrado');
   cerrarPuntajeEventoModal();
-  await loadEventos();
+  await recargarFeedbackEventos();
 }

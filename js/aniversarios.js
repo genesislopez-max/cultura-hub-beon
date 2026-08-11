@@ -168,6 +168,20 @@ function filaAnivRow(r,now){
   </div>`;
 }
 
+// Orden de la lista: cronológico puro por fecha del próximo aniversario,
+// contando el día y no solo el mes. Antes, dentro de un mismo mes se ordenaba
+// por años descendente ("más años primero"), lo que dejaba los "en X días"
+// saltando (ej. 15, 17, hoy, hoy, 2, 14) y se leía como si las fechas
+// estuvieran mezcladas. Los años solo desempatan a igualdad de fecha, para que
+// el hito más grande quede arriba entre quienes cumplen el mismo día.
+function ordenarAnivPorFecha(rows,now){
+  return [...rows].sort((a,b)=>{
+    const pa=proximoAnivDe(a,now),pb=proximoAnivDe(b,now);
+    if(pa.getTime()!==pb.getTime()) return pa.getTime()-pb.getTime();
+    return b.años-a.años;
+  });
+}
+
 // Agrupa por mes calendario del próximo aniversario (no por mes de ingreso)
 // — mismo criterio que ya usaba esta tabla antes del rediseño.
 function renderAnivLista(rows){
@@ -181,11 +195,7 @@ function renderAnivLista(rows){
     return;
   }
   const now=new Date();now.setHours(0,0,0,0);
-  const rowsOrdenados=[...rows].sort((a,b)=>{
-    const pa=proximoAnivDe(a,now),pb=proximoAnivDe(b,now);
-    if(pa.getMonth()!==pb.getMonth()||pa.getFullYear()!==pb.getFullYear()) return pa.getTime()-pb.getTime();
-    return b.años-a.años;
-  });
+  const rowsOrdenados=ordenarAnivPorFecha(rows,now);
 
   const grupos={};
   rowsOrdenados.forEach(r=>{

@@ -389,23 +389,36 @@ function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior, grupo){
 // ya renderizadas — así busca en TODAS las personas, no solo en la página actual.
 // Engineers & Tech y Core Team viven en pestañas separadas, cada una con sus
 // propios inputs (sufijo -eng / -core), así que se filtran de forma independiente.
+// País/Ciudad se cargan a mano en Airtable, así que llegan con espacios de más
+// y mayúsculas inconsistentes ("Buenos Aires" / "buenos aires ") — y en algunas
+// bases el campo es un linked record, que llega como array. Se normaliza acá
+// una sola vez para que el <select> no muestre la misma ciudad dos veces y el
+// filtro matchee igual sin importar cómo se escribió.
+function valorUbicacion(valor){
+  if(Array.isArray(valor)) valor=valor[0];
+  return (valor||'').toString().trim();
+}
 function filtrarPersonas(grupo){
   const q=(document.getElementById(`personas-search-${grupo}`)?.value||'').trim().toLowerCase();
   const rol=document.getElementById(`personas-rol-${grupo}`)?.value||'';
   const loyalty=document.getElementById(`personas-loyalty-${grupo}`)?.value||'';
   const proyecto=document.getElementById(`personas-proyecto-${grupo}`)?.value||'';
   const manager=document.getElementById(`personas-manager-${grupo}`)?.value||'';
+  const pais=(document.getElementById(`personas-pais-${grupo}`)?.value||'').toLowerCase();
+  const ciudadFil=(document.getElementById(`personas-ciudad-${grupo}`)?.value||'').toLowerCase();
 
   const matchPersona=r=>{
     const f=r.fields;
     const nombre=(f.Nombre||'').toLowerCase(), mail=(f.Mail||'').toLowerCase(),
-          proy=(f.Proyecto||'').toLowerCase(), ciudad=(f.Ciudad||'').toLowerCase();
+          proy=(f.Proyecto||'').toLowerCase(), ciudad=valorUbicacion(f.Ciudad).toLowerCase();
     const matchQ=!q||nombre.includes(q)||mail.includes(q)||proy.includes(q)||ciudad.includes(q);
     const matchRol=!rol||(f['Rol en empresa']||'')===rol;
     const matchLoyalty=!loyalty||normalizarNivel(f['Nivel Loyalty'])===loyalty;
     const matchProyecto=!proyecto||(f.Proyecto||'')===proyecto;
     const matchManager=!manager||(f.Manager||'')===manager;
-    return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager;
+    const matchPais=!pais||valorUbicacion(f['País']).toLowerCase()===pais;
+    const matchCiudad=!ciudadFil||ciudad===ciudadFil;
+    return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager&&matchPais&&matchCiudad;
   };
 
   const all=pagState[grupo].all||pagState[grupo].data;
@@ -453,8 +466,53 @@ function poblarFiltrosPersonas(){
       const placeholder=grupo==='eng'?'Todos los TEMs':'Todos los managers';
       selMgr.innerHTML=`<option value="">${placeholder}</option>`+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
     }
+    poblarFiltroPais(grupo);
+    poblarFiltroCiudad(grupo);
   });
   actualizarEstiloFiltrosET();
+}
+
+// Dedup case-insensitive preservando la primera forma vista, para que
+// "Buenos Aires" y "buenos aires " no aparezcan como dos opciones distintas.
+function opcionesUnicas(valores){
+  const vistos=new Map();
+  valores.filter(Boolean).forEach(v=>{
+    const clave=v.toLowerCase();
+    if(!vistos.has(clave)) vistos.set(clave,v);
+  });
+  return [...vistos.values()].sort((a,b)=>a.localeCompare(b,'es'));
+}
+
+function poblarFiltroPais(grupo){
+  const sel=document.getElementById(`personas-pais-${grupo}`);
+  if(!sel) return;
+  const previo=sel.value;
+  const paises=opcionesUnicas((pagState[grupo].all||[]).map(p=>valorUbicacion(p.fields['País'])));
+  sel.innerHTML='<option value="">Todos los países</option>'+paises.map(p=>`<option value="${p}">${p}</option>`).join('');
+  // Preservar la selección si sigue existiendo (poblarFiltrosPersonas() se
+  // vuelve a llamar en cada recarga de datos).
+  if(previo&&paises.some(p=>p.toLowerCase()===previo.toLowerCase())) sel.value=previo;
+}
+
+// La ciudad se acota al país elegido: sin esto se puede combinar
+// País=Argentina con Ciudad=Bogotá y la lista queda vacía sin motivo claro.
+function poblarFiltroCiudad(grupo){
+  const sel=document.getElementById(`personas-ciudad-${grupo}`);
+  if(!sel) return;
+  const previo=sel.value;
+  const pais=(document.getElementById(`personas-pais-${grupo}`)?.value||'').toLowerCase();
+  const ciudades=opcionesUnicas((pagState[grupo].all||[])
+    .filter(p=>!pais||valorUbicacion(p.fields['País']).toLowerCase()===pais)
+    .map(p=>valorUbicacion(p.fields.Ciudad)));
+  sel.innerHTML='<option value="">Todas las ciudades</option>'+ciudades.map(c=>`<option value="${c}">${c}</option>`).join('');
+  if(previo&&ciudades.some(c=>c.toLowerCase()===previo.toLowerCase())) sel.value=previo;
+}
+
+// Al cambiar el país hay que reconstruir las ciudades antes de filtrar — si la
+// ciudad que estaba elegida no existe en el país nuevo, queda deseleccionada.
+function cambiarPaisPersonas(grupo){
+  poblarFiltroCiudad(grupo);
+  filtrarPersonas(grupo);
 }
 
 // KPI strip por nivel Loyalty de Engineers & Tech (diseño "Engineers y Tech.dc.html").
@@ -489,8 +547,8 @@ function renderETKpi(lista,containerId){
 // Resalta en azul los selects de Engineers & Tech / Core Team que tienen un
 // filtro activo (diseño "Engineers y Tech.dc.html").
 function actualizarEstiloFiltrosET(){
-  ['personas-loyalty-eng','personas-proyecto-eng','personas-manager-eng',
-   'personas-rol-core','personas-loyalty-core','personas-proyecto-core','personas-manager-core'].forEach(id=>{
+  ['personas-loyalty-eng','personas-proyecto-eng','personas-manager-eng','personas-pais-eng','personas-ciudad-eng',
+   'personas-rol-core','personas-loyalty-core','personas-proyecto-core','personas-manager-core','personas-pais-core','personas-ciudad-core'].forEach(id=>{
     const sel=document.getElementById(id);
     if(sel) sel.classList.toggle('et-active',!!sel.value);
   });

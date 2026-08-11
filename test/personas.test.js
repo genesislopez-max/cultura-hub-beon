@@ -65,3 +65,31 @@ test('yaEgreso: Fecha de egreso es hoy, ya cuenta como egresado', ()=>{
 test('yaEgreso: Fecha de egreso en el futuro, todavía no está egresado', ()=>{
   assert.equal(ctx.yaEgreso({fields:{'Fecha de egreso':fechaOffsetDias(1)}}),false);
 });
+
+// ─── Filtros de País / Ciudad ─────────────────────────────────────────────────
+// Los dos campos se cargan a mano en Airtable, así que llegan con espacios de
+// más y mayúsculas inconsistentes; algunas bases además los tienen como linked
+// record (array). El <select> no debe mostrar la misma ciudad dos veces.
+test('valorUbicacion: recorta espacios y desenvuelve linked records', ()=>{
+  assert.equal(ctx.valorUbicacion(' Buenos Aires '),'Buenos Aires');
+  assert.equal(ctx.valorUbicacion(['Bogotá']),'Bogotá');
+  assert.equal(ctx.valorUbicacion([]),'');
+  assert.equal(ctx.valorUbicacion(undefined),'');
+  assert.equal(ctx.valorUbicacion(null),'');
+});
+
+test('opcionesUnicas: dedup case-insensitive preservando la primera forma vista', ()=>{
+  const opts=ctx.opcionesUnicas(['Buenos Aires','buenos aires','BUENOS AIRES','Córdoba']);
+  assert.equal(JSON.stringify(opts),JSON.stringify(['Buenos Aires','Córdoba']));
+});
+
+test('opcionesUnicas: descarta vacíos y ordena alfabéticamente en español', ()=>{
+  const opts=ctx.opcionesUnicas(['Uruguay','','Argentina',null,'Brasil',undefined]);
+  assert.equal(JSON.stringify(opts),JSON.stringify(['Argentina','Brasil','Uruguay']));
+});
+
+test('opcionesUnicas: ordena con acentos como corresponde en español', ()=>{
+  // Con el orden por código de carácter, "Ávila" caería después de "Zamora"
+  const opts=ctx.opcionesUnicas(['Zamora','Ávila','Bogotá']);
+  assert.equal(JSON.stringify(opts),JSON.stringify(['Ávila','Bogotá','Zamora']));
+});

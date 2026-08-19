@@ -1045,6 +1045,15 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .ev-action-btn:hover{border-color:var(--blue);color:var(--blue);background:color-mix(in srgb,var(--blue) 7%,transparent);}
 .ev-action-btn.ev-action-cargar{border-color:color-mix(in srgb,var(--blue) 45%,var(--border));color:var(--blue);}
 
+/* Botón "Resumen del Q" del header — clase propia y no .ev-action-btn, que la
+   comparten los botones de acción de cada fila: acá se busca que destaque
+   (borde azul de marca, fondo tenue, peso 700, sombra y micro-elevación en
+   hover, mismo gesto que .btn-primary), no que se mimetice con la tabla. */
+.ev-btn-resumen{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:11px;border:1.5px solid var(--blue);background:color-mix(in srgb,var(--blue) 8%,transparent);color:var(--blue);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(58,105,255,0.16);transition:background 0.15s,box-shadow 0.15s,transform 0.12s;}
+.ev-btn-resumen i{font-size:15px;}
+.ev-btn-resumen:hover{background:color-mix(in srgb,var(--blue) 15%,transparent);box-shadow:0 6px 16px rgba(58,105,255,0.24);transform:translateY(-1px);}
+.ev-btn-resumen:active{transform:translateY(0);box-shadow:0 2px 8px rgba(58,105,255,0.16);}
+
 /* Sin overflow:hidden — el glow ya lo recorta el .modal (que tiene su propio
    overflow:hidden), y acá recortaba los selects del header cuando el navegador
    los renderiza más altos de lo previsto. */

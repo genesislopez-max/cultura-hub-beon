@@ -110,3 +110,103 @@ test('combinarEventos: ordena la lista final por Fecha descendente, mezclando am
   // aunque el contenido sea idéntico.
   assert.equal(JSON.stringify(lista.map(e=>e.fecha)),JSON.stringify(['2026-06-01','2025-12-01','2025-01-01']));
 });
+
+// ─── Resumen del trimestre ────────────────────────────────────────────────────
+const ctxQ=loadApp(['state.js','utils.js','personas.js','actividades-virtuales.js','eventos.js']);
+
+// Q3 2026 = jul-sep. Se mezclan eventos dentro y fuera del rango a propósito.
+const LISTA=[
+  {fuente:'Actividades', evento:'Charla julio', fecha:'2026-07-16',asistentes:67,puntaje:4.6,respuestas:28,comentario:'Muy útil'},
+  {fuente:'Actividades', evento:'Charla agosto',fecha:'2026-08-30',asistentes:9, puntaje:5,  respuestas:6, comentario:null},
+  {fuente:'Get Together',evento:'GT Lima',     fecha:'2026-09-02',asistentes:18,puntaje:null,respuestas:null,comentario:null},
+  {fuente:'Actividades', evento:'Fuera de Q',  fecha:'2026-06-30',asistentes:99,puntaje:3,  respuestas:2, comentario:'no cuenta'},
+];
+// Filas crudas: una por persona por evento. Ana va a dos eventos del Q.
+const AV=[
+  {fields:{Fecha:'2026-07-16',Persona:'Ana'}},
+  {fields:{Fecha:'2026-07-16',Persona:'Bruno'}},
+  {fields:{Fecha:'2026-08-30',Persona:'Ana'}},
+  {fields:{Fecha:'2026-06-30',Persona:'Carla'}},   // fuera del Q
+];
+const GT=[{fields:{Fecha:'2026-09-02',BEONer:'Diego'}}];
+const PERSONAS=[
+  {fields:{Nombre:'Ana',  'Fecha de ingreso':'2020-01-01'}},
+  {fields:{Nombre:'Bruno','Fecha de ingreso':'2020-01-01'}},
+  {fields:{Nombre:'Carla','Fecha de ingreso':'2020-01-01'}},
+  {fields:{Nombre:'Diego','Fecha de ingreso':'2020-01-01'}},
+  {fields:{Nombre:'Egresado','Fecha de ingreso':'2020-01-01','Fecha de egreso':'2021-01-01'}},
+];
+const resumen=()=>ctxQ.resumenTrimestreEventos(LISTA,AV,GT,PERSONAS,2026,3);
+
+test('resumenTrimestreEventos: solo toma los eventos del trimestre pedido', ()=>{
+  const r=resumen();
+  assert.equal(r.totalEventos,3);
+  assert.equal(r.eventos.some(e=>e.evento==='Fuera de Q'),false);
+});
+
+test('resumenTrimestreEventos: ordena los eventos cronológicamente', ()=>{
+  assert.equal(resumen().eventos.map(e=>e.fecha).join(),'2026-07-16,2026-08-30,2026-09-02');
+});
+
+test('resumenTrimestreEventos: asistencias suma por evento, personasUnicas no repite gente', ()=>{
+  const r=resumen();
+  assert.equal(r.asistencias,67+9+18);
+  // Ana fue a dos eventos pero cuenta una vez; Carla quedó fuera del Q
+  assert.equal(r.personasUnicas,3); // Ana, Bruno, Diego
+});
+
+test('resumenTrimestreEventos: el % de participación excluye a los egresados', ()=>{
+  const r=resumen();
+  assert.equal(r.activos,4);                 // los 5 menos el egresado
+  assert.equal(r.pctParticipacion,75);       // 3 de 4
+});
+
+test('resumenTrimestreEventos: promedia solo los eventos con encuesta', ()=>{
+  const r=resumen();
+  assert.equal(r.conEncuesta,2);
+  assert.equal(r.sinEncuesta,1);
+  assert.equal(r.promedio,4.8);              // (4.6 + 5) / 2
+});
+
+test('resumenTrimestreEventos: destaca el más convocante y el mejor puntuado', ()=>{
+  const r=resumen();
+  assert.equal(r.masConvocante.evento,'Charla julio');   // 67 asistentes
+  assert.equal(r.mejorPuntuado.evento,'Charla agosto');  // 5.0
+});
+
+test('resumenTrimestreEventos: desglosa por fuente', ()=>{
+  const r=resumen();
+  assert.equal(r.porFuente['Actividades'].eventos,2);
+  assert.equal(r.porFuente['Get Together'].asistencias,18);
+});
+
+test('resumenTrimestreEventos: junta solo los comentarios cargados', ()=>{
+  const r=resumen();
+  assert.equal(r.comentarios.length,1);
+  assert.equal(r.comentarios[0].comentario,'Muy útil');
+});
+
+test('resumenTrimestreEventos: un trimestre sin eventos no rompe', ()=>{
+  const r=ctxQ.resumenTrimestreEventos(LISTA,AV,GT,PERSONAS,2026,1);
+  assert.equal(r.totalEventos,0);
+  assert.equal(r.promedio,null);
+  assert.equal(r.masConvocante,null);
+  assert.equal(r.asistencias,0);
+});
+
+test('textoResumenTrimestre: incluye los totales y cada evento con su puntaje', ()=>{
+  const txt=ctxQ.textoResumenTrimestre(resumen());
+  assert.match(txt,/Eventos Q3 2026/);
+  assert.match(txt,/3 eventos · 94 asistencias/);
+  assert.match(txt,/Participación: 75% del equipo \(4 activos\)/);
+  assert.match(txt,/Satisfacción promedio: 4\.80\/5/);
+  assert.match(txt,/Charla julio/);
+  assert.match(txt,/"Muy útil"/);
+  assert.match(txt,/Queda 1 evento sin encuesta cargada/);
+  assert.equal(txt.includes('Fuera de Q'),false);
+});
+
+test('textoResumenTrimestre: trimestre vacío devuelve un texto claro, no vacío', ()=>{
+  const txt=ctxQ.textoResumenTrimestre(ctxQ.resumenTrimestreEventos([],[],[],PERSONAS,2026,1));
+  assert.match(txt,/Sin eventos registrados en este trimestre/);
+});

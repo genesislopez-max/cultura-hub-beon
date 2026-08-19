@@ -1071,11 +1071,18 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .evq-sel{height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.18);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;outline:none;}
 .evq-sel option{color:var(--text);background:var(--bg2);}
 .evq-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
-.evq-kpi{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:14px 16px;}
+.evq-kpi{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}
 .evq-kpi-label{font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
-.evq-kpi-val{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin:6px 0 4px;font-variant-numeric:tabular-nums;}
-.evq-kpi-sub{font-size:11.5px;color:var(--text2);display:flex;gap:4px;flex-wrap:wrap;}
-.evq-destacados{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:14px;}
+.evq-kpi-val{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin:8px 0 6px;font-variant-numeric:tabular-nums;}
+.evq-kpi-sub{font-size:11.5px;color:var(--text2);line-height:1.4;}
+
+/* Desglose por fuente — fila propia debajo de los KPI. Los chips llevan su
+   gap y su borde para que se lean como piezas separadas y no como un bloque. */
+.evq-fuentes{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;}
+.evq-fuentes-label{font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-right:2px;}
+.evq-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;border:1px solid transparent;font-size:12px;font-weight:700;white-space:nowrap;}
+.evq-chip-dato{font-weight:500;color:var(--text2);padding-left:8px;margin-left:1px;border-left:1px solid currentColor;opacity:0.85;}
+.evq-destacados{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:16px;}
 .evq-destacado{display:flex;gap:11px;align-items:flex-start;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:13px 15px;font-size:16px;}
 .evq-destacado-label{font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
 .evq-destacado-val{font-size:13.5px;font-weight:700;color:var(--text);margin-top:3px;line-height:1.35;}

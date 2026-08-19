@@ -395,18 +395,27 @@ function renderResumenTrimestre(){
     <div class="evq-kpi-sub">${sub}</div>
   </div>`;
 
+  // El desglose por fuente va en su propia fila, no dentro de la tarjeta de
+  // "Eventos": ahí quedaba apretado contra el número y, con dos fuentes, los
+  // dos chips se pegaban entre sí.
   const fuentes=Object.entries(r.porFuente).map(([f,d])=>{
-    const badge=f==='Get Together'?'badge-purple':'badge-blue';
-    return `<span class="badge ${badge}">${f}: ${d.eventos} · ${d.asistencias} asist.</span>`;
-  }).join(' ');
+    const color=f==='Get Together'?'var(--purple)':'var(--blue)';
+    const icono=(EV_SRC_ICONO[f]||EV_SRC_ICONO['Actividades']).icon;
+    return `<span class="evq-chip" style="color:${color};background:color-mix(in srgb,${color} 10%,transparent);border-color:color-mix(in srgb,${color} 22%,transparent)">
+      <i class="ti ${icono}"></i>${f}
+      <span class="evq-chip-dato">${d.eventos} evento${d.eventos!==1?'s':''} · ${d.asistencias} asist.</span>
+    </span>`;
+  }).join('');
 
   cont.innerHTML=`
     <div class="evq-kpis">
-      ${kpi('Eventos',r.totalEventos,fuentes||'—','var(--blue)')}
+      ${kpi('Eventos',r.totalEventos,`en ${r.etiqueta}`,'var(--blue)')}
       ${kpi('Asistencias',r.asistencias,`${r.personasUnicas} persona${r.personasUnicas!==1?'s':''} distinta${r.personasUnicas!==1?'s':''}`,'var(--purple)')}
       ${kpi('Participación',r.pctParticipacion!=null?`${r.pctParticipacion}%`:'—',`${r.activos} activos al cierre`,'var(--green)')}
       ${kpi('Satisfacción',r.promedio!=null?r.promedio.toFixed(2):'—',r.conEncuesta?`sobre ${r.conEncuesta} con encuesta`:'sin encuestas cargadas','var(--amber)')}
     </div>
+
+    ${fuentes?`<div class="evq-fuentes"><span class="evq-fuentes-label">Por fuente</span>${fuentes}</div>`:''}
 
     <div class="evq-destacados">
       ${r.masConvocante?`<div class="evq-destacado"><i class="ti ti-users" style="color:var(--blue)"></i>

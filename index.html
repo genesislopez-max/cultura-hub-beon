@@ -1687,13 +1687,19 @@
         <div class="ev-modal-eyebrow"><i class="ti ti-chart-bar"></i>Resumen del trimestre</div>
         <div class="ev-modal-name" id="ev-resumen-subtitulo"></div>
         <div class="evq-controles">
-          <select class="evq-sel" id="evq-anio" onchange="renderResumenTrimestre()"></select>
-          <select class="evq-sel" id="evq-trimestre" onchange="renderResumenTrimestre()">
-            <option value="1">Q1 · ene-mar</option>
-            <option value="2">Q2 · abr-jun</option>
-            <option value="3">Q3 · jul-sep</option>
-            <option value="4">Q4 · oct-dic</option>
-          </select>
+          <div class="evq-sel-wrap">
+            <select class="evq-sel" id="evq-anio" onchange="renderResumenTrimestre()"></select>
+            <i class="ti ti-chevron-down evq-sel-chevron"></i>
+          </div>
+          <div class="evq-sel-wrap">
+            <select class="evq-sel" id="evq-trimestre" onchange="renderResumenTrimestre()">
+              <option value="1">Q1 · ene-mar</option>
+              <option value="2">Q2 · abr-jun</option>
+              <option value="3">Q3 · jul-sep</option>
+              <option value="4">Q4 · oct-dic</option>
+            </select>
+            <i class="ti ti-chevron-down evq-sel-chevron"></i>
+          </div>
         </div>
       </div>
     </div>

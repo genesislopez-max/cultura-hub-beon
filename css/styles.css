@@ -1045,7 +1045,10 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .ev-action-btn:hover{border-color:var(--blue);color:var(--blue);background:color-mix(in srgb,var(--blue) 7%,transparent);}
 .ev-action-btn.ev-action-cargar{border-color:color-mix(in srgb,var(--blue) 45%,var(--border));color:var(--blue);}
 
-.ev-modal-header{position:relative;overflow:hidden;padding:24px 26px 22px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);}
+/* Sin overflow:hidden — el glow ya lo recorta el .modal (que tiene su propio
+   overflow:hidden), y acá recortaba los selects del header cuando el navegador
+   los renderiza más altos de lo previsto. */
+.ev-modal-header{position:relative;padding:24px 26px 24px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);}
 .ev-modal-glow{position:absolute;right:-70px;top:-90px;width:230px;height:230px;border-radius:999px;background:radial-gradient(circle,rgba(254,104,227,.45),rgba(254,104,227,0) 70%);pointer-events:none;}
 .ev-modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:999px;border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;}
 .ev-modal-close:hover{background:rgba(255,255,255,.3);}
@@ -1067,8 +1070,16 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .ev-btn-guardar:hover{opacity:0.93;}
 
 /* EVENTOS — ventana "Resumen del Q" */
-.evq-controles{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap;}
-.evq-sel{height:32px;padding:0 12px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.18);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;outline:none;}
+.evq-controles{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+/* appearance:none + chevron propio, igual que .et-sel en los filtros: sin eso
+   el <select> nativo impone su propia altura (más de la pedida en algunos
+   navegadores) y el texto quedaba cortado. min-height en vez de height para
+   que nunca pueda recortar su propio contenido. */
+.evq-sel-wrap{position:relative;display:flex;align-items:center;}
+.evq-sel-wrap .evq-sel-chevron{position:absolute;right:12px;color:rgba(255,255,255,.85);font-size:12px;pointer-events:none;}
+.evq-sel{appearance:none;-webkit-appearance:none;min-height:34px;padding:0 32px 0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.18);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;line-height:1;cursor:pointer;outline:none;transition:background 0.15s;}
+.evq-sel:hover{background:rgba(255,255,255,.28);}
+.evq-sel:focus-visible{border-color:#fff;}
 .evq-sel option{color:var(--text);background:var(--bg2);}
 .evq-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
 .evq-kpi{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}

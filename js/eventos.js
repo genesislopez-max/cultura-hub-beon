@@ -327,7 +327,7 @@ function renderEventosTabla(filtrados){
     return`<tr class="ev-row" data-fuente="${fuenteAttr}" data-evento="${eventoAttr}" data-fecha="${ev.fecha}" onclick="abrirPuntajeEventoModal(this.dataset.fuente,this.dataset.evento,this.dataset.fecha)" style="cursor:pointer">
       <td><div style="display:flex;align-items:center;gap:11px;min-width:0">
         <div class="ev-src-icon" style="background:color-mix(in srgb,${src.color} 12%,transparent);color:${src.color}"><i class="ti ${src.icon}"></i></div>
-        <strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.evento}</strong>
+        <strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${eventoAttr}">${ev.evento}</strong>
       </div></td>
       <td style="font-size:12px;color:var(--text2)">${fmt(ev.fecha)}</td>
       <td><span class="badge ${fuenteBadge}">${ev.fuente}</span></td>

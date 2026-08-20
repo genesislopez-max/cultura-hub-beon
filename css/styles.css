@@ -1022,26 +1022,34 @@ textarea.field-input{resize:vertical;min-height:80px;}
 #page-eventoshist .metric-sub{font-size:12.5px;}
 #page-eventoshist .table-wrap{border-radius:20px;}
 /* Los títulos de evento son largos ("The Beauty of Combining Software
-   Engineering with AI: Propose, Fail, Propose Better") y sin table-layout:fixed
-   esa columna se estiraba a 641px, empujando Satisfacción y Acción fuera del
-   contenedor: en una laptop había que deslizar 243px para verlas. Con anchos
-   fijos el nombre se recorta con puntos suspensivos (el completo queda en el
-   title) y la tabla nunca excede el ancho disponible. */
-#page-eventoshist .data-table{table-layout:fixed;}
-#page-eventoshist .data-table th:nth-child(2),#page-eventoshist .data-table td:nth-child(2){width:118px;white-space:nowrap;}
-#page-eventoshist .data-table th:nth-child(3){width:124px;}
-#page-eventoshist .data-table th:nth-child(4){width:92px;}
-#page-eventoshist .data-table th:nth-child(5){width:178px;}
-#page-eventoshist .data-table th:nth-child(6){width:148px;}
+   Engineering with AI: Propose, Fail, Propose Better") y sin acotarlos esa
+   columna se estiraba a 641px, empujando Satisfacción y Acción fuera del
+   contenedor: en una laptop había que deslizar 243px para verlas.
+   La solución NO usa anchos en px por columna: eso se rompe con el zoom del
+   navegador o una fuente base más grande, porque el texto crece y los px no.
+   En su lugar, las 5 columnas de la derecha se dimensionan por su contenido
+   (width:1% + nowrap las encoge a lo justo) y la del título recibe lo que
+   sobra (max-width:0 la fuerza a ceder), recortando con puntos suspensivos —
+   el título completo queda en el title del elemento. Así la tabla entra en
+   cualquier combinación de ancho, zoom y tamaño de fuente. */
+#page-eventoshist .data-table th:nth-child(n+2),
+#page-eventoshist .data-table td:nth-child(n+2){width:1%;white-space:nowrap;}
+#page-eventoshist .data-table td:first-child{max-width:0;}
 @media (max-width:1280px){
   /* 24px de padding por lado × 6 columnas son 288px de la tabla gastados en
      aire: a este ancho hacen la diferencia entre entrar y tener que deslizar. */
-  #page-eventoshist .data-table td{padding:14px 14px;}
-  #page-eventoshist .data-table th{padding:12px 14px;}
-  #page-eventoshist .data-table th:nth-child(3){width:124px;}
-  #page-eventoshist .data-table th:nth-child(6){width:142px;}
-  /* "Get Together" partía en dos líneas dentro de su badge */
-  #page-eventoshist .data-table td:nth-child(3) .badge{white-space:nowrap;}
+  #page-eventoshist .data-table td{padding:14px 13px;}
+  #page-eventoshist .data-table th{padding:12px 13px;}
+}
+/* Por debajo de ~1120px (un 1512 con zoom al 150% da 1008px de viewport CSS)
+   ya no entran las 6 columnas. Se cede Fuente, que es la única redundante: la
+   fuente de cada evento ya se ve en el ícono de color al lado del nombre, y su
+   filtro sigue en la barra de arriba. */
+@media (max-width:1120px){
+  #page-eventoshist .data-table th:nth-child(3),
+  #page-eventoshist .data-table td:nth-child(3){display:none;}
+  #page-eventoshist .data-table td{padding:14px 11px;}
+  #page-eventoshist .data-table th{padding:12px 11px;}
 }
 #page-eventoshist .data-table td{padding:14px 24px;}
 #page-eventoshist .data-table th{padding:12px 24px;}

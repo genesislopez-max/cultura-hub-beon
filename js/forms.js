@@ -595,6 +595,7 @@ const FORMS={
 
   // Accesible desde cualquier pantalla (botón en el sidebar, no depende de
   // ninguna sección) — Persona/Mail se completan solos con la sesión activa.
+  // El aviso a Slack sale de textoFeedbackSlack() (más abajo en este archivo).
   feedback:{title:'Enviar feedback',html:()=>`
 <div class="field-group"><label class="field-label">Categoría *</label>
   <select class="field-input" id="f-fb-categoria">
@@ -611,8 +612,29 @@ const FORMS={
       if(!mensaje){toast('El mensaje es obligatorio',true);return false;}
       const u=usuarioActual();
       const hoy=new Date().toISOString().slice(0,10);
-      await atPost('Feedback',{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:v('f-fb-categoria')||'Otro',Mensaje:mensaje});
+      const categoria=v('f-fb-categoria')||'Otro';
+      await atPost('Feedback',{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:categoria,Mensaje:mensaje});
+      // Aviso a Slack recién después de que Airtable confirmó: si el guardado
+      // falla, atPost tira y no se manda nada. Va al canal 'feedback', que se
+      // puede apuntar a otro lado con SLACK_WEBHOOK_FEEDBACK.
+      sendSlack(textoFeedbackSlack(categoria,u,mensaje),'feedback');
       return true;
     }}
 };
 FORMS.coreteam=FORMS.engineers; // Engineers & Tech y Core Team comparten el mismo alta de persona
+
+// ─── Aviso de feedback a Slack ────────────────────────────────────────────────
+const FEEDBACK_EMOJI={Sugerencia:'💡',Bug:'🐛',Otro:'💬'};
+
+// Arma el texto del aviso. Separada del save() para poder testearla sin DOM.
+// El mensaje del usuario va como blockquote de Slack: hay que prefijar CADA
+// línea con "> ", porque si el feedback es multilínea Slack solo citaría la
+// primera y el resto saldría como texto suelto pegado al aviso.
+function textoFeedbackSlack(categoria,usuario,mensaje){
+  const cat=categoria||'Otro';
+  const nombre=(usuario?.nombre||'').trim();
+  const mail=(usuario?.email||'').trim();
+  const quien=nombre&&mail?`${nombre} · ${mail}`:(nombre||mail||'Alguien del equipo');
+  const cita=String(mensaje||'').trim().split('\n').map(l=>`> ${l}`).join('\n');
+  return `${FEEDBACK_EMOJI[cat]||'💬'} *Nuevo feedback en el Hub — ${cat}*\n${quien}\n${cita}`;
+}

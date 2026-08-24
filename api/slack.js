@@ -15,7 +15,17 @@ module.exports=async(req,res)=>{
     return;
   }
 
-  const webhook=process.env.SLACK_WEBHOOK;
+  // El canal viene del cliente, así que NO se usa para armar el nombre de la
+  // variable de entorno: se mapea contra una lista fija. Si no, un body
+  // malicioso podría hacer que el server lea cualquier env var.
+  const WEBHOOKS={
+    // Avisos operativos (ingresos, tareas, offboarding…) — el canal de siempre.
+    general:process.env.SLACK_WEBHOOK,
+    // El feedback del Hub puede ir a otro lado (un DM o un canal privado de
+    // People Ops); si no se configura, cae en el general.
+    feedback:process.env.SLACK_WEBHOOK_FEEDBACK||process.env.SLACK_WEBHOOK,
+  };
+  const webhook=WEBHOOKS[req.body?.canal]||WEBHOOKS.general;
   if(!webhook){
     res.status(200).json({skipped:true}); // Slack es opcional, igual que antes
     return;

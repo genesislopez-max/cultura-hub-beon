@@ -1,6 +1,10 @@
-async function sendSlack(text){
+// `canal` es opcional: 'general' (default) o 'feedback'. El server lo mapea
+// contra una lista fija de webhooks (ver api/slack.js), así que acá solo se
+// pasa la etiqueta. Nunca tira: un aviso de Slack no debe hacer fallar el
+// guardado que lo disparó.
+async function sendSlack(text,canal){
   try{
-    await fetch('/api/slack',{method:'POST',headers:authHeaders(),body:JSON.stringify({text})});
+    await fetch('/api/slack',{method:'POST',headers:authHeaders(),body:JSON.stringify({text,canal:canal||'general'})});
   }catch(e){console.error('Slack error:',e.message);}
 }
 // ─── AIRTABLE ────────────────────────────────────────────────────────────────

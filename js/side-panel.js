@@ -103,25 +103,18 @@ async function verBenefPersona(nombre, grupo, nivel){
       // valor fijo del catálogo — mismo criterio que se usa para sumar el
       // total usado más arriba.
       const valor=r.fields.Monto?`$${Number(r.fields.Monto).toLocaleString('es-AR')}/año`:benef?.fields.Valor?`$${Number(benef.fields.Valor).toLocaleString('es-AR')}/año`:'';
-      const activo=(r.fields.Estado||'Activo')==='Activo';
+      const estado=r.fields.Estado||'Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
-      const fechaAct=r.fields['Fecha activación'];
-      const fechaBaja=r.fields['Fecha de baja'];
       const motivoBaja=r.fields['Motivo de baja'];
-      let fechaLabel;
-      if(activo){
-        fechaLabel=fechaAct?`Activo desde ${fmt(fechaAct)}`:'Sin fecha registrada';
-      } else {
-        const partes=[fechaAct?`Usado desde ${fmt(fechaAct)}`:'',fechaBaja?`Baja: ${fmt(fechaBaja)}`:''].filter(Boolean);
-        fechaLabel=partes.length?partes.join(' · '):'Sin fecha registrada';
-      }
+      const fechaLabel=periodoBenefAsignado(r.fields);
+      const asistencia=asistenciaBenefAsignado(r.fields);
       return`<div class="bp-detalle-row">
         <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${bNombre}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
-          <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}</div>
+          <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
         </div>
-        <span class="badge ${activo?'badge-green':'badge-amber'}">${activo?'Activo':'Inactivo'}</span>
+        ${badgeEstadoBenef(estado)}
         <div class="bp-detalle-actions">
           <button class="bp-detalle-action-btn" onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar"><i class="ti ti-pencil"></i></button>
           <button class="bp-detalle-action-btn danger" onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar"><i class="ti ti-trash"></i></button>
@@ -250,9 +243,58 @@ function closeBenefPersonaDetalle(e){
   }
 }
 
+// ─── Estados de un beneficio asignado ─────────────────────────────────────────
+// "En pausa" es un tercer estado, para el caso real de alguien que dejó de usar
+// el beneficio sin darlo de baja (ej. suspendió las clases de inglés unos
+// meses). Cuenta como NO activo en todos los filtros del Hub — que comparan
+// contra 'Activo', así que no consume presupuesto ni suma a los KPIs — pero se
+// muestra distinto de Inactivo y no lleva Fecha de baja, porque no terminó.
+const BENEF_ESTADOS=['Activo','En pausa','Inactivo'];
+// Los dos estados que admiten un motivo (por qué se pausó o por qué terminó).
+const BENEF_ESTADOS_CON_MOTIVO=new Set(['En pausa','Inactivo']);
+function badgeEstadoBenef(estado){
+  const e=estado||'Activo';
+  const clase=e==='Activo'?'badge-green':e==='En pausa'?'badge-amber':'badge-gray';
+  return `<span class="badge ${clase}">${e}</span>`;
+}
+
+// Texto del período de un beneficio asignado, según su estado. Los tres casos
+// dicen cosas distintas: Activo abre un período sin cerrar, En pausa tiene
+// inicio pero no fin (el beneficio no terminó, así que no lleva Fecha de baja),
+// e Inactivo es un período cerrado.
+function periodoBenefAsignado(fields){
+  const estado=fields.Estado||'Activo';
+  const fechaAct=fields['Fecha activación'];
+  const fechaBaja=fields['Fecha de baja'];
+  if(estado==='Activo'){
+    return fechaAct?`Activo desde ${fmt(fechaAct)}`:'Sin fecha registrada';
+  }
+  if(estado==='En pausa'){
+    return fechaAct?`En pausa · empezó el ${fmt(fechaAct)}`:'En pausa · sin fecha de inicio';
+  }
+  const partes=[fechaAct?`Usado desde ${fmt(fechaAct)}`:'',fechaBaja?`Baja: ${fmt(fechaBaja)}`:''].filter(Boolean);
+  return partes.length?partes.join(' · '):'Sin fecha registrada';
+}
+
+// Porcentajes de asistencia del histórico migrado del Sheet — son el dato que
+// justifica varias bajas ("removed for low commitment"), así que se muestran
+// junto al período. Se comparan contra null/'' y no por truthiness, porque 0%
+// de asistencia es un valor real y es justamente el que más importa mostrar.
+function asistenciaBenefAsignado(fields){
+  const mes=fields['% asistencia mensual'];
+  const anio=fields['% asistencia anual'];
+  return [
+    mes!=null&&mes!==''?`${Math.round(Number(mes))}% mes`:'',
+    anio!=null&&anio!==''?`${Math.round(Number(anio))}% año`:'',
+  ].filter(Boolean).join(' · ');
+}
+
 function toggleCampoMotivoBaja(){
   const fg=document.getElementById('fg-eba-motivo');
-  if(fg) fg.style.display=document.getElementById('f-eba-estado')?.value==='Inactivo'?'block':'none';
+  const estado=document.getElementById('f-eba-estado')?.value||'Activo';
+  if(fg) fg.style.display=BENEF_ESTADOS_CON_MOTIVO.has(estado)?'block':'none';
+  const lbl=document.getElementById('lbl-eba-motivo');
+  if(lbl) lbl.textContent=estado==='En pausa'?'Motivo de la pausa':'Motivo de la baja';
 }
 
 // Editar Monto/Fecha activación/Estado de un beneficio ya asignado — el
@@ -274,12 +316,11 @@ function editarBenefAsignado(id,nombre,grupo,nivel){
 <div class="field-group"><label class="field-label">Fecha activación</label><input class="field-input" id="f-eba-fecha" type="date" value="${f['Fecha activación']||''}"></div>
 <div class="field-group"><label class="field-label">Estado</label>
   <select class="field-input" id="f-eba-estado" onchange="toggleCampoMotivoBaja()">
-    <option value="Activo"${(f.Estado||'Activo')==='Activo'?' selected':''}>Activo</option>
-    <option value="Inactivo"${f.Estado==='Inactivo'?' selected':''}>Inactivo</option>
+    ${BENEF_ESTADOS.map(e=>`<option value="${e}"${(f.Estado||'Activo')===e?' selected':''}>${e}</option>`).join('')}
   </select>
 </div>
-<div class="field-group" id="fg-eba-motivo" style="display:${f.Estado==='Inactivo'?'block':'none'}">
-  <label class="field-label">Motivo de la baja</label>
+<div class="field-group" id="fg-eba-motivo" style="display:${BENEF_ESTADOS_CON_MOTIVO.has(f.Estado)?'block':'none'}">
+  <label class="field-label" id="lbl-eba-motivo">${f.Estado==='En pausa'?'Motivo de la pausa':'Motivo de la baja'}</label>
   <textarea class="field-input" id="f-eba-motivo" placeholder="Ej: dejó de usarlo, cambió de beneficio…">${f['Motivo de baja']||''}</textarea>
   ${f['Fecha de baja']?`<div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">Dado de baja el ${fmt(f['Fecha de baja'])}</div>`:''}
 </div>
@@ -306,14 +347,19 @@ ${esUdemy?`
         'Fecha activación':fecha||null,
         Monto:v('f-eba-monto')?Number(v('f-eba-monto')):null,
       };
-      if(nuevoEstado==='Inactivo'){
+      if(BENEF_ESTADOS_CON_MOTIVO.has(nuevoEstado)){
         fields['Motivo de baja']=v('f-eba-motivo')||null;
+      } else {
+        fields['Motivo de baja']=null;
+      }
+      if(nuevoEstado==='Inactivo'){
         // Solo se pisa la Fecha de baja al momento en que PASA a Inactivo —
         // si ya estaba Inactivo y se reabre el form para otra cosa (ej.
         // corregir el motivo), no hace falta correr la fecha a hoy de nuevo.
         if(f.Estado!=='Inactivo') fields['Fecha de baja']=new Date().toISOString().slice(0,10);
       } else {
-        fields['Motivo de baja']=null;
+        // "En pausa" no lleva Fecha de baja: el beneficio no terminó. Si venía
+        // de Inactivo y se reabre como pausado, se limpia la baja anterior.
         fields['Fecha de baja']=null;
       }
       if(esTerapia){

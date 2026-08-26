@@ -35,14 +35,22 @@ async function atRequest(url,options){
   if(!r.ok){
     const body=await r.json().catch(()=>null);
     const msg=body?.error?.message||r.statusText||`Error ${r.status}`;
+    // Los errores que genera nuestro propio proxy (ej. el 403 de solo lectura)
+    // vienen marcados con origen:'hub' y ya traen un mensaje escrito para el
+    // usuario: se muestran tal cual. Envolverlos en la explicación de Airtable
+    // dejaba mensajes como "Airtable rechazó el pedido: puede faltar la tabla…
+    // (Tu usuario es de solo lectura…)", que mezcla dos causas distintas.
+    const delHub=body?.error?.origen==='hub';
     // Airtable devuelve 403 INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND tanto si el
-    // token no tiene permiso como si la tabla o un campo no existen — y en la
-    // práctica acá casi siempre es lo segundo (una tabla que todavía no se
-    // creó en la base). El mensaje anterior decía solo "Token inválido o sin
-    // permisos", que manda a buscar el problema del lado del usuario.
+    // token no tiene permiso como si la tabla o un campo no existen, y 422
+    // UNKNOWN_FIELD_NAME cuando el campo puntual no está en la tabla. En este
+    // proyecto la causa casi siempre es esa: un campo o una tabla que todavía
+    // no se creó en la base, así que el mensaje lo dice explícitamente.
     const err=new Error(
+      delHub?msg:
       r.status===401?`Tu sesión no es válida — cerrá sesión y volvé a entrar. (${msg})`:
       r.status===403?`Airtable rechazó el pedido: puede faltar la tabla o un campo en la base, o el token no tener permiso. (${msg})`:
+      /unknown field name/i.test(msg)?`Falta un campo en Airtable — crealo en la tabla y volvé a intentar. (${msg})`:
       msg);
     err.status=r.status;
     throw err;

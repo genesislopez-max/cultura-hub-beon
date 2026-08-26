@@ -66,3 +66,40 @@ test('atRequest: una respuesta ok se devuelve tal cual', async ()=>{
   const r=await ctx.atRequest('https://api.airtable.com/v0/x/Personas',{});
   assert.equal(r.ok,true);
 });
+
+// Los errores que genera nuestro propio proxy (el 403 de solo lectura) vienen
+// marcados con origen:'hub' y ya traen un mensaje para el usuario. Sin esto se
+// mostraban envueltos en la explicación de Airtable, mezclando dos causas:
+// "Airtable rechazó el pedido: puede faltar la tabla… (Tu usuario es de solo
+// lectura…)".
+test('atRequest: un error propio del Hub se muestra tal cual, sin prefijo de Airtable', async ()=>{
+  ctx.fetch=async()=>({
+    ok:false,status:403,statusText:'Forbidden',
+    json:async()=>({error:{origen:'hub',message:'Tu usuario es de solo lectura. Escribile a People Ops.'}}),
+  });
+  await assert.rejects(
+    ctx.atRequest('/api/airtable?path=Personas',{}),
+    err=>{
+      assert.equal(err.message,'Tu usuario es de solo lectura. Escribile a People Ops.');
+      assert.doesNotMatch(err.message,/Airtable rechazó/);
+      return true;
+    },
+  );
+});
+
+// Tercera vez en este proyecto que un campo/tabla que falta en Airtable se
+// presenta como otra cosa, así que el mensaje dice qué hacer.
+test('atRequest: un 422 por campo inexistente dice que hay que crearlo en Airtable', async ()=>{
+  ctx.fetch=async()=>({
+    ok:false,status:422,statusText:'Unprocessable Entity',
+    json:async()=>({error:{type:'UNKNOWN_FIELD_NAME',message:'Unknown field name: "Fecha de baja"'}}),
+  });
+  await assert.rejects(
+    ctx.atRequest('/api/airtable?path=Beneficios%20Asignados/rec1',{}),
+    err=>{
+      assert.match(err.message,/Falta un campo en Airtable/);
+      assert.match(err.message,/Fecha de baja/); // conserva el nombre del campo
+      return true;
+    },
+  );
+});

@@ -127,7 +127,9 @@ module.exports=async(req,res)=>{
   // autorizado." genérico) para que quien lo reciba entienda que es por rol y
   // no un error de configuración.
   if(!METODOS_LECTURA.has(req.method)&&!ROLES_PUEDEN_ESCRIBIR.has(rol)&&!TABLAS_ESCRIBE_CUALQUIERA.has(tabla)){
-    res.status(403).json({error:{message:'Tu usuario es de solo lectura. Escribile a People Ops para que carguen el cambio.'}});
+    // origen:'hub' marca que el error lo generamos nosotros y no Airtable, para
+    // que el cliente lo muestre tal cual (ver atRequest en js/api.js).
+    res.status(403).json({error:{origen:'hub',message:'Tu usuario es de solo lectura. Escribile a People Ops para que carguen el cambio.'}});
     return;
   }
 

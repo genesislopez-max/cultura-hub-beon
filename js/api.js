@@ -35,7 +35,15 @@ async function atRequest(url,options){
   if(!r.ok){
     const body=await r.json().catch(()=>null);
     const msg=body?.error?.message||r.statusText||`Error ${r.status}`;
-    const err=new Error(r.status===401||r.status===403?`Token inválido o sin permisos (${msg})`:msg);
+    // Airtable devuelve 403 INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND tanto si el
+    // token no tiene permiso como si la tabla o un campo no existen — y en la
+    // práctica acá casi siempre es lo segundo (una tabla que todavía no se
+    // creó en la base). El mensaje anterior decía solo "Token inválido o sin
+    // permisos", que manda a buscar el problema del lado del usuario.
+    const err=new Error(
+      r.status===401?`Tu sesión no es válida — cerrá sesión y volvé a entrar. (${msg})`:
+      r.status===403?`Airtable rechazó el pedido: puede faltar la tabla o un campo en la base, o el token no tener permiso. (${msg})`:
+      msg);
     err.status=r.status;
     throw err;
   }

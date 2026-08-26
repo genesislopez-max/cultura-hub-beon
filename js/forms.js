@@ -615,11 +615,22 @@ const FORMS={
       const u=usuarioActual();
       const hoy=new Date().toISOString().slice(0,10);
       const categoria=v('f-fb-categoria')||'Otro';
-      await atPost('Feedback',{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:categoria,Mensaje:mensaje});
-      // Aviso a Slack recién después de que Airtable confirmó: si el guardado
-      // falla, atPost tira y no se manda nada. Va al canal 'feedback', que se
-      // puede apuntar a otro lado con SLACK_WEBHOOK_FEEDBACK.
-      sendSlack(textoFeedbackSlack(categoria,u,mensaje),'feedback');
+      const textoSlack=textoFeedbackSlack(categoria,u,mensaje);
+      // El aviso a Slack va SIEMPRE, incluso si Airtable rechaza el guardado
+      // (típicamente porque falta la tabla "Feedback" o alguno de sus campos).
+      // Antes atPost() tiraba antes de llegar acá y el feedback se perdía
+      // entero: la persona veía un error y su mensaje no quedaba en ningún
+      // lado. Slack es justamente el canal por el que People Ops se entera, así
+      // que es el peor momento para no mandarlo.
+      try{
+        await atPost('Feedback',{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:categoria,Mensaje:mensaje});
+      }catch(err){
+        console.error('No se pudo guardar el feedback en Airtable:',err.message);
+        await sendSlack(`${textoSlack}\n\n_⚠️ No se pudo guardar en la tabla "Feedback" de Airtable: ${err.message}_`,'feedback');
+        toast('Tu feedback llegó a People Ops por Slack, pero no se pudo guardar en Airtable. Ya estamos avisados.',true);
+        return false; // no muestra "Guardado ✓", porque no se guardó
+      }
+      sendSlack(textoSlack,'feedback');
       return true;
     }}
 };

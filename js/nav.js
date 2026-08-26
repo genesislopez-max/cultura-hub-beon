@@ -234,7 +234,17 @@ async function saveRecord(){
   btn.disabled=true;lbl.textContent='Guardando...';
   try{
     const ok=await form.save();
-    if(ok!==false){closeModal();toast('Guardado ✓');await loadAll();}
+    if(ok!==false){
+      closeModal();
+      toast('Guardado ✓');
+      // Los forms con sinRecargar:true no alimentan ninguna sección del Hub
+      // (Feedback), así que no hay nada que refrescar. Evitarlo no es solo
+      // velocidad: loadAll() recarga las ~14 tablas de la base, varias de
+      // ellas restringidas según el rol, y cualquier fallo ahí pisaba el
+      // "Guardado ✓" con un error — el que mandó el feedback creía que no se
+      // había guardado, cuando en realidad sí.
+      if(!form.sinRecargar) await loadAll();
+    }
   }catch(e){toast('Error: '+e.message,true);}
   btn.disabled=false;lbl.textContent='Guardar';
 }

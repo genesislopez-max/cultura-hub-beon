@@ -596,7 +596,9 @@ const FORMS={
   // Accesible desde cualquier pantalla (botón en el sidebar, no depende de
   // ninguna sección) — Persona/Mail se completan solos con la sesión activa.
   // El aviso a Slack sale de textoFeedbackSlack() (más abajo en este archivo).
-  feedback:{title:'Enviar feedback',html:()=>`
+  // sinRecargar: el feedback no alimenta ninguna sección, así que no hace
+  // falta el loadAll() que corre saveRecord() por defecto — ver el porqué allá.
+  feedback:{title:'Enviar feedback',sinRecargar:true,html:()=>`
 <div class="field-group"><label class="field-label">Categoría *</label>
   <select class="field-input" id="f-fb-categoria">
     <option value="Sugerencia">Sugerencia</option>

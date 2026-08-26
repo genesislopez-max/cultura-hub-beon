@@ -623,7 +623,7 @@ const FORMS={
       // lado. Slack es justamente el canal por el que People Ops se entera, así
       // que es el peor momento para no mandarlo.
       try{
-        await atPost('Feedback',{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:categoria,Mensaje:mensaje});
+        await atPost(TABLA_FEEDBACK,{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:categoria,Mensaje:mensaje});
       }catch(err){
         console.error('No se pudo guardar el feedback en Airtable:',err.message);
         await sendSlack(`${textoSlack}\n\n_⚠️ No se pudo guardar en la tabla "Feedback" de Airtable: ${err.message}_`,'feedback');
@@ -636,7 +636,14 @@ const FORMS={
 };
 FORMS.coreteam=FORMS.engineers; // Engineers & Tech y Core Team comparten el mismo alta de persona
 
-// ─── Aviso de feedback a Slack ────────────────────────────────────────────────
+// ─── Feedback de la plataforma ────────────────────────────────────────────────
+// El nombre de la tabla en Airtable es "Feedback - Plataforma", con guión y
+// espacios. No es "Feedback" (así estaba antes, y Airtable respondía 403
+// INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND, que se lee como un problema de
+// permisos y no de nombre) ni "Eventos Feedback", que es otra tabla distinta:
+// esa guarda el puntaje de satisfacción de cada evento (ver js/eventos.js).
+const TABLA_FEEDBACK='Feedback - Plataforma';
+
 const FEEDBACK_EMOJI={Sugerencia:'💡',Bug:'🐛',Otro:'💬'};
 
 // Arma el texto del aviso. Separada del save() para poder testearla sin DOM.

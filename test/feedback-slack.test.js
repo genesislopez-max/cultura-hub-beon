@@ -115,3 +115,23 @@ test('api/slack: sin sesión válida no manda nada', async()=>{
   assert.equal(res.statusCode,401);
   assert.equal(enviados.length,0);
 });
+
+// ─── Nombre de la tabla ───────────────────────────────────────────────────────
+// Estuvo apuntando a "Feedback" mientras en Airtable la tabla se llama
+// "Feedback - Plataforma", y Airtable respondía 403
+// INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND — un error que se lee como problema de
+// permisos y no de nombre, así que costó bastante encontrarlo. Este test fija
+// el nombre exacto para que un cambio accidental se note acá y no en producción.
+// TABLA_FEEDBACK es un const del script, así que no aparece como propiedad del
+// sandbox — hay que leerlo evaluando adentro del contexto.
+const tablaFeedback=()=>require('node:vm').runInContext('TABLA_FEEDBACK',ctx);
+
+test('TABLA_FEEDBACK: es exactamente el nombre de la tabla en Airtable', ()=>{
+  assert.equal(tablaFeedback(),'Feedback - Plataforma');
+});
+
+test('TABLA_FEEDBACK: no se confunde con "Eventos Feedback", que es otra tabla', ()=>{
+  // "Eventos Feedback" guarda el puntaje de satisfacción de cada evento
+  assert.notEqual(tablaFeedback(),'Eventos Feedback');
+  assert.notEqual(tablaFeedback(),'Feedback');
+});

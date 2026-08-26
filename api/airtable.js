@@ -27,6 +27,17 @@ const TABLAS_INGRESOS_EGRESOS=new Set(['Checklist']);
 const ROLES_VEN_INGRESOS_EGRESOS=new Set(['full','hr']);
 const TABLAS_GRUPO_BENEFICIOS=new Set(['Beneficios','Presupuesto Loyalty','Beneficios Asignados']);
 
+// ─── Solo lectura para los equipos ────────────────────────────────────────────
+// Hasta acá el rol definía qué se VE, pero casi no qué se puede CAMBIAR: el rol
+// "equipo" podía crear personas, beneficios, asignaciones, proyectos y tareas.
+// Con varios equipos editando, los cambios se vuelven intrackeables, así que la
+// escritura queda para People Ops (full) y HR.
+const ROLES_PUEDEN_ESCRIBIR=new Set(['full','hr']);
+// Excepción: el feedback de la plataforma lo tiene que poder mandar cualquiera
+// — es el canal para avisar justamente que algo no se puede hacer.
+const TABLAS_ESCRIBE_CUALQUIERA=new Set(['Feedback - Plataforma']);
+const METODOS_LECTURA=new Set(['GET','HEAD','OPTIONS']);
+
 function pasaFiltroGrupo(grupoRecord,grupoPermitido){
   return !grupoRecord||grupoRecord===grupoPermitido||grupoRecord==='Ambos';
 }
@@ -109,6 +120,17 @@ module.exports=async(req,res)=>{
   }
 
   const tabla=String(path).split('/')[0];
+
+  // Solo lectura para los roles que no escriben. Va antes de cualquier otro
+  // chequeo de tabla porque es transversal: aplica a toda la base, no a una
+  // tabla puntual. Se responde 403 con un mensaje explicativo (no el "No
+  // autorizado." genérico) para que quien lo reciba entienda que es por rol y
+  // no un error de configuración.
+  if(!METODOS_LECTURA.has(req.method)&&!ROLES_PUEDEN_ESCRIBIR.has(rol)&&!TABLAS_ESCRIBE_CUALQUIERA.has(tabla)){
+    res.status(403).json({error:{message:'Tu usuario es de solo lectura. Escribile a People Ops para que carguen el cambio.'}});
+    return;
+  }
+
   if(TABLAS_INGRESOS_EGRESOS.has(tabla)&&!ROLES_VEN_INGRESOS_EGRESOS.has(rol)){
     if(req.method==='GET'){
       // Degradación silenciosa — sin esto, un Promise.all() en el cliente

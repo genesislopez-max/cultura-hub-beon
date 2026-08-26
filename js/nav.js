@@ -52,6 +52,10 @@ const SECCION_TARJETA_INICIO={ingresos:'sc-ingresos',egresos:'sc-offboard',revie
 // no muestre secciones que van a llegar vacías.
 function aplicarRestriccionesDeAcceso(){
   const rol=rolUsuarioActual();
+  // Aclara el modo lectura una sola vez en el topbar. Sin esto, alguien que no
+  // ve ningún botón de alta no sabe si es por su rol o si el Hub se rompió.
+  const badgeLectura=document.getElementById('badge-solo-lectura');
+  if(badgeLectura) badgeLectura.style.display=puedeEscribir()?'none':'inline-flex';
   Object.entries(SECCION_ROLES_PERMITIDOS).forEach(([nombre,permitidos])=>{
     if(permitidos.has(rol)) return;
     document.querySelector(`.sb-item[onclick*="${nombre}"]`)?.style.setProperty('display','none');
@@ -107,13 +111,15 @@ function showSection(name,btn){
   const btnAnivExportar=document.getElementById('btn-aniv-exportar');
   const btnEventosExportar=document.getElementById('btn-eventos-exportar');
   if(btnExportar) btnExportar.style.display=name==='inicio'?'flex':'none';
-  if(btnAgregarPersona) btnAgregarPersona.style.display=name==='inicio'?'flex':'none';
+  if(btnAgregarPersona) btnAgregarPersona.style.display=name==='inicio'&&puedeEscribir()?'flex':'none';
   if(btnAnivExportar) btnAnivExportar.style.display=name==='aniversarios'?'flex':'none';
   if(btnEventosExportar) btnEventosExportar.style.display=name==='eventoshist'?'flex':'none';
   const ab=document.getElementById('btn-add');
   const abf=document.getElementById('btn-add-full');
   const abh=document.getElementById('btn-add-historico');
-  if(ADD.includes(name)){
+  // Los roles de solo lectura no ven ningún botón de alta: el servidor los
+  // rechazaría con 403 igual, así que mostrarlos solo genera frustración.
+  if(ADD.includes(name)&&puedeEscribir()){
     ab.style.display='flex';
     document.getElementById('btn-label').textContent=LABELS[name];
     currentForm=FORMS[name];

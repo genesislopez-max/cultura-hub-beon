@@ -67,6 +67,11 @@ function projInitialEng(nombre){
 function nivelBadgeHtmlEng(recordId, nivelActual){
   const nivel=nivelActual||'Spark';
   const inner=n=>`<i class="ti ${NIVEL_ICONS[n]||'ti-award'}"></i>${n}`;
+  // En modo lectura el nivel se muestra igual, pero como badge y no como
+  // desplegable: sin esto el menú se abría y el cambio moría en un 403.
+  if(!puedeEscribir()){
+    return `<span class="nivel-badge-et badge-nivel-${nivel}" style="cursor:default">${inner(nivel)}</span>`;
+  }
   return`<div class="nivel-select-wrap" id="nw-${recordId}">
     <button class="nivel-badge-et badge-nivel-${nivel}" onclick="toggleNivelDropdown('${recordId}')">
       ${inner(nivel)}

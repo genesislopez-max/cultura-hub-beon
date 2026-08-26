@@ -324,7 +324,12 @@ function renderEventosTabla(filtrados){
     const eventoAttr=ev.evento.replace(/"/g,'&quot;');
     const btnIcon=ev.puntaje!=null?'ti-pencil':'ti-star';
     const btnClase=ev.puntaje!=null?'':'ev-action-cargar';
-    return`<tr class="ev-row" data-fuente="${fuenteAttr}" data-evento="${eventoAttr}" data-fecha="${ev.fecha}" onclick="abrirPuntajeEventoModal(this.dataset.fuente,this.dataset.evento,this.dataset.fecha)" style="cursor:pointer">
+    // En modo lectura la fila no abre el modal de puntaje: se podía editar
+    // igual desde ahí y el guardado terminaba en un 403.
+    const abre=puedeEscribir()
+      ?` onclick="abrirPuntajeEventoModal(this.dataset.fuente,this.dataset.evento,this.dataset.fecha)" style="cursor:pointer"`
+      :'';
+    return`<tr class="ev-row" data-fuente="${fuenteAttr}" data-evento="${eventoAttr}" data-fecha="${ev.fecha}"${abre}>
       <td><div style="display:flex;align-items:center;gap:11px;min-width:0">
         <div class="ev-src-icon" style="background:color-mix(in srgb,${src.color} 12%,transparent);color:${src.color}"><i class="ti ${src.icon}"></i></div>
         <strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${eventoAttr}">${ev.evento}</strong>
@@ -333,7 +338,7 @@ function renderEventosTabla(filtrados){
       <td><span class="badge ${fuenteBadge}">${ev.fuente}</span></td>
       <td style="font-weight:600;color:var(--blue);text-align:right">${ev.asistentes}</td>
       <td>${puntajeHtml}${comentarioHtml}</td>
-      <td style="text-align:right"><button class="ev-action-btn ${btnClase}"><i class="ti ${btnIcon}"></i>${ev.puntaje!=null?'Editar':'Cargar puntaje'}</button></td>
+      <td style="text-align:right">${puedeEscribir()?`<button class="ev-action-btn ${btnClase}"><i class="ti ${btnIcon}"></i>${ev.puntaje!=null?'Editar':'Cargar puntaje'}</button>`:''}</td>
     </tr>`;
   }).join('')||`<tr class="empty-row"><td colspan="6">
       <div class="ev-empty">

@@ -626,7 +626,9 @@ function renderBenefPersonas(){
   const personas=cachePersonasRaw.filter(p=>{
     const nombre=(p.fields.Nombre||'').toLowerCase();
     const grupo=getRolGroup(p.fields['Rol en empresa']||'');
-    const nivel=p.fields['Nivel Loyalty']||'Spark';
+    // normalizarNivel y no el valor crudo: con un "Thunder " cargado con un
+    // espacio de más, el filtro por nivel nunca matcheaba a esa persona.
+    const nivel=normalizarNivel(p.fields['Nivel Loyalty']);
     const matchQ=!q||nombre.includes(q);
     const matchG=!grupoFil||grupo===grupoFil;
     const matchL=!loyaltyFil||nivel===loyaltyFil;
@@ -667,7 +669,10 @@ function renderBenefPersonas(){
     const f=p.fields;
     const nombre=f.Nombre||'—';
     const grupo=getRolGroup(f['Rol en empresa']||'');
-    const nivel=f['Nivel Loyalty']||'Spark';
+    // Crudo, un nivel con espacios rompía tres cosas a la vez: la clave del
+    // topeMap no matcheaba (tope 0 → "Sin tope"), tieneAccesoBeneficio() no
+    // reconocía el nivel, y el badge caía a gris con ícono de medalla.
+    const nivel=normalizarNivel(f['Nivel Loyalty']);
     const tope=topeMap[`${grupo}|${nivel}`]||0;
 
     // Beneficios accesibles según nivel + asignados activos
@@ -702,14 +707,13 @@ function renderBenefPersonas(){
     const topeStr=tope>0?`$${tope.toLocaleString('es-AR')}`:'Sin tope';
 
     const grupoBadge=grupo==='Engineers'?'badge-blue':'badge-purple';
-    const nivelColors={'Spark':'badge-nivel-Spark','Ray':'badge-nivel-Ray','Lightning':'badge-nivel-Lightning','Thunder':'badge-nivel-Thunder','Storm':'badge-nivel-Storm'};
     const bg=idx%2===0?'background:var(--bg2)':'';
     const activeW=beneficiosAccesibles.length?Math.round(asignados.length/beneficiosAccesibles.length*100):0;
 
     return`<tr class="tr-clickable benef-per-tr" style="${bg}" onclick="verBenefPersona('${nombre.replace(/'/g,"\\'")}','${grupo}','${nivel}')">
       <td>${avH(nombre)}${nombre}</td>
       <td><span class="badge ${grupoBadge}">${grupo}</span></td>
-      <td><span class="badge ${nivelColors[nivel]||'badge-gray'} benef-per-nivel-badge"><i class="ti ${NIVEL_ICONS[nivel]||'ti-award'}"></i>${nivel}</span></td>
+      <td>${badgeNivelHtml(nivel,'badge benef-per-nivel-badge')}</td>
       <td style="font-size:13px">
         <span style="font-weight:600">${asignados.length}</span>
         <span style="color:var(--text3);font-size:11px"> asignados / ${beneficiosAccesibles.length} disponibles</span>

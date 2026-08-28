@@ -65,8 +65,8 @@ function projInitialEng(nombre){
   return m?m[0].toUpperCase():'·';
 }
 function nivelBadgeHtmlEng(recordId, nivelActual){
-  const nivel=nivelActual||'Spark';
-  const inner=n=>`<i class="ti ${NIVEL_ICONS[n]||'ti-award'}"></i>${n}`;
+  const nivel=normalizarNivel(nivelActual);
+  const inner=n=>`<i class="ti ${iconoNivel(n)}"></i>${n}`;
   // En modo lectura el nivel se muestra igual, pero como badge y no como
   // desplegable: sin esto el menú se abría y el cambio moría en un 403.
   if(!puedeEscribir()){
@@ -129,13 +129,16 @@ function verFichaPersona(id){
   if(!p){toast('No se encontró la persona',true);return;}
   const f=p.fields;
   const rol=f['Rol en empresa']||'';
-  const nivel=f['Nivel Loyalty']||'Spark';
+  const nivel=normalizarNivel(f['Nivel Loyalty']);
   const area=f['Área']||f['Area']||'';
 
   document.getElementById('pf-nombre').innerHTML=`${avH(f.Nombre)}<span>${f.Nombre||'—'}</span>`;
+  // Tercera variante del badge que había en el Hub: sin ícono y con la clase
+  // de color vieja (nivel-X en vez de badge-nivel-X, mismos colores). Pasa por
+  // el helper para que se vea igual que en Engineers y Beneficios.
   document.getElementById('pf-subtitle').innerHTML=
     (rol?`<span class="badge ${rolColor[rol]||'badge-gray'}">${rol}</span>`:'')+
-    `<span class="nivel-badge nivel-${nivel}" style="cursor:default">${nivel}</span>`;
+    badgeNivelHtml(nivel,'nivel-badge');
 
   const row=(label,val)=>`<div class="side-panel-row"><span style="color:var(--text2)">${label}</span><span style="font-weight:600;text-align:right">${val||'—'}</span></div>`;
   document.getElementById('pf-body').innerHTML=
@@ -327,7 +330,7 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   const btn=document.querySelector(`#nw-${recordId} .nivel-badge-et`);
   if(btn){
     btn.className=`nivel-badge-et badge-nivel-${nuevoNivel}`;
-    btn.innerHTML=`<i class="ti ${NIVEL_ICONS[nuevoNivel]||'ti-award'}"></i>${nuevoNivel}`;
+    btn.innerHTML=`<i class="ti ${iconoNivel(nuevoNivel)}"></i>${nuevoNivel}`;
     // Actualizar onclick del dropdown para reflejar nuevo nivel actual
     btn.setAttribute('onclick',`toggleNivelDropdown('${recordId}')`);
   }
@@ -561,6 +564,27 @@ function normalizarNivel(valor){
   const crudo=(valor||'').trim();
   return NIVELES.find(niv=>niv.toLowerCase()===crudo.toLowerCase())||'Spark';
 }
+
+// ─── Badge de nivel Loyalty ───────────────────────────────────────────────────
+// Único lugar donde se arma el badge. Cada vista repetía por su cuenta
+// `NIVEL_ICONS[nivel]||'ti-award'` + un mapa de clases de color, pasándole el
+// valor CRUDO de Airtable: un "Thunder " con un espacio de más no matcheaba
+// ninguno de los dos mapas, así que en Beneficios salía gris con ícono de
+// medalla mientras en Engineers (que sí normaliza) salía morado con el de
+// viento. El mismo nivel se veía de dos formas distintas según la pestaña.
+//
+// Estas dos funciones normalizan siempre, así que el fallback 'ti-award' ya no
+// hace falta: normalizarNivel() nunca devuelve algo fuera de NIVELES.
+function iconoNivel(nivel){
+  return NIVEL_ICONS[normalizarNivel(nivel)];
+}
+
+// `clases` son las clases de contenedor de cada vista (ej. 'badge' o
+// 'nivel-badge-et'); el color (badge-nivel-X) y el ícono los pone el helper.
+function badgeNivelHtml(nivel,clases){
+  const n=normalizarNivel(nivel);
+  return `<span class="${clases||'badge'} badge-nivel-${n}"><i class="ti ${NIVEL_ICONS[n]}"></i>${n}</span>`;
+}
 function renderETKpi(lista,containerId){
   const cont=document.getElementById(containerId||'et-kpi-strip');
   if(!cont) return;
@@ -571,7 +595,7 @@ function renderETKpi(lista,containerId){
   });
   cont.innerHTML=[...NIVELES].reverse().map(n=>`
     <div class="et-kpi-card">
-      <div class="et-kpi-icon badge-nivel-${n}"><i class="ti ${NIVEL_ICONS[n]||'ti-award'}"></i></div>
+      <div class="et-kpi-icon badge-nivel-${n}"><i class="ti ${iconoNivel(n)}"></i></div>
       <div>
         <div class="et-kpi-val">${conteo[n]}</div>
         <div class="et-kpi-label">${n}</div>

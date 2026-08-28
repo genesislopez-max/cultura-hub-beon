@@ -3,7 +3,9 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {loadApp}=require('../test-helpers/load-app');
 
-const ctx=loadApp(['personas.js']);
+// constants.js aporta NIVELES / NIVEL_ICONS, de los que dependen
+// normalizarNivel() y los helpers del badge de nivel.
+const ctx=loadApp(['constants.js','personas.js']);
 
 // Día fijo en 1 para no depender de si el mes actual tiene ese día (evita
 // overflow de mes en fechas cercanas a fin de mes).
@@ -117,4 +119,51 @@ test('opcionesUnicas: ordena con acentos como corresponde en español', ()=>{
   // Con el orden por código de carácter, "Ávila" caería después de "Zamora"
   const opts=ctx.opcionesUnicas(['Zamora','Ávila','Bogotá']);
   assert.equal(JSON.stringify(opts),JSON.stringify(['Ávila','Bogotá','Zamora']));
+});
+
+// ─── Badge de nivel Loyalty ───────────────────────────────────────────────────
+// El mismo nivel se veía distinto según la pestaña: Engineers normalizaba el
+// valor de Airtable y Beneficios lo usaba crudo, así que un "Thunder " con un
+// espacio de más no matcheaba el mapa de colores ni el de íconos y salía gris
+// con ícono de medalla (ti-award) en vez de morado con ti-wind.
+test('iconoNivel: un nivel sucio devuelve el mismo ícono que el limpio', ()=>{
+  assert.equal(ctx.iconoNivel('Thunder'),'ti-wind');
+  assert.equal(ctx.iconoNivel('Thunder '),'ti-wind');
+  assert.equal(ctx.iconoNivel(' thunder'),'ti-wind');
+  assert.equal(ctx.iconoNivel('THUNDER'),'ti-wind');
+});
+
+// Ya no puede caer en 'ti-award': normalizarNivel nunca devuelve algo fuera de
+// NIVELES, así que un valor irreconocible muestra el ícono de Spark.
+test('iconoNivel: un nivel irreconocible cae en el ícono de Spark, no en la medalla', ()=>{
+  assert.equal(ctx.iconoNivel('Tormenta'),'ti-sparkles');
+  assert.equal(ctx.iconoNivel(''),'ti-sparkles');
+  assert.equal(ctx.iconoNivel(undefined),'ti-sparkles');
+});
+
+test('badgeNivelHtml: un nivel sucio produce el mismo HTML que el limpio', ()=>{
+  assert.equal(ctx.badgeNivelHtml('Thunder '),ctx.badgeNivelHtml('Thunder'));
+});
+
+test('badgeNivelHtml: siempre lleva la clase de color y el ícono del nivel', ()=>{
+  const html=ctx.badgeNivelHtml('Thunder ');
+  assert.match(html,/badge-nivel-Thunder/);
+  assert.match(html,/ti-wind/);
+  assert.match(html,/>Thunder</);          // el texto también sale normalizado
+  assert.doesNotMatch(html,/badge-gray/);
+  assert.doesNotMatch(html,/ti-award/);
+});
+
+test('badgeNivelHtml: las clases del contenedor las pone cada vista', ()=>{
+  assert.match(ctx.badgeNivelHtml('Storm','badge benef-per-nivel-badge'),/class="badge benef-per-nivel-badge badge-nivel-Storm"/);
+  // Sin clases explícitas cae a 'badge', que es el contenedor genérico.
+  assert.match(ctx.badgeNivelHtml('Storm'),/class="badge badge-nivel-Storm"/);
+});
+
+// Los cinco niveles tienen que tener ícono propio — si se agrega uno a NIVELES
+// sin ícono, badgeNivelHtml imprimiría "ti undefined".
+test('badgeNivelHtml: los cinco niveles tienen ícono definido', ()=>{
+  for(const n of ['Spark','Ray','Lightning','Thunder','Storm']){
+    assert.doesNotMatch(ctx.badgeNivelHtml(n),/undefined/);
+  }
 });

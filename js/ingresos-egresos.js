@@ -136,6 +136,18 @@ function renderCard(r,tipo){
   return div;
 }
 
+// Último día de una tarjeta de offboarding. El registro de Checklist NO lo
+// tiene: su campo "Fecha" es la fecha de aviso. El último día se carga en
+// Personas["Fecha de egreso"] (ver el form de offboarding en forms.js), así que
+// hay que ir a buscarlo por nombre. Fallback al aviso solo si la persona no
+// está en Personas — sin eso, una tarjeta suelta ordenaría como si fuera de
+// 1970 y quedaría siempre al final.
+function ultimoDiaDeEgreso(rec){
+  const nombre=(rec.fields.Persona||'').trim();
+  const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre);
+  return persona?.fields['Fecha de egreso']||rec.fields.Fecha||'';
+}
+
 // Diseño "Egresos Kanban.dc.html" (claude.ai/design) — tarjeta rediseñada,
 // exclusiva de Egresos (Ingresos sigue con renderCard()/.kanban-card). Misma
 // fuente de datos que renderCard: Personas en vivo con fallback a lo
@@ -156,7 +168,13 @@ function renderEgresoCard(r){
   const metaRows=[
     mail&&{icon:'ti-mail',label:'Correo',value:mail},
     pais&&{icon:'ti-world',label:'País',value:pais},
-    f.Fecha&&{icon:'ti-calendar-x',label:'Fecha de salida',value:fmt(f.Fecha)},
+    // Son dos fechas distintas y la tarjeta mostraba la equivocada: el registro
+    // de Checklist guarda en "Fecha" la fecha de AVISO, y el último día vive en
+    // Personas["Fecha de egreso"] (ver el form de offboarding en forms.js). La
+    // tarjeta mostraba la de aviso con el label "Fecha de salida", así que no
+    // coincidía con lo cargado. Van las dos, cada una con su nombre.
+    pf['Fecha de egreso']&&{icon:'ti-calendar-x',label:'Último día',value:fmt(pf['Fecha de egreso'])},
+    f.Fecha&&{icon:'ti-bell',label:'Aviso',value:fmt(f.Fecha)},
   ].filter(Boolean);
   const div=document.createElement('div');
   div.className='eg-card';
@@ -511,10 +529,16 @@ async function loadKanbanEgresos(){
   // sin registro en Checklist) — se combinan primero para ordenar por fecha
   // real de la más reciente a la más vieja, en vez de que cada fuente quede
   // ordenada por separado y las históricas siempre abajo.
+  //
+  // Las dos ordenan por ÚLTIMO DÍA. Antes las de Checklist entraban con su
+  // campo Fecha, que es la fecha de aviso: se comparaba el aviso de una contra
+  // el último día de la otra, dos cosas distintas, y el orden salía mal (el
+  // aviso puede ser meses anterior a la salida). Si la persona no está en
+  // Personas se cae al aviso, que es lo único que queda.
   const nombresConChecklist=new Set(recs.map(r=>(r.fields.Persona||'').trim().toLowerCase()));
   const historicos=cachePersonasRaw.filter(p=>p.fields['Fecha de egreso']&&!nombresConChecklist.has((p.fields.Nombre||'').trim().toLowerCase()));
   const completos=[
-    ...(porColumna['Offboarding completo']||[]).map(r=>({fecha:r.fields.Fecha||'',render:()=>renderEgresoCard(r)})),
+    ...(porColumna['Offboarding completo']||[]).map(r=>({fecha:ultimoDiaDeEgreso(r),render:()=>renderEgresoCard(r)})),
     ...historicos.map(p=>({fecha:p.fields['Fecha de egreso']||'',render:()=>renderEgresoHistoricoCard(p)})),
   ].sort((a,b)=>b.fecha.localeCompare(a.fecha));
   counts['Offboarding completo']=completos.length;

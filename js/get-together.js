@@ -50,7 +50,11 @@ function openGTCityModal(pais, ciudad){
     encuentros[fecha].push(r);
   });
 
-  const totalPersonas=new Set(recs.map(r=>r.fields.BEONer||'')).size;
+  // filter(Boolean): un registro sin BEONer cargado entraba al Set como '' y
+  // se contaba como una persona más — el modal decía "2 BEONers distintos"
+  // listando una sola persona y una fila sin nombre. Mismo criterio que ya
+  // usan renderGTCiudad() y renderGTMetricas().
+  const totalPersonas=new Set(recs.map(r=>r.fields.BEONer||'').filter(Boolean)).size;
 
   let html=`<div style="font-size:13px;color:var(--text2);margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)">
     ${Object.keys(encuentros).length} encuentro${Object.keys(encuentros).length!==1?'s':''} · ${totalPersonas} BEONer${totalPersonas!==1?'s':''} distintos
@@ -62,12 +66,17 @@ function openGTCityModal(pais, ciudad){
         ${fmt(fecha)} · ${gente.length} persona${gente.length!==1?'s':''}
       </div>
       ${gente.map(r=>{
-        const nombre=r.fields.BEONer||'—';
+        const nombre=r.fields.BEONer||'';
         const proyecto=r.fields.Proyecto||'';
+        // nombrePersonaHistorico en vez de un "—" pelado: un guión no distingue
+        // entre "el registro no tiene persona cargada" y "la persona quedó
+        // apuntando a un record borrado", y se lee como un bug de la app en vez
+        // de como un dato que falta completar en Airtable. El badge "ex" marca
+        // a quien ya no está en BEON, que igual tiene que aparecer.
         return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
           ${avH(nombre)}
           <div style="display:flex;flex-direction:column;gap:2px">
-            <div style="font-size:13px;font-weight:500;line-height:1.3">${nombre}</div>
+            <div style="font-size:13px;font-weight:500;line-height:1.3">${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}</div>
             ${proyecto?`<div style="font-size:12px;color:var(--text3);line-height:1.3">${proyecto}</div>`:''}
           </div>
         </div>`;
@@ -204,7 +213,11 @@ function renderGTPersona(){
     const f=r.fields;
     const nombre=f.BEONer||'';
     if(!nombre) return;
-    if(!personaActiva(nombre)) return;
+    // Sin filtro por personaActiva(): Get Together es un registro histórico y
+    // el encuentro pasó de verdad. Quien ya no está en BEON tiene que seguir
+    // apareciendo — son eventos que se consultan para recolectar info — con el
+    // badge "ex" aclarando que no sigue en la empresa. Mismo criterio que
+    // Off Sites.
     if(paisFil&&(f.País||'')!==paisFil) return;
     if(temFil&&managerDePersona(nombre)!==temFil) return;
     if(!mapa[nombre]) mapa[nombre]={count:0,paises:new Set(),ciudades:new Set(),ultFecha:'',primerFecha:'9999'};
@@ -231,7 +244,7 @@ function renderGTPersona(){
     const paisesHtml=[...d.paises].map(paisBadge).join(' ')||'—';
     return`<tr style="${bg}">
       <td style="text-align:center;width:40px">${rankHtml}</td>
-      <td>${avH(nombre)}${nombre}</td>
+      <td>${avH(nombre)}${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}</td>
       <td><div style="display:flex;align-items:center;gap:10px"><span style="font-weight:700;font-size:18px;color:var(--blue);min-width:14px">${d.count}</span><div class="gt-bar-track"><div class="gt-bar-fill" style="width:${barW}%"></div></div></div></td>
       <td><div style="display:flex;flex-wrap:wrap;gap:4px">${paisesHtml}</div></td>
       <td style="font-size:12px;color:var(--text3)">${fmt(d.primerFecha)}</td>
@@ -280,7 +293,9 @@ function renderGTHistorial(){
   const recs=cacheGetTogetherRaw.filter(r=>{
     const f=r.fields;
     const txt=`${f.BEONer||''} ${f.Ciudad||''} ${f.País||''} ${f.Proyecto||''}`.toLowerCase();
-    return personaActiva(f.BEONer)&&(!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil)&&(!temFil||managerDePersona(f.BEONer)===temFil);
+    // Sin personaActiva(): el historial tiene que listar el encuentro aunque
+    // quien fue ya no trabaje en BEON (ver renderGTPersona más arriba).
+    return (!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil)&&(!temFil||managerDePersona(f.BEONer)===temFil);
   });
   document.getElementById('gt-badge-hist').textContent=`${recs.length} registros`;
   const tb=document.getElementById('gt-tbody-hist');
@@ -288,7 +303,7 @@ function renderGTHistorial(){
     const f=r.fields;
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr style="${bg}">
-      <td>${avH(f.BEONer||'')}${f.BEONer||'—'}</td>
+      <td>${avH(f.BEONer||'')}${nombrePersonaHistorico(f.BEONer)}${badgeExBeoner(f.BEONer)}</td>
       <td style="font-size:12px">${paisBadge(f.País)}</td>
       <td style="font-size:12px">${f.Ciudad||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${f.Proyecto||'—'}</td>

@@ -9,7 +9,11 @@ process.env.SESSION_SECRET='test-secret';
 const {signSession}=require('../api/_lib/session');
 const handler=require('../api/airtable');
 
-const TOKEN=signSession({email:'gustavo@beon.tech',name:'Gustavo'});
+// Con rol de escritura: los tests de acá abajo verifican cómo se reconstruye la
+// URL de Airtable, no los permisos. Un token sin rol cae en "equipo", que desde
+// el modo solo lectura ya no puede escribir (ver ROLES_PUEDEN_ESCRIBIR en
+// api/airtable.js) y haría fallar el PATCH por un motivo ajeno al test.
+const TOKEN=signSession({email:'gustavo@beon.tech',name:'Gustavo',rol:'full'});
 
 function fakeRes(){
   const res={statusCode:200,headers:{},body:null};

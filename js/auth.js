@@ -40,6 +40,15 @@ function rolUsuarioActual(){
   }
 }
 
+// La escritura es de People Ops (full) y HR — el resto entra en modo lectura.
+// El bloqueo REAL está en el servidor (ver ROLES_PUEDEN_ESCRIBIR en
+// api/airtable.js); esto es solo para no mostrar botones que van a devolver
+// 403. Tiene que quedar en sincronía con esa lista.
+const ROLES_ESCRITURA=new Set(['full','hr']);
+function puedeEscribir(){
+  return ROLES_ESCRITURA.has(rolUsuarioActual());
+}
+
 // Único grupo de Beneficios que puede ver este rol ('Engineers'|'Core Team'),
 // o null si ve los dos grupos sin restricción (full/tem/manager).
 function grupoBeneficiosActual(){

@@ -1021,6 +1021,36 @@ textarea.field-input{resize:vertical;min-height:80px;}
 #page-eventoshist .metric-icon{width:32px;height:32px;border-radius:10px;font-size:17px;}
 #page-eventoshist .metric-sub{font-size:12.5px;}
 #page-eventoshist .table-wrap{border-radius:20px;}
+/* Los títulos de evento son largos ("The Beauty of Combining Software
+   Engineering with AI: Propose, Fail, Propose Better") y sin acotarlos esa
+   columna se estiraba a 641px, empujando Satisfacción y Acción fuera del
+   contenedor: en una laptop había que deslizar 243px para verlas.
+   La solución NO usa anchos en px por columna: eso se rompe con el zoom del
+   navegador o una fuente base más grande, porque el texto crece y los px no.
+   En su lugar, las 5 columnas de la derecha se dimensionan por su contenido
+   (width:1% + nowrap las encoge a lo justo) y la del título recibe lo que
+   sobra (max-width:0 la fuerza a ceder), recortando con puntos suspensivos —
+   el título completo queda en el title del elemento. Así la tabla entra en
+   cualquier combinación de ancho, zoom y tamaño de fuente. */
+#page-eventoshist .data-table th:nth-child(n+2),
+#page-eventoshist .data-table td:nth-child(n+2){width:1%;white-space:nowrap;}
+#page-eventoshist .data-table td:first-child{max-width:0;}
+@media (max-width:1280px){
+  /* 24px de padding por lado × 6 columnas son 288px de la tabla gastados en
+     aire: a este ancho hacen la diferencia entre entrar y tener que deslizar. */
+  #page-eventoshist .data-table td{padding:14px 13px;}
+  #page-eventoshist .data-table th{padding:12px 13px;}
+}
+/* Por debajo de ~1120px (un 1512 con zoom al 150% da 1008px de viewport CSS)
+   ya no entran las 6 columnas. Se cede Fuente, que es la única redundante: la
+   fuente de cada evento ya se ve en el ícono de color al lado del nombre, y su
+   filtro sigue en la barra de arriba. */
+@media (max-width:1120px){
+  #page-eventoshist .data-table th:nth-child(3),
+  #page-eventoshist .data-table td:nth-child(3){display:none;}
+  #page-eventoshist .data-table td{padding:14px 11px;}
+  #page-eventoshist .data-table th{padding:12px 11px;}
+}
 #page-eventoshist .data-table td{padding:14px 24px;}
 #page-eventoshist .data-table th{padding:12px 24px;}
 #page-eventoshist .search-bar{padding:16px 24px;}
@@ -1045,7 +1075,19 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .ev-action-btn:hover{border-color:var(--blue);color:var(--blue);background:color-mix(in srgb,var(--blue) 7%,transparent);}
 .ev-action-btn.ev-action-cargar{border-color:color-mix(in srgb,var(--blue) 45%,var(--border));color:var(--blue);}
 
-.ev-modal-header{position:relative;overflow:hidden;padding:24px 26px 22px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);}
+/* Botón "Resumen del Q" del header — clase propia y no .ev-action-btn, que la
+   comparten los botones de acción de cada fila: acá se busca que destaque
+   (borde azul de marca, fondo tenue, peso 700, sombra y micro-elevación en
+   hover, mismo gesto que .btn-primary), no que se mimetice con la tabla. */
+.ev-btn-resumen{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:11px;border:1.5px solid var(--blue);background:color-mix(in srgb,var(--blue) 8%,transparent);color:var(--blue);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 8px rgba(58,105,255,0.16);transition:background 0.15s,box-shadow 0.15s,transform 0.12s;}
+.ev-btn-resumen i{font-size:15px;}
+.ev-btn-resumen:hover{background:color-mix(in srgb,var(--blue) 15%,transparent);box-shadow:0 6px 16px rgba(58,105,255,0.24);transform:translateY(-1px);}
+.ev-btn-resumen:active{transform:translateY(0);box-shadow:0 2px 8px rgba(58,105,255,0.16);}
+
+/* Sin overflow:hidden — el glow ya lo recorta el .modal (que tiene su propio
+   overflow:hidden), y acá recortaba los selects del header cuando el navegador
+   los renderiza más altos de lo previsto. */
+.ev-modal-header{position:relative;padding:24px 26px 24px;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);}
 .ev-modal-glow{position:absolute;right:-70px;top:-90px;width:230px;height:230px;border-radius:999px;background:radial-gradient(circle,rgba(254,104,227,.45),rgba(254,104,227,0) 70%);pointer-events:none;}
 .ev-modal-close{position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:999px;border:1px solid rgba(255,255,255,.32);background:rgba(255,255,255,.16);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:background 0.15s;}
 .ev-modal-close:hover{background:rgba(255,255,255,.3);}
@@ -1065,3 +1107,97 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .ev-btn-cancelar:hover{border-color:var(--text3);}
 .ev-btn-guardar{display:flex;align-items:center;gap:8px;height:44px;padding:0 22px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--blue) 0%,var(--purple) 100%);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 12px 26px -12px rgba(58,105,255,.55);transition:opacity 0.15s;}
 .ev-btn-guardar:hover{opacity:0.93;}
+
+/* EVENTOS — ventana "Resumen del Q" */
+.evq-controles{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;}
+/* appearance:none + chevron propio, igual que .et-sel en los filtros: sin eso
+   el <select> nativo impone su propia altura (más de la pedida en algunos
+   navegadores) y el texto quedaba cortado. min-height en vez de height para
+   que nunca pueda recortar su propio contenido. */
+.evq-sel-wrap{position:relative;display:flex;align-items:center;}
+.evq-sel-wrap .evq-sel-chevron{position:absolute;right:12px;color:rgba(255,255,255,.85);font-size:12px;pointer-events:none;}
+.evq-sel{appearance:none;-webkit-appearance:none;min-height:34px;padding:0 32px 0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.18);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;font-weight:700;line-height:1;cursor:pointer;outline:none;transition:background 0.15s;}
+.evq-sel:hover{background:rgba(255,255,255,.28);}
+.evq-sel:focus-visible{border-color:#fff;}
+.evq-sel option{color:var(--text);background:var(--bg2);}
+.evq-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;}
+.evq-kpi{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:15px 17px;}
+.evq-kpi-label{font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.evq-kpi-val{font-size:26px;font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin:8px 0 6px;font-variant-numeric:tabular-nums;}
+.evq-kpi-sub{font-size:11.5px;color:var(--text2);line-height:1.4;}
+
+/* Desglose por fuente — fila propia debajo de los KPI. Los chips llevan su
+   gap y su borde para que se lean como piezas separadas y no como un bloque. */
+.evq-fuentes{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;}
+.evq-fuentes-label{font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);margin-right:2px;}
+.evq-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 13px;border-radius:999px;border:1px solid transparent;font-size:12px;font-weight:700;white-space:nowrap;}
+.evq-chip-dato{font-weight:500;color:var(--text2);padding-left:8px;margin-left:1px;border-left:1px solid currentColor;opacity:0.85;}
+.evq-destacados{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:16px;}
+.evq-destacado{display:flex;gap:11px;align-items:flex-start;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:13px 15px;font-size:16px;}
+.evq-destacado-label{font-size:10.5px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);}
+.evq-destacado-val{font-size:13.5px;font-weight:700;color:var(--text);margin-top:3px;line-height:1.35;}
+.evq-destacado-sub{font-size:11.5px;color:var(--text2);margin-top:2px;}
+.evq-seccion-titulo{font-size:12.5px;font-weight:700;color:var(--text2);margin:20px 0 9px;}
+.evq-quote{border-left:3px solid var(--blue);background:var(--bg);border-radius:0 10px 10px 0;padding:11px 14px;margin-bottom:8px;}
+.evq-quote-txt{font-size:13px;font-style:italic;color:var(--text);line-height:1.5;}
+.evq-quote-meta{font-size:11.5px;color:var(--text3);margin-top:5px;}
+.evq-aviso{display:flex;align-items:center;gap:8px;margin-top:16px;padding:10px 14px;border-radius:10px;background:color-mix(in srgb,var(--amber) 10%,transparent);color:var(--amber);font-size:12.5px;font-weight:600;}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT EN LAPTOPS (900–1600px)
+   Todas las media queries de arriba son max-width:900px, así que entre 900px y
+   el infinito se servía un único layout pensado para un monitor de 24". En una
+   laptop de 1280–1440px eso deja el sidebar comiéndose 230px y las columnas tan
+   angostas que la tabla de personas muestra "Proyecto Connec…" en todas las
+   filas — el dato deja de servir.
+   Se recupera ancho en tres pasos, del menos al más invasivo:
+     1600px → menos chrome (sidebar y padding) y filtros más compactos
+     1450px → se cede Manager, que igual está en el panel lateral de la persona
+     1280px → grillas de KPI a 2 columnas y se cede Antigüedad
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width:1600px){
+  .sidebar{width:206px;}
+  .content{padding:20px 22px;}
+  .topbar{padding:14px 22px;}
+  /* Los 5 filtros + la búsqueda entraban en dos renglones y comían alto útil */
+  .et-search-wrap{flex:1 1 220px;min-width:180px;max-width:280px;}
+  /* Un <select> se dimensiona por su opción más larga, así que "Proyecto
+     Connectiv Enterprise 6" estiraba el filtro y empujaba la toolbar a dos
+     renglones. Con max-width queda acotado y la opción larga se recorta. */
+  .et-sel{min-width:118px;max-width:152px;padding:0 28px 0 30px;font-size:12.5px;text-overflow:ellipsis;}
+  .et-toolbar{padding:15px 20px;gap:10px;}
+  .et-row,.et-thead{padding-left:20px;padding-right:20px;gap:12px;}
+}
+
+@media (max-width:1560px){
+  /* Manager sale de la tabla: se sigue viendo en la ficha de cada persona (y
+     su filtro sigue en la toolbar), así que no se pierde acceso al dato.
+     El corte va en 1560px y no más abajo porque una MacBook de 14" reporta
+     1512px de ancho, y ahí Proyecto ya se truncaba en todas las filas. */
+  .et-row,.et-thead{grid-template-columns:2.6fr 1.1fr 1.25fr 1.9fr 1.3fr 36px;}
+  .et-mgr-cell,.et-thead>div:nth-child(6){display:none;}
+}
+
+@media (max-width:1280px){
+  .sidebar{width:190px;}
+  .content{padding:16px 18px;}
+  /* Acá los 5 filtros con su texto completo ya no entran en un renglón. Se los
+     deja envolver en vez de apretarlos con max-width: recortados quedaban dos
+     etiquetas idénticas ("Todos los p…" para Proyectos y para Países), que es
+     peor que gastar un renglón más. */
+  .et-search-wrap{flex:1 1 180px;min-width:150px;max-width:240px;}
+  .et-sel{min-width:104px;max-width:none;font-size:12px;padding:0 24px 0 27px;}
+  .et-filters{gap:8px;}
+  .et-toolbar{padding:13px 18px;gap:8px;}
+  /* Cuatro KPI a 1/4 de un contenido de ~1000px dejan números de 26px en
+     tarjetas de 240px: pasan a 2×2, que respira mejor. */
+  .metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .metrics-3{grid-template-columns:repeat(2,minmax(0,1fr));}
+  .inicio-hero-grid{grid-template-columns:1fr 1fr;}
+  .kanban-board{grid-template-columns:repeat(auto-fit,minmax(196px,1fr));}
+  .summary-grid{grid-template-columns:repeat(auto-fit,minmax(196px,1fr));}
+  /* Antigüedad es lo próximo más prescindible: también está en la ficha. */
+  .et-row,.et-thead{grid-template-columns:2.8fr 1.1fr 1.25fr 2fr 36px;}
+  .et-ten-cell,.et-thead>div:nth-child(5){display:none;}
+}

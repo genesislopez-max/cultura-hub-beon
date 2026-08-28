@@ -3,7 +3,9 @@ let cumpleSegmento='todos';
 async function loadCumpleanos(personas){
   const now=new Date();now.setHours(0,0,0,0);
   const mesActual=now.getMonth(),mesProximo=(now.getMonth()+1)%12;
-  const rows=(personas||[]).filter(r=>!yaEgreso(r)&&r.fields['Fecha de cumpleaños']).map(r=>{
+  // egresoRegistrado y no yaEgreso: quien ya tiene fecha de offboarding cargada
+  // sale de la lista desde ese momento, sin esperar a su último día.
+  const rows=(personas||[]).filter(r=>!egresoRegistrado(r)&&r.fields['Fecha de cumpleaños']).map(r=>{
     const f=r.fields;
     const rol=(f['Rol en empresa']||'').trim();
     const fecha=f['Fecha de cumpleaños'];

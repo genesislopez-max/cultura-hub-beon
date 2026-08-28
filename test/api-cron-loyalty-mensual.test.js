@@ -110,7 +110,10 @@ test('cron-loyalty-mensual: en el último día hábil, la consulta usa IS_SAME s
   }
 });
 
-test('cron-loyalty-mensual: sin cambios en el mes, no manda nada a Slack', async()=>{
+// Un mes sin movimientos igual manda el resumen: si no llegara nada, sería
+// indistinguible de que la automatización esté rota o de que los cambios no se
+// estén registrando en "Historial Loyalty".
+test('cron-loyalty-mensual: sin cambios en el mes, avisa que no hubo cambios', async()=>{
   const {calls,fetchImpl}=mockFetch({cambios:[]});
   const original=global.fetch;
   global.fetch=fetchImpl;
@@ -118,7 +121,11 @@ test('cron-loyalty-mensual: sin cambios en el mes, no manda nada a Slack', async
     const req={headers:{}};
     const res=fakeRes();
     await handler(req,res,{hoy:new Date(2026,7,31)});
-    assert.equal(calls.filter(c=>c.url.includes('hooks.slack.test')).length,0);
+    const aSlack=calls.filter(c=>c.url.includes('hooks.slack.test'));
+    assert.equal(aSlack.length,1);
+    const texto=JSON.parse(aSlack[0].opts.body).text;
+    assert.match(texto,/Resumen mensual — Cambios de Nivel Loyalty \(agosto de 2026\)/);
+    assert.match(texto,/Sin cambios de nivel este mes/);
     assert.equal(res.body.notificados,0);
   }finally{
     global.fetch=original;

@@ -63,17 +63,18 @@ module.exports=async(req,res,opts={})=>{
     return;
   }
 
-  if(!cambios.length){
-    res.status(200).json({ok:true,notificados:0});
-    return;
-  }
-
   const mesTexto=`${MESES_ES[hoy.getMonth()]} de ${hoy.getFullYear()}`;
-  const lineas=cambios.map(c=>{
-    const f=c.fields||{};
-    return `• *${f.Persona||'alguien'}*: ${f['Nivel anterior']||'—'} → ${f['Nivel nuevo']||'—'}`;
-  });
-  const texto=`📊 *Resumen mensual — Cambios de Nivel Loyalty (${mesTexto})*\n${lineas.join('\n')}`;
+  // Se manda el resumen incluso sin cambios. Antes, un mes sin movimientos no
+  // producía ningún mensaje, y eso era indistinguible de que la automatización
+  // estuviera rota (o de que los cambios no se estuvieran registrando en
+  // "Historial Loyalty"): en los dos casos no llegaba nada.
+  const texto=cambios.length
+    ?`📊 *Resumen mensual — Cambios de Nivel Loyalty (${mesTexto})*\n`+
+      cambios.map(c=>{
+        const f=c.fields||{};
+        return `• *${f.Persona||'alguien'}*: ${f['Nivel anterior']||'—'} → ${f['Nivel nuevo']||'—'}`;
+      }).join('\n')
+    :`📊 *Resumen mensual — Cambios de Nivel Loyalty (${mesTexto})*\nSin cambios de nivel este mes.`;
 
   try{
     await fetch(webhook,{

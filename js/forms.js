@@ -595,7 +595,10 @@ const FORMS={
 
   // Accesible desde cualquier pantalla (botón en el sidebar, no depende de
   // ninguna sección) — Persona/Mail se completan solos con la sesión activa.
-  feedback:{title:'Enviar feedback',html:()=>`
+  // El aviso a Slack sale de textoFeedbackSlack() (más abajo en este archivo).
+  // sinRecargar: el feedback no alimenta ninguna sección, así que no hace
+  // falta el loadAll() que corre saveRecord() por defecto — ver el porqué allá.
+  feedback:{title:'Enviar feedback',sinRecargar:true,html:()=>`
 <div class="field-group"><label class="field-label">Categoría *</label>
   <select class="field-input" id="f-fb-categoria">
     <option value="Sugerencia">Sugerencia</option>
@@ -611,8 +614,47 @@ const FORMS={
       if(!mensaje){toast('El mensaje es obligatorio',true);return false;}
       const u=usuarioActual();
       const hoy=new Date().toISOString().slice(0,10);
-      await atPost('Feedback',{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:v('f-fb-categoria')||'Otro',Mensaje:mensaje});
+      const categoria=v('f-fb-categoria')||'Otro';
+      const textoSlack=textoFeedbackSlack(categoria,u,mensaje);
+      // El aviso a Slack va SIEMPRE, incluso si Airtable rechaza el guardado
+      // (típicamente porque falta la tabla "Feedback" o alguno de sus campos).
+      // Antes atPost() tiraba antes de llegar acá y el feedback se perdía
+      // entero: la persona veía un error y su mensaje no quedaba en ningún
+      // lado. Slack es justamente el canal por el que People Ops se entera, así
+      // que es el peor momento para no mandarlo.
+      try{
+        await atPost(TABLA_FEEDBACK,{Fecha:hoy,Persona:u.nombre||u.email||'',Mail:u.email||'',Categoría:categoria,Mensaje:mensaje});
+      }catch(err){
+        console.error('No se pudo guardar el feedback en Airtable:',err.message);
+        await sendSlack(`${textoSlack}\n\n_⚠️ No se pudo guardar en la tabla "Feedback" de Airtable: ${err.message}_`,'feedback');
+        toast('Tu feedback llegó a People Ops por Slack, pero no se pudo guardar en Airtable. Ya estamos avisados.',true);
+        return false; // no muestra "Guardado ✓", porque no se guardó
+      }
+      sendSlack(textoSlack,'feedback');
       return true;
     }}
 };
 FORMS.coreteam=FORMS.engineers; // Engineers & Tech y Core Team comparten el mismo alta de persona
+
+// ─── Feedback de la plataforma ────────────────────────────────────────────────
+// El nombre de la tabla en Airtable es "Feedback - Plataforma", con guión y
+// espacios. No es "Feedback" (así estaba antes, y Airtable respondía 403
+// INVALID_PERMISSIONS_OR_MODEL_NOT_FOUND, que se lee como un problema de
+// permisos y no de nombre) ni "Eventos Feedback", que es otra tabla distinta:
+// esa guarda el puntaje de satisfacción de cada evento (ver js/eventos.js).
+const TABLA_FEEDBACK='Feedback - Plataforma';
+
+const FEEDBACK_EMOJI={Sugerencia:'💡',Bug:'🐛',Otro:'💬'};
+
+// Arma el texto del aviso. Separada del save() para poder testearla sin DOM.
+// El mensaje del usuario va como blockquote de Slack: hay que prefijar CADA
+// línea con "> ", porque si el feedback es multilínea Slack solo citaría la
+// primera y el resto saldría como texto suelto pegado al aviso.
+function textoFeedbackSlack(categoria,usuario,mensaje){
+  const cat=categoria||'Otro';
+  const nombre=(usuario?.nombre||'').trim();
+  const mail=(usuario?.email||'').trim();
+  const quien=nombre&&mail?`${nombre} · ${mail}`:(nombre||mail||'Alguien del equipo');
+  const cita=String(mensaje||'').trim().split('\n').map(l=>`> ${l}`).join('\n');
+  return `${FEEDBACK_EMOJI[cat]||'💬'} *Nuevo feedback en el Hub — ${cat}*\n${quien}\n${cita}`;
+}

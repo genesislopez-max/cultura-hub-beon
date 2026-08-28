@@ -66,6 +66,31 @@ test('yaEgreso: Fecha de egreso en el futuro, todavía no está egresado', ()=>{
   assert.equal(ctx.yaEgreso({fields:{'Fecha de egreso':fechaOffsetDias(1)}}),false);
 });
 
+// ─── egresoRegistrado ─────────────────────────────────────────────────────────
+// Cumpleaños y Aniversarios son listas para saludar, así que sacan a la persona
+// apenas se registra el offboarding — no cuando llega su último día. Ese hueco
+// (entre que se carga el offboarding y el último día, que suele ser semanas
+// después) era justo el período en que el Hub la seguía proponiendo para
+// saludar. El resto del Hub sigue usando yaEgreso.
+test('egresoRegistrado: sin Fecha de egreso, no hay offboarding registrado', ()=>{
+  assert.equal(ctx.egresoRegistrado({fields:{}}),false);
+});
+
+test('egresoRegistrado: una Fecha de egreso FUTURA ya cuenta — acá difiere de yaEgreso', ()=>{
+  const p={fields:{'Fecha de egreso':fechaOffsetDias(30)}};
+  assert.equal(ctx.egresoRegistrado(p),true);
+  assert.equal(ctx.yaEgreso(p),false); // el motivo por el que hacen falta los dos
+});
+
+test('egresoRegistrado: una Fecha de egreso pasada también cuenta', ()=>{
+  assert.equal(ctx.egresoRegistrado({fields:{'Fecha de egreso':fechaOffsetDias(-1)}}),true);
+});
+
+// Airtable devuelve '' en vez de omitir el campo cuando se carga y se borra.
+test('egresoRegistrado: una Fecha de egreso vacía no cuenta como offboarding', ()=>{
+  assert.equal(ctx.egresoRegistrado({fields:{'Fecha de egreso':''}}),false);
+});
+
 // ─── Filtros de País / Ciudad ─────────────────────────────────────────────────
 // Los dos campos se cargan a mano en Airtable, así que llegan con espacios de
 // más y mayúsculas inconsistentes; algunas bases además los tienen como linked

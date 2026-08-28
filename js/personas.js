@@ -67,6 +67,11 @@ function projInitialEng(nombre){
 function nivelBadgeHtmlEng(recordId, nivelActual){
   const nivel=nivelActual||'Spark';
   const inner=n=>`<i class="ti ${NIVEL_ICONS[n]||'ti-award'}"></i>${n}`;
+  // En modo lectura el nivel se muestra igual, pero como badge y no como
+  // desplegable: sin esto el menú se abría y el cambio moría en un 403.
+  if(!puedeEscribir()){
+    return `<span class="nivel-badge-et badge-nivel-${nivel}" style="cursor:default">${inner(nivel)}</span>`;
+  }
   return`<div class="nivel-select-wrap" id="nw-${recordId}">
     <button class="nivel-badge-et badge-nivel-${nivel}" onclick="toggleNivelDropdown('${recordId}')">
       ${inner(nivel)}
@@ -160,6 +165,20 @@ function yaEgreso(r){
   if(!fe) return false;
   const hoy=new Date();hoy.setHours(0,0,0,0);
   return new Date(fe+'T00:00:00')<=hoy;
+}
+
+// Distinto de yaEgreso(): alcanza con que el offboarding esté REGISTRADO,
+// aunque el último día todavía no haya llegado. Registrar un offboarding
+// escribe "Fecha de egreso" con el último día (ver forms.js), que casi siempre
+// es futuro — así que para yaEgreso() la persona sigue activa durante todo ese
+// período, que es lo correcto para el directorio, el presupuesto de beneficios
+// y el Kanban de Offboarding, donde tiene que seguir apareciendo.
+//
+// No lo es para Cumpleaños y Aniversarios: son listas para saludar, y saludar
+// a alguien que está en pleno offboarding es exactamente lo que hay que evitar.
+// Esas dos usan este criterio.
+function egresoRegistrado(r){
+  return !!r.fields['Fecha de egreso'];
 }
 
 async function loadPersonas(){
@@ -335,19 +354,29 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   const nombre=persona?.fields?.Nombre||'esta persona';
 
   // Registrar el cambio para el resumen mensual de Slack del último día hábil
-  // (ver api/cron-loyalty-mensual.js) — best-effort, no bloquea el flujo si
-  // falla (por ejemplo si todavía no se creó la tabla en Airtable).
+  // (ver api/cron-loyalty-mensual.js) — best-effort: no bloquea el cambio de
+  // nivel, que ya quedó guardado arriba.
   // Fecha con los getters LOCALES (no toISOString, que pasa a UTC): un
   // cambio hecho entre las 21:00 y medianoche en Argentina cae en el día
   // siguiente en UTC, y podía quedar en el mes equivocado para el cron.
   const hoyLocal=new Date();
   const fechaHistorial=`${hoyLocal.getFullYear()}-${String(hoyLocal.getMonth()+1).padStart(2,'0')}-${String(hoyLocal.getDate()).padStart(2,'0')}`;
-  await atPost('Historial Loyalty',{
-    Persona:nombre,
-    'Nivel anterior':nivelAnterior,
-    'Nivel nuevo':nuevoNivel,
-    Fecha:fechaHistorial,
-  }).catch(()=>{});
+  let falloHistorial=false;
+  try{
+    await atPost('Historial Loyalty',{
+      Persona:nombre,
+      'Nivel anterior':nivelAnterior,
+      'Nivel nuevo':nuevoNivel,
+      Fecha:fechaHistorial,
+    });
+  }catch(err){
+    // Antes esto era un .catch(()=>{}) mudo, y era el peor lugar para el
+    // silencio: si la tabla no existe o le falta un campo, el cambio de nivel
+    // se guarda igual pero NUNCA entra al resumen mensual, y no había forma de
+    // notarlo hasta preguntarse por qué el resumen llega vacío.
+    console.error('No se pudo registrar el cambio en "Historial Loyalty":',err.message);
+    falloHistorial=true;
+  }
 
   // Notificar Slack
   const nivelEmojisSlack={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
@@ -357,6 +386,12 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   // (Engineers & Tech y Core Team son pestañas separadas)
   const grupo=(pagState.core.all||[]).some(p=>p.id===recordId)?'core':'eng';
   mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior, grupo);
+
+  // Va último a propósito: mostrarRecordatorioBrevo() termina con el toast de
+  // "Nivel actualizado ✓", y si el aviso saliera antes ese toast lo tapaba.
+  if(falloHistorial){
+    toast('⚠️ El nivel se guardó, pero el cambio no quedó registrado para el resumen mensual de Slack (revisá la tabla "Historial Loyalty").',true);
+  }
 }
 
 function mostrarRecordatorioBrevo(nombre, nuevoNivel, nivelAnterior, grupo){

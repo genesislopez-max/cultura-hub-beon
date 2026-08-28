@@ -17,7 +17,7 @@ async function verBenefPersona(nombre, grupo, nivel){
   document.getElementById('bpd-nombre').textContent=nombre;
   document.getElementById('bpd-pills').innerHTML=`
     <span class="bp-detalle-pill"><i class="ti ti-users"></i>${grupo}</span>
-    <span class="bp-detalle-pill"><i class="ti ${NIVEL_ICONS[nivel]||'ti-award'}"></i>${nivel}</span>`;
+    <span class="bp-detalle-pill"><i class="ti ${iconoNivel(nivel)}"></i>${normalizarNivel(nivel)}</span>`;
   document.getElementById('bpd-stats').innerHTML='';
   document.getElementById('bpd-body').innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px;">Cargando...</div>';
   overlay.classList.add('open');

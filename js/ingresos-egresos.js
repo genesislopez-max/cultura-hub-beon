@@ -136,6 +136,18 @@ function renderCard(r,tipo){
   return div;
 }
 
+// Último día de una tarjeta de offboarding. El registro de Checklist NO lo
+// tiene: su campo "Fecha" es la fecha de aviso. El último día se carga en
+// Personas["Fecha de egreso"] (ver el form de offboarding en forms.js), así que
+// hay que ir a buscarlo por nombre. Fallback al aviso solo si la persona no
+// está en Personas — sin eso, una tarjeta suelta ordenaría como si fuera de
+// 1970 y quedaría siempre al final.
+function ultimoDiaDeEgreso(rec){
+  const nombre=(rec.fields.Persona||'').trim();
+  const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre);
+  return persona?.fields['Fecha de egreso']||rec.fields.Fecha||'';
+}
+
 // Diseño "Egresos Kanban.dc.html" (claude.ai/design) — tarjeta rediseñada,
 // exclusiva de Egresos (Ingresos sigue con renderCard()/.kanban-card). Misma
 // fuente de datos que renderCard: Personas en vivo con fallback a lo
@@ -156,7 +168,13 @@ function renderEgresoCard(r){
   const metaRows=[
     mail&&{icon:'ti-mail',label:'Correo',value:mail},
     pais&&{icon:'ti-world',label:'País',value:pais},
-    f.Fecha&&{icon:'ti-calendar-x',label:'Fecha de salida',value:fmt(f.Fecha)},
+    // Son dos fechas distintas y la tarjeta mostraba la equivocada: el registro
+    // de Checklist guarda en "Fecha" la fecha de AVISO, y el último día vive en
+    // Personas["Fecha de egreso"] (ver el form de offboarding en forms.js). La
+    // tarjeta mostraba la de aviso con el label "Fecha de salida", así que no
+    // coincidía con lo cargado. Acá va solo el último día, que es el dato que
+    // se busca de un vistazo; el aviso aparece al abrir la tarjeta.
+    pf['Fecha de egreso']&&{icon:'ti-calendar-x',label:'Último día',value:fmt(pf['Fecha de egreso'])},
   ].filter(Boolean);
   const div=document.createElement('div');
   div.className='eg-card';
@@ -511,10 +529,16 @@ async function loadKanbanEgresos(){
   // sin registro en Checklist) — se combinan primero para ordenar por fecha
   // real de la más reciente a la más vieja, en vez de que cada fuente quede
   // ordenada por separado y las históricas siempre abajo.
+  //
+  // Las dos ordenan por ÚLTIMO DÍA. Antes las de Checklist entraban con su
+  // campo Fecha, que es la fecha de aviso: se comparaba el aviso de una contra
+  // el último día de la otra, dos cosas distintas, y el orden salía mal (el
+  // aviso puede ser meses anterior a la salida). Si la persona no está en
+  // Personas se cae al aviso, que es lo único que queda.
   const nombresConChecklist=new Set(recs.map(r=>(r.fields.Persona||'').trim().toLowerCase()));
   const historicos=cachePersonasRaw.filter(p=>p.fields['Fecha de egreso']&&!nombresConChecklist.has((p.fields.Nombre||'').trim().toLowerCase()));
   const completos=[
-    ...(porColumna['Offboarding completo']||[]).map(r=>({fecha:r.fields.Fecha||'',render:()=>renderEgresoCard(r)})),
+    ...(porColumna['Offboarding completo']||[]).map(r=>({fecha:ultimoDiaDeEgreso(r),render:()=>renderEgresoCard(r)})),
     ...historicos.map(p=>({fecha:p.fields['Fecha de egreso']||'',render:()=>renderEgresoHistoricoCard(p)})),
   ].sort((a,b)=>b.fecha.localeCompare(a.fecha));
   counts['Offboarding completo']=completos.length;
@@ -587,7 +611,14 @@ function openChecklistInline(id,nombre,tipo,rol,fecha,etapa){
   document.getElementById('cl-nombre').textContent=nombre;
   document.getElementById('cl-badge').className=`badge ${tipo==='Ingreso'?'badge-green':'badge-red'}`;
   document.getElementById('cl-badge').textContent=tipo;
-  document.getElementById('cl-subtitle').textContent=`${tipo} · ${rol}${fecha?' · '+fmt(fecha):''}`;
+  // En Egreso el subtítulo lleva el último día — la misma fecha que muestra la
+  // tarjeta del Kanban. El parámetro `fecha` que llega desde la tarjeta es el
+  // campo Fecha del Checklist, o sea el aviso: mostrarlo acá (sin label, entre
+  // tipo y rol) hacía que el modal contradijera a la tarjeta. El aviso va
+  // etiquetado en la barra de info, abajo. En Ingreso `fecha` ya es la fecha
+  // de ingreso, que es la que corresponde.
+  const fechaTitulo=tipo==='Egreso'?(ultimoDiaDeEgreso({fields:cacheChecklistFields[id]||{}})||fecha):fecha;
+  document.getElementById('cl-subtitle').textContent=`${tipo} · ${rol}${fechaTitulo?' · '+fmt(fechaTitulo):''}`;
   renderClInfoBar(id);
   const items=getItems(tipo,rol);
   if(!clState[id]) clState[id]=Array(items.length).fill(false);
@@ -597,10 +628,13 @@ function openChecklistInline(id,nombre,tipo,rol,fecha,etapa){
 
 // Muestra Proyecto/Mail/País/Cumpleaños arriba del checklist, para no tener
 // que volver a la tarjeta del Kanban mientras se van completando los ítems.
-// La fecha de ingreso/aviso no se repite acá — ya se ve arriba en el
-// subtítulo (tipo · rol · fecha). Proyecto/Mail/País se leen en vivo desde
-// Personas (mismo criterio que renderCard) para no mostrar un dato viejo si
-// se editó después.
+// Proyecto/Mail/País se leen en vivo desde Personas (mismo criterio que
+// renderCard) para no mostrar un dato viejo si se editó después.
+//
+// En Egreso se suma la fecha de aviso, etiquetada. La tarjeta del Kanban
+// muestra solo el último día, que es lo que se busca de un vistazo; el aviso
+// es dato del trámite y aparece acá, al abrir la tarjeta. La fecha de ingreso
+// no se repite — ya está arriba en el subtítulo.
 function renderClInfoBar(id){
   const bar=document.getElementById('cl-info-bar');
   if(!bar) return;
@@ -612,6 +646,7 @@ function renderClInfoBar(id){
     (pf.Mail||f.Mail)&&`✉️ ${pf.Mail||f.Mail}`,
     (pf['País']||f['País'])&&`🌎 ${pf['País']||f['País']}`,
     pf['Fecha de cumpleaños']&&`🎂 ${fmt(pf['Fecha de cumpleaños'])}`,
+    f.Tipo==='Egreso'&&f.Fecha&&`📣 Aviso: ${fmt(f.Fecha)}`,
   ].filter(Boolean);
   if(!datos.length){bar.style.display='none';bar.innerHTML='';return;}
   bar.style.display='flex';

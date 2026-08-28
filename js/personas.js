@@ -167,6 +167,20 @@ function yaEgreso(r){
   return new Date(fe+'T00:00:00')<=hoy;
 }
 
+// Distinto de yaEgreso(): alcanza con que el offboarding esté REGISTRADO,
+// aunque el último día todavía no haya llegado. Registrar un offboarding
+// escribe "Fecha de egreso" con el último día (ver forms.js), que casi siempre
+// es futuro — así que para yaEgreso() la persona sigue activa durante todo ese
+// período, que es lo correcto para el directorio, el presupuesto de beneficios
+// y el Kanban de Offboarding, donde tiene que seguir apareciendo.
+//
+// No lo es para Cumpleaños y Aniversarios: son listas para saludar, y saludar
+// a alguien que está en pleno offboarding es exactamente lo que hay que evitar.
+// Esas dos usan este criterio.
+function egresoRegistrado(r){
+  return !!r.fields['Fecha de egreso'];
+}
+
 async function loadPersonas(){
   const d=await atGet('Personas','&sort[0][field]=Nombre&sort[0][direction]=asc');
   const recs=d.records||[];

@@ -172,9 +172,9 @@ function renderEgresoCard(r){
     // de Checklist guarda en "Fecha" la fecha de AVISO, y el último día vive en
     // Personas["Fecha de egreso"] (ver el form de offboarding en forms.js). La
     // tarjeta mostraba la de aviso con el label "Fecha de salida", así que no
-    // coincidía con lo cargado. Van las dos, cada una con su nombre.
+    // coincidía con lo cargado. Acá va solo el último día, que es el dato que
+    // se busca de un vistazo; el aviso aparece al abrir la tarjeta.
     pf['Fecha de egreso']&&{icon:'ti-calendar-x',label:'Último día',value:fmt(pf['Fecha de egreso'])},
-    f.Fecha&&{icon:'ti-bell',label:'Aviso',value:fmt(f.Fecha)},
   ].filter(Boolean);
   const div=document.createElement('div');
   div.className='eg-card';
@@ -611,7 +611,14 @@ function openChecklistInline(id,nombre,tipo,rol,fecha,etapa){
   document.getElementById('cl-nombre').textContent=nombre;
   document.getElementById('cl-badge').className=`badge ${tipo==='Ingreso'?'badge-green':'badge-red'}`;
   document.getElementById('cl-badge').textContent=tipo;
-  document.getElementById('cl-subtitle').textContent=`${tipo} · ${rol}${fecha?' · '+fmt(fecha):''}`;
+  // En Egreso el subtítulo lleva el último día — la misma fecha que muestra la
+  // tarjeta del Kanban. El parámetro `fecha` que llega desde la tarjeta es el
+  // campo Fecha del Checklist, o sea el aviso: mostrarlo acá (sin label, entre
+  // tipo y rol) hacía que el modal contradijera a la tarjeta. El aviso va
+  // etiquetado en la barra de info, abajo. En Ingreso `fecha` ya es la fecha
+  // de ingreso, que es la que corresponde.
+  const fechaTitulo=tipo==='Egreso'?(ultimoDiaDeEgreso({fields:cacheChecklistFields[id]||{}})||fecha):fecha;
+  document.getElementById('cl-subtitle').textContent=`${tipo} · ${rol}${fechaTitulo?' · '+fmt(fechaTitulo):''}`;
   renderClInfoBar(id);
   const items=getItems(tipo,rol);
   if(!clState[id]) clState[id]=Array(items.length).fill(false);
@@ -621,10 +628,13 @@ function openChecklistInline(id,nombre,tipo,rol,fecha,etapa){
 
 // Muestra Proyecto/Mail/País/Cumpleaños arriba del checklist, para no tener
 // que volver a la tarjeta del Kanban mientras se van completando los ítems.
-// La fecha de ingreso/aviso no se repite acá — ya se ve arriba en el
-// subtítulo (tipo · rol · fecha). Proyecto/Mail/País se leen en vivo desde
-// Personas (mismo criterio que renderCard) para no mostrar un dato viejo si
-// se editó después.
+// Proyecto/Mail/País se leen en vivo desde Personas (mismo criterio que
+// renderCard) para no mostrar un dato viejo si se editó después.
+//
+// En Egreso se suma la fecha de aviso, etiquetada. La tarjeta del Kanban
+// muestra solo el último día, que es lo que se busca de un vistazo; el aviso
+// es dato del trámite y aparece acá, al abrir la tarjeta. La fecha de ingreso
+// no se repite — ya está arriba en el subtítulo.
 function renderClInfoBar(id){
   const bar=document.getElementById('cl-info-bar');
   if(!bar) return;
@@ -636,6 +646,7 @@ function renderClInfoBar(id){
     (pf.Mail||f.Mail)&&`✉️ ${pf.Mail||f.Mail}`,
     (pf['País']||f['País'])&&`🌎 ${pf['País']||f['País']}`,
     pf['Fecha de cumpleaños']&&`🎂 ${fmt(pf['Fecha de cumpleaños'])}`,
+    f.Tipo==='Egreso'&&f.Fecha&&`📣 Aviso: ${fmt(f.Fecha)}`,
   ].filter(Boolean);
   if(!datos.length){bar.style.display='none';bar.innerHTML='';return;}
   bar.style.display='flex';

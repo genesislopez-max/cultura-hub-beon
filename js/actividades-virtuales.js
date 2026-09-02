@@ -51,12 +51,18 @@ function switchAVTab(tab,btn){
 
 // Agrupa las asistencias por evento+fecha — clave compartida por varias
 // funciones (render de "Por evento", métricas, % de asistencia).
+// Los asistentes se deduplican por nombre: "quiénes fueron" es una lista de
+// personas, no de registros. Con carga manual es normal que quede más de una
+// fila de la misma persona para el mismo evento, y antes cada fila contaba como
+// un asistente más — inflaba el conteo de la tabla y el numerador del % de
+// asistencia, que así podía pasar de 100%.
 function agruparAVPorEvento(rows){
   const mapa={};
   rows.forEach(r=>{
     const key=`${r.fields.Evento||'—'}|${r.fields.Fecha||''}`;
     if(!mapa[key]) mapa[key]={evento:r.fields.Evento||'—',fecha:r.fields.Fecha||'',grupo:r.fields.Grupo||'Todos',asistentes:[]};
-    if(r.fields.Persona) mapa[key].asistentes.push(r.fields.Persona);
+    const persona=(r.fields.Persona||'').trim();
+    if(persona&&!mapa[key].asistentes.includes(persona)) mapa[key].asistentes.push(persona);
   });
   return mapa;
 }
@@ -70,21 +76,66 @@ function personaPerteneceAGrupoAV(persona,grupo){
   return grupo==='Core Team'?esCore:!esCore;
 }
 
-function activosParaEventoAV(evento){
-  return (cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,evento.fecha)&&personaPerteneceAGrupoAV(p,evento.grupo)).length;
+// Universo de gente que cuenta como denominador del % de un evento: quienes
+// estaban activos en esa fecha y pertenecen al grupo, MÁS quien tenga registro
+// de asistencia.
+//
+// Ese "más" es el punto: el numerador contaba a todo asistente del grupo y el
+// denominador solo a los activos según las fechas de ingreso/egreso cargadas en
+// Personas, así que alguien que asistió pero cuyas fechas dicen que no estaba
+// (dato desactualizado, o el evento cargado después de un ingreso) sumaba
+// arriba y no abajo — de ahí los porcentajes de más de 100%. Si hay un registro
+// de asistencia, esa persona estaba: el registro es mejor evidencia que la
+// fecha cargada a mano.
+//
+// Devuelve un Set de nombres ya normalizados (trim), para comparar contra la
+// lista de asistentes sin recalcular el recorte en cada llamada.
+// Denominador del % de una persona: los eventos en los que estaba activa y
+// dentro de su grupo, MÁS los que efectivamente asistió — el mismo criterio
+// que universoAV(), visto del otro lado. Sin ese "más", asistir a un evento
+// fuera del período en que Personas la marca activa sumaba al numerador y no
+// al denominador, y el porcentaje pasaba de 100%.
+function eventosElegiblesAV(persona,eventos,eventosAsistidos){
+  if(!persona) return eventos.slice();
+  const asistio=new Set((eventosAsistidos||[]).map(e=>`${e.evento}|${e.fecha}`));
+  return eventos.filter(e=>
+    asistio.has(`${e.evento}|${e.fecha}`)||
+    (personaActivaEnFecha(persona,e.fecha)&&personaPerteneceAGrupoAV(persona,e.grupo))
+  );
+}
+
+// Eventos distintos a los que asistió una persona. Los registros de asistencia
+// vienen sin deduplicar (dos filas de la misma persona para el mismo evento es
+// un caso real de la carga manual), y contarlos crudos inflaba el numerador.
+function eventosDistintosAV(eventosAsistidos){
+  return new Set((eventosAsistidos||[]).map(e=>`${e.evento}|${e.fecha}`)).size;
+}
+
+function universoAV(evento,grupo){
+  const g=grupo||evento.grupo;
+  const delGrupo=(cachePersonasRaw||[]).filter(p=>personaPerteneceAGrupoAV(p,g));
+  const nombres=new Set(
+    delGrupo.filter(p=>personaActivaEnFecha(p,evento.fecha)).map(p=>(p.fields.Nombre||'').trim()).filter(Boolean)
+  );
+  evento.asistentes.forEach(nombre=>{
+    const n=(nombre||'').trim();
+    // Solo si la persona existe en Personas y es del grupo: un asistente que
+    // no está en Personas no se puede clasificar, así que no entra ni al
+    // numerador ni al denominador (no mueve el porcentaje en ninguna dirección).
+    if(n&&delGrupo.some(p=>(p.fields.Nombre||'').trim()===n)) nombres.add(n);
+  });
+  return nombres;
 }
 
 // % de asistencia de un evento sobre un grupo puntual (Core Team/Engineers &
 // Tech), sin importar a quién estaba dirigido el evento — así un evento
 // "Todos" se puede leer separado por grupo en vez de un solo número mezclado.
+// Sin `grupo`, usa el grupo al que estaba dirigido el evento.
 function pctPorGrupoAV(evento,grupo){
-  const activos=(cachePersonasRaw||[]).filter(p=>personaActivaEnFecha(p,evento.fecha)&&personaPerteneceAGrupoAV(p,grupo)).length;
-  if(!activos) return null;
-  const asistio=evento.asistentes.filter(nombre=>{
-    const p=(cachePersonasRaw||[]).find(x=>(x.fields.Nombre||'').trim()===nombre.trim());
-    return p&&personaPerteneceAGrupoAV(p,grupo);
-  }).length;
-  return Math.round(asistio/activos*100);
+  const universo=universoAV(evento,grupo);
+  if(!universo.size) return null;
+  const asistio=evento.asistentes.filter(nombre=>universo.has((nombre||'').trim())).length;
+  return Math.round(asistio/universo.size*100);
 }
 
 function promPorGrupoAV(eventos,grupo){
@@ -106,10 +157,7 @@ function renderAVMetricas(){
   const personas=new Set(cacheAVRaw.map(r=>r.fields.Persona).filter(Boolean));
   document.getElementById('av-total-personas').textContent=personas.size;
 
-  const pcts=eventos.map(e=>{
-    const activos=activosParaEventoAV(e);
-    return activos?Math.round(e.asistentes.length/activos*100):null;
-  }).filter(p=>p!=null);
+  const pcts=eventos.map(e=>pctPorGrupoAV(e)).filter(p=>p!=null);
   const prom=pcts.length?Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length):0;
   document.getElementById('av-prom-asistencia').textContent=eventos.length?`${prom}%`:'—';
 }
@@ -149,12 +197,13 @@ function renderAVPersona(){
   if(!tb) return;
   tb.innerHTML=filas.map(([nombre,d],idx)=>{
     const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
-    const elegibles=persona?eventosUnicos.filter(e=>personaActivaEnFecha(persona,e.fecha)&&personaPerteneceAGrupoAV(persona,e.grupo)).length:eventosUnicos.length;
-    const pct=elegibles?Math.round(d.eventos.length/elegibles*100):null;
+    const elegibles=eventosElegiblesAV(persona,eventosUnicos,d.eventos).length;
+    const asistidos=eventosDistintosAV(d.eventos);
+    const pct=elegibles?Math.round(asistidos/elegibles*100):null;
     const bg=idx%2===0?'background:var(--bg2)':'';
     return `<tr class="tr-clickable" style="${bg}" onclick="verAVPersona('${nombre.replace(/'/g,"\\'")}')">
       <td>${avH(nombre)}${nombre}</td>
-      <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.eventos.length}</td>
+      <td style="font-weight:600;font-size:15px;color:var(--blue)">${asistidos}</td>
       <td style="font-size:12px;color:var(--text2)">${pct!=null?pct+'% ('+elegibles+' posibles)':'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.ultFecha)}</td>
     </tr>`;
@@ -225,9 +274,9 @@ function renderAVPersonaCard(){
   // dentro de su grupo.
   const eventosUnicosEnRango=Object.values(agruparAVPorEvento(cacheAVRaw)).filter(e=>dentroDelRango(e.fecha));
   const persona=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===nombre.trim());
-  const eventosElegibles=persona?eventosUnicosEnRango.filter(e=>personaActivaEnFecha(persona,e.fecha)&&personaPerteneceAGrupoAV(persona,e.grupo)):eventosUnicosEnRango;
+  const eventosElegibles=eventosElegiblesAV(persona,eventosUnicosEnRango,eventosPersona);
   const elegibles=eventosElegibles.length;
-  const pct=elegibles?Math.round(eventosPersona.length/elegibles*100):null;
+  const pct=elegibles?Math.round(eventosDistintosAV(eventosPersona)/elegibles*100):null;
 
   // Lo que le faltó: eventos elegibles para esta persona (activa + su grupo)
   // en los que no hay un registro de asistencia a su nombre.
@@ -306,14 +355,17 @@ function renderAVEvento(){
   const tb=document.getElementById('av-tbody-evento');
   if(!tb) return;
   tb.innerHTML=filas.map(([key,d],idx)=>{
-    const activos=activosParaEventoAV(d);
-    const pct=activos?Math.round(d.asistentes.length/activos*100):null;
+    const pct=pctPorGrupoAV(d);
+    // El "(N activos)" del label es el mismo denominador que usa el porcentaje
+    // — si se recalcula aparte se vuelven a desincronizar, que es justo lo que
+    // producía el 102%.
+    const universo=universoAV(d).size;
     const bg=idx%2===0?'background:var(--bg2)':'';
     const fila=`<tr class="tr-clickable" style="${bg}" onclick="toggleAVEventoDetalle('${key.replace(/'/g,"\\'")}')">
       <td><strong>${d.evento}</strong> ${d.grupo&&d.grupo!=='Todos'?`<span class="badge badge-gray" style="font-size:10px">${d.grupo}</span>`:''}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.fecha)}</td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.asistentes.length}</td>
-      <td style="font-size:12px;color:var(--text2)">${pct!=null?pct+'% ('+activos+' activos)':'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${pct!=null?pct+'% ('+universo+' activos)':'—'}</td>
     </tr>`;
     return avEventoExpandido===key?fila+filaDetalleAVEvento(d):fila;
   }).join('')||'<tr class="empty-row"><td colspan="4">Sin resultados</td></tr>';

@@ -98,3 +98,49 @@ test('asistenciaBenefAsignado: 0% se muestra; vacío/null no', ()=>{
   assert.equal(ctx.asistenciaBenefAsignado({}),'');
   assert.equal(ctx.asistenciaBenefAsignado({'% asistencia mensual':null,'% asistencia anual':''}),'');
 });
+
+// ─── Fecha de baja editable ───────────────────────────────────────────────────
+// Antes la Fecha de baja se forzaba a new Date() al pasar a Inactivo y no había
+// campo para tocarla, así que la fecha real (casi siempre anterior al día en
+// que se carga en el Hub) se terminaba anotando a mano en el motivo. Ahora sale
+// del input; estas pruebas fijan qué se manda a Airtable en cada estado.
+function fieldsDeBaja(estadoNuevo,fechaInput){
+  const fields={Estado:estadoNuevo};
+  if(BENEF_ESTADOS_CON_MOTIVO.has(estadoNuevo)) fields['Motivo de baja']='algo';
+  else fields['Motivo de baja']=null;
+  if(estadoNuevo==='Inactivo') fields['Fecha de baja']=fechaInput||null;
+  else fields['Fecha de baja']=null;
+  return fields;
+}
+
+test('fecha de baja: al pasar a Inactivo se guarda la fecha elegida, no la de hoy', ()=>{
+  const hoy=new Date().toISOString().slice(0,10);
+  const fields=fieldsDeBaja('Inactivo','2022-10-20');
+  assert.equal(fields['Fecha de baja'],'2022-10-20');
+  assert.notEqual(fields['Fecha de baja'],hoy);
+});
+
+test('fecha de baja: Inactivo sin fecha en el campo guarda null, no una fecha inventada', ()=>{
+  assert.equal(fieldsDeBaja('Inactivo','')['Fecha de baja'],null);
+});
+
+// "En pausa" no lleva fecha de baja: el beneficio no terminó. Si el registro
+// venía de Inactivo, la baja anterior se limpia.
+test('fecha de baja: En pausa nunca guarda fecha de baja, pero sí motivo', ()=>{
+  const fields=fieldsDeBaja('En pausa','2022-10-20');
+  assert.equal(fields['Fecha de baja'],null);
+  assert.equal(fields['Motivo de baja'],'algo');
+});
+
+test('fecha de baja: volver a Activo limpia fecha y motivo', ()=>{
+  const fields=fieldsDeBaja('Activo','2022-10-20');
+  assert.equal(fields['Fecha de baja'],null);
+  assert.equal(fields['Motivo de baja'],null);
+});
+
+// La fila del beneficio ya mostraba la baja; con la fecha editable tiene que
+// seguir reflejando la que se guardó, no la de carga.
+test('periodoBenefAsignado: muestra la fecha de baja que se guardó', ()=>{
+  const t=ctx.periodoBenefAsignado({Estado:'Inactivo','Fecha activación':'2022-06-03','Fecha de baja':'2022-10-20'});
+  assert.match(t,/Baja: 20 de oct de 2022/);
+});

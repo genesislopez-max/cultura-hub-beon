@@ -289,12 +289,26 @@ function asistenciaBenefAsignado(fields){
   ].filter(Boolean).join(' · ');
 }
 
-function toggleCampoMotivoBaja(){
-  const fg=document.getElementById('fg-eba-motivo');
+// Muestra u oculta los campos que dependen del Estado, y ajusta sus labels.
+//
+// La Fecha de baja solo aparece con Inactivo: "En pausa" admite motivo pero no
+// fecha de baja, porque el beneficio no terminó.
+function toggleCamposBajaBenef(){
   const estado=document.getElementById('f-eba-estado')?.value||'Activo';
+
+  const fg=document.getElementById('fg-eba-motivo');
   if(fg) fg.style.display=BENEF_ESTADOS_CON_MOTIVO.has(estado)?'block':'none';
   const lbl=document.getElementById('lbl-eba-motivo');
   if(lbl) lbl.textContent=estado==='En pausa'?'Motivo de la pausa':'Motivo de la baja';
+
+  const fgFecha=document.getElementById('fg-eba-fecha-baja');
+  if(fgFecha) fgFecha.style.display=estado==='Inactivo'?'block':'none';
+  // Al pasar a Inactivo se propone hoy, que es el caso más común, pero queda
+  // editable: la fecha real de baja suele ser anterior al momento en que se
+  // carga en el Hub. Solo se propone si el campo está vacío, para no pisar una
+  // fecha que la persona acaba de escribir o que ya venía guardada.
+  const input=document.getElementById('f-eba-fecha-baja');
+  if(input&&estado==='Inactivo'&&!input.value) input.value=new Date().toISOString().slice(0,10);
 }
 
 // Editar Monto/Fecha activación/Estado de un beneficio ya asignado — el
@@ -315,14 +329,18 @@ function editarBenefAsignado(id,nombre,grupo,nivel){
 <div class="field-group"><label class="field-label">Monto ($)</label><input class="field-input" id="f-eba-monto" type="number" min="0" value="${f.Monto||''}" placeholder="Valor del catálogo si se deja vacío"></div>
 <div class="field-group"><label class="field-label">Fecha activación</label><input class="field-input" id="f-eba-fecha" type="date" value="${f['Fecha activación']||''}"></div>
 <div class="field-group"><label class="field-label">Estado</label>
-  <select class="field-input" id="f-eba-estado" onchange="toggleCampoMotivoBaja()">
+  <select class="field-input" id="f-eba-estado" onchange="toggleCamposBajaBenef()">
     ${BENEF_ESTADOS.map(e=>`<option value="${e}"${(f.Estado||'Activo')===e?' selected':''}>${e}</option>`).join('')}
   </select>
+</div>
+<div class="field-group" id="fg-eba-fecha-baja" style="display:${f.Estado==='Inactivo'?'block':'none'}">
+  <label class="field-label">Fecha de baja</label>
+  <input class="field-input" id="f-eba-fecha-baja" type="date" value="${f['Fecha de baja']||''}">
+  <div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">Cuándo dejó de usar el beneficio. Se propone la fecha de hoy, pero podés poner la real.</div>
 </div>
 <div class="field-group" id="fg-eba-motivo" style="display:${BENEF_ESTADOS_CON_MOTIVO.has(f.Estado)?'block':'none'}">
   <label class="field-label" id="lbl-eba-motivo">${f.Estado==='En pausa'?'Motivo de la pausa':'Motivo de la baja'}</label>
   <textarea class="field-input" id="f-eba-motivo" placeholder="Ej: dejó de usarlo, cambió de beneficio…">${f['Motivo de baja']||''}</textarea>
-  ${f['Fecha de baja']?`<div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">Dado de baja el ${fmt(f['Fecha de baja'])}</div>`:''}
 </div>
 ${esTerapia?`
 <div class="field-group"><label class="field-label">Frecuencia</label>
@@ -353,10 +371,12 @@ ${esUdemy?`
         fields['Motivo de baja']=null;
       }
       if(nuevoEstado==='Inactivo'){
-        // Solo se pisa la Fecha de baja al momento en que PASA a Inactivo —
-        // si ya estaba Inactivo y se reabre el form para otra cosa (ej.
-        // corregir el motivo), no hace falta correr la fecha a hoy de nuevo.
-        if(f.Estado!=='Inactivo') fields['Fecha de baja']=new Date().toISOString().slice(0,10);
+        // La fecha sale del campo, no de new Date(): antes se forzaba a hoy y
+        // no había manera de corregirla, así que la fecha real de la baja se
+        // terminaba anotando a mano en el motivo. El campo se pre-rellena con
+        // hoy (ver toggleCamposBajaBenef), así que dejarlo como viene mantiene
+        // el comportamiento anterior sin impedir cambiarlo.
+        fields['Fecha de baja']=v('f-eba-fecha-baja')||null;
       } else {
         // "En pausa" no lleva Fecha de baja: el beneficio no terminó. Si venía
         // de Inactivo y se reabre como pausado, se limpia la baja anterior.

@@ -126,7 +126,9 @@ test('cron-offsites-recordatorio: sin viajes en 7 días, no manda nada a Slack',
   }
 });
 
-test('cron-offsites-recordatorio: la consulta usa IS_SAME sobre la fecha de hoy+7', async()=>{
+// La consulta pide las dos fechas juntas (hoy y hoy+7) en un solo request: el
+// handler resuelve personas y agrupa viajes una sola vez para las dos.
+test('cron-offsites-recordatorio: una sola consulta pide hoy y hoy+7', async()=>{
   const {calls,fetchImpl}=mockFetch({offsites:[]});
   const original=global.fetch;
   global.fetch=fetchImpl;
@@ -134,8 +136,117 @@ test('cron-offsites-recordatorio: la consulta usa IS_SAME sobre la fecha de hoy+
     const req={headers:{}};
     const res=fakeRes();
     await handler(req,res,{hoy:new Date(2026,6,28)});
-    const airtableCall=calls.find(c=>c.url.includes('/Off%20Sites'));
-    assert.match(decodeURIComponent(airtableCall.url),/IS_SAME\(\{Fecha inicio\}, "2026-08-04", 'day'\)/);
+    const airtableCalls=calls.filter(c=>c.url.includes('/Off%20Sites'));
+    assert.equal(airtableCalls.length,1);
+    const formula=decodeURIComponent(airtableCalls[0].url);
+    assert.match(formula,/IS_SAME\(\{Fecha inicio\}, "2026-07-28", 'day'\)/); // hoy
+    assert.match(formula,/IS_SAME\(\{Fecha inicio\}, "2026-08-04", 'day'\)/); // hoy+7
+    assert.match(formula,/^.*OR\(/);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+// ─── Aviso del día que arranca ────────────────────────────────────────────────
+// Antes solo avisaba 7 días antes; el día del viaje no llegaba nada.
+test('cron-offsites-recordatorio: avisa el día que empieza el Off Site', async()=>{
+  const offsites=[
+    {id:'o1',fields:{Persona:'Ana Test',Destino:'Cariló','Fecha inicio':'2026-07-28','Fecha fin':'2026-07-31'}},
+  ];
+  const posts=[];
+  const original=global.fetch;
+  global.fetch=async(url,opts)=>{
+    const u=String(url);
+    if(u.includes('/Off%20Sites')) return {ok:true,json:async()=>({records:offsites})};
+    if(u.includes('hooks.slack.test')){ posts.push(JSON.parse(opts.body).text); return {ok:true,json:async()=>({})}; }
+    throw new Error('fetch inesperado: '+u);
+  };
+  try{
+    const req={headers:{}};
+    const res=fakeRes();
+    await handler(req,res,{hoy:new Date(2026,6,28)}); // el viaje arranca hoy
+    assert.equal(posts.length,1);
+    assert.match(posts[0],/Hoy empieza/);
+    assert.doesNotMatch(posts[0],/En una semana/);
+    assert.match(posts[0],/Cariló/);
+    assert.match(posts[0],/28 de jul de 2026/);
+    assert.match(posts[0],/Ana Test/);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+test('cron-offsites-recordatorio: los dos avisos conviven, cada uno con su texto', async()=>{
+  const offsites=[
+    {id:'o1',fields:{Persona:'Ana Test',Destino:'Cariló','Fecha inicio':'2026-07-28','Fecha fin':'2026-07-31'}},
+    {id:'o2',fields:{Persona:'Bruno Diaz',Destino:'Bariloche','Fecha inicio':'2026-08-04','Fecha fin':'2026-08-08'}},
+  ];
+  const posts=[];
+  const original=global.fetch;
+  global.fetch=async(url,opts)=>{
+    const u=String(url);
+    if(u.includes('/Off%20Sites')) return {ok:true,json:async()=>({records:offsites})};
+    if(u.includes('hooks.slack.test')){ posts.push(JSON.parse(opts.body).text); return {ok:true,json:async()=>({})}; }
+    throw new Error('fetch inesperado: '+u);
+  };
+  try{
+    const req={headers:{}};
+    const res=fakeRes();
+    await handler(req,res,{hoy:new Date(2026,6,28)});
+    assert.equal(res.body.notificados,2);
+    assert.equal(posts.length,2);
+    // El que arranca hoy va primero: es el aviso más urgente.
+    assert.match(posts[0],/Hoy empieza.*Cariló/);
+    assert.match(posts[1],/En una semana empieza.*Bariloche/);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+// Fecha inicio entra en la clave de agrupación. Sin eso, dos viajes al mismo
+// destino que terminan el mismo día (uno arranca hoy, el otro en una semana)
+// se mezclaban en un solo aviso con la fecha de uno de los dos.
+test('cron-offsites-recordatorio: dos viajes al mismo destino y fin no se mezclan si arrancan distinto', async()=>{
+  const offsites=[
+    {id:'o1',fields:{Persona:'Ana Test',Destino:'Bariloche','Fecha inicio':'2026-07-28','Fecha fin':'2026-08-10'}},
+    {id:'o2',fields:{Persona:'Bruno Diaz',Destino:'Bariloche','Fecha inicio':'2026-08-04','Fecha fin':'2026-08-10'}},
+  ];
+  const posts=[];
+  const original=global.fetch;
+  global.fetch=async(url,opts)=>{
+    const u=String(url);
+    if(u.includes('/Off%20Sites')) return {ok:true,json:async()=>({records:offsites})};
+    if(u.includes('hooks.slack.test')){ posts.push(JSON.parse(opts.body).text); return {ok:true,json:async()=>({})}; }
+    throw new Error('fetch inesperado: '+u);
+  };
+  try{
+    const req={headers:{}};
+    const res=fakeRes();
+    await handler(req,res,{hoy:new Date(2026,6,28)});
+    assert.equal(res.body.notificados,2);
+    assert.match(posts[0],/Hoy empieza/);
+    assert.match(posts[0],/Ana Test/);
+    assert.doesNotMatch(posts[0],/Bruno Diaz/);
+    assert.match(posts[1],/En una semana/);
+    assert.match(posts[1],/Bruno Diaz/);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+// Un viaje que arranca mañana (o cualquier otro día) no debe generar aviso: son
+// dos momentos puntuales, no un rango.
+test('cron-offsites-recordatorio: un viaje que arranca mañana no dispara aviso', async()=>{
+  const offsites=[]; // el filtro de Airtable ya no lo traería; se refleja acá
+  const {calls,fetchImpl}=mockFetch({offsites});
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const req={headers:{}};
+    const res=fakeRes();
+    await handler(req,res,{hoy:new Date(2026,6,28)});
+    assert.equal(res.body.notificados,0);
+    assert.equal(calls.filter(c=>c.url.includes('hooks.slack.test')).length,0);
   }finally{
     global.fetch=original;
   }

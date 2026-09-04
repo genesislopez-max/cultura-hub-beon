@@ -79,6 +79,34 @@ test('api/slack: sin SLACK_WEBHOOK_FEEDBACK, el feedback cae en el canal general
   assert.equal(enviados[0].url,'https://hooks.slack.test/general');
 });
 
+// El fallback al canal general era invisible: el feedback aparecía en
+// #avisos-cultura y no se podía distinguir "está mal configurado" de "así es".
+test('api/slack: si el feedback cae en el general, el mensaje avisa que falta configurar', async()=>{
+  const {enviados}=await postSlack({text:'hola',canal:'feedback'},
+    {SLACK_WEBHOOK:'https://hooks.slack.test/general'});
+  assert.match(enviados[0].body.text,/hola/);              // el feedback no se pierde
+  assert.match(enviados[0].body.text,/it-culture-hub/);     // dice a dónde debería ir
+  assert.match(enviados[0].body.text,/SLACK_WEBHOOK_FEEDBACK/); // y qué falta
+});
+
+// El aviso solo aparece cuando hace falta: con la variable puesta, el mensaje
+// va limpio (ya lo verifica el test de arriba con assert.equal del texto), y
+// los avisos operativos nunca lo llevan.
+test('api/slack: el aviso de configuración no contamina los avisos del canal general', async()=>{
+  const {enviados}=await postSlack({text:'nuevo ingreso'},
+    {SLACK_WEBHOOK:'https://hooks.slack.test/general'});
+  assert.equal(enviados[0].body.text,'nuevo ingreso');
+  assert.doesNotMatch(enviados[0].body.text,/SLACK_WEBHOOK_FEEDBACK/);
+});
+
+// Nunca el VALOR de la variable, solo su nombre: el mensaje va a un canal de
+// Slack y un webhook es una credencial.
+test('api/slack: el aviso nombra la variable pero no filtra el webhook configurado', async()=>{
+  const {enviados}=await postSlack({text:'hola',canal:'feedback'},
+    {SLACK_WEBHOOK:'https://hooks.slack.test/general-secreto'});
+  assert.doesNotMatch(enviados[0].body.text,/hooks\.slack\.test/);
+});
+
 test('api/slack: los avisos sin canal siguen yendo al general (no cambia lo de antes)', async()=>{
   const {enviados}=await postSlack({text:'ingreso'},
     {SLACK_WEBHOOK:'https://hooks.slack.test/general',SLACK_WEBHOOK_FEEDBACK:'https://hooks.slack.test/privado'});

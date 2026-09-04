@@ -19,10 +19,11 @@ module.exports=async(req,res)=>{
   // variable de entorno: se mapea contra una lista fija. Si no, un body
   // malicioso podría hacer que el server lea cualquier env var.
   const WEBHOOKS={
-    // Avisos operativos (ingresos, tareas, offboarding…) — el canal de siempre.
+    // Avisos operativos (ingresos, tareas, offboarding…) → #avisos-cultura.
     general:process.env.SLACK_WEBHOOK,
-    // El feedback del Hub puede ir a otro lado (un DM o un canal privado de
-    // People Ops); si no se configura, cae en el general.
+    // El feedback de la plataforma va a su propio canal (#it-culture-hub), que
+    // es quien lo resuelve; si SLACK_WEBHOOK_FEEDBACK no está configurada, cae
+    // en el general para no perder el aviso.
     feedback:process.env.SLACK_WEBHOOK_FEEDBACK||process.env.SLACK_WEBHOOK,
   };
   const webhook=WEBHOOKS[req.body?.canal]||WEBHOOKS.general;
@@ -31,11 +32,19 @@ module.exports=async(req,res)=>{
     return;
   }
 
+  // Ese fallback era invisible: el feedback aparecía en el canal general y no
+  // había manera de saber que era por falta de configuración y no por diseño.
+  // Se avisa en el propio mensaje. Va el NOMBRE de la variable, nunca su valor.
+  const cayoEnGeneral=req.body?.canal==='feedback'&&!process.env.SLACK_WEBHOOK_FEEDBACK;
+  const texto=(req.body?.text||'')+(cayoEnGeneral
+    ?'\n\n_⚠️ Esto tendría que llegar a #it-culture-hub. Falta configurar la variable `SLACK_WEBHOOK_FEEDBACK` en Vercel con el webhook de ese canal._'
+    :'');
+
   try{
     await fetch(webhook,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text:req.body?.text||''}),
+      body:JSON.stringify({text:texto}),
     });
     res.status(200).json({ok:true});
   }catch(e){

@@ -1,8 +1,10 @@
-// Cron diario (ver vercel.json): si algún Off Site arranca en exactamente 7
-// días, avisa por Slack — un mensaje por viaje (Destino + Fecha fin, ya que
-// Fecha inicio queda fija por el filtro), agrupando a todas las personas que
-// van al mismo lugar en las mismas fechas en un solo aviso, no uno por
-// persona (cada record de Off Sites es una persona).
+// Cron diario (ver vercel.json): avisa por Slack los Off Sites que arrancan en
+// exactamente 7 días y los que arrancan HOY — dos momentos distintos, el
+// primero para preparar el viaje y el segundo como recordatorio del día.
+//
+// Un mensaje por viaje, agrupando a todas las personas que van al mismo lugar
+// en las mismas fechas en un solo aviso, no uno por persona (cada record de
+// Off Sites es una persona).
 const MESES_ES_ABR=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 function fmtFecha(iso){
   if(!iso) return '';
@@ -36,9 +38,15 @@ module.exports=async(req,res,opts={})=>{
   const hoy=opts.hoy||new Date(Date.now()-3*60*60*1000);
   const enUnaSemana=new Date(hoy);
   enUnaSemana.setDate(enUnaSemana.getDate()+7);
-  const fechaStr=enUnaSemana.toISOString().slice(0,10);
+  const hoyStr=hoy.toISOString().slice(0,10);
+  const enUnaSemanaStr=enUnaSemana.toISOString().slice(0,10);
 
-  const formula=encodeURIComponent(`IS_SAME({Fecha inicio}, "${fechaStr}", 'day')`);
+  // Las dos fechas van en una sola consulta (OR) en vez de dos requests: el
+  // resto del handler ya resuelve personas y agrupa viajes, y hacerlo dos veces
+  // duplicaría ese trabajo para nada.
+  const formula=encodeURIComponent(
+    `OR(IS_SAME({Fecha inicio}, "${hoyStr}", 'day'),IS_SAME({Fecha inicio}, "${enUnaSemanaStr}", 'day'))`
+  );
   const url=`https://api.airtable.com/v0/${base}/${encodeURIComponent('Off Sites')}?filterByFormula=${formula}`;
 
   let registros=[];
@@ -70,20 +78,30 @@ module.exports=async(req,res,opts={})=>{
     }catch(e){/* si falla la resolución, seguimos con los IDs crudos antes que no avisar nada */}
   }
 
+  // Fecha inicio entra en la clave: antes quedaba fija por el filtro (una sola
+  // fecha), pero ahora la consulta trae dos días distintos y sin ella dos
+  // viajes al mismo destino que terminan el mismo día se mezclarían en uno.
   const viajes={};
   registros.forEach(r=>{
     const f=r.fields;
-    const key=`${f.Destino||''}|${f['Fecha fin']||''}`;
+    const key=`${f.Destino||''}|${f['Fecha inicio']||''}|${f['Fecha fin']||''}`;
     if(!viajes[key]) viajes[key]={destino:f.Destino||'Sin destino',fechaInicio:f['Fecha inicio'],fechaFin:f['Fecha fin'],personas:new Set()};
     const persona=Array.isArray(f.Persona)?(personasPorId.get(f.Persona[0])||f.Persona[0]):(typeof f.Persona==='string'?f.Persona:'');
     if(persona) viajes[key].personas.add(persona);
   });
 
-  const lista=Object.values(viajes);
+  // Los que arrancan hoy primero: es el aviso más urgente de los dos.
+  const lista=Object.values(viajes).sort((a,b)=>(a.fechaInicio||'').localeCompare(b.fechaInicio||''));
   for(const v of lista){
     const rango=v.fechaFin?`del ${fmtFecha(v.fechaInicio)} al ${fmtFecha(v.fechaFin)}`:`el ${fmtFecha(v.fechaInicio)}`;
     const quienes=v.personas.size?`\n👥 ${[...v.personas].join(', ')}`:'';
-    const texto=`✈️ *En una semana empieza el Off Site a ${v.destino}*, ${rango}${quienes}`;
+    // La consulta solo trae estas dos fechas, así que el título sale de
+    // comparar contra ellas. Si por algún motivo llegara otra (un cambio de
+    // filtro más adelante), cae en el texto neutro en vez de mentir la fecha.
+    const titulo=v.fechaInicio===hoyStr?`¡Hoy empieza el Off Site a ${v.destino}!`
+      :v.fechaInicio===enUnaSemanaStr?`En una semana empieza el Off Site a ${v.destino}`
+      :`Off Site a ${v.destino}`;
+    const texto=`✈️ *${titulo}* — ${rango}${quienes}`;
     try{
       await fetch(webhook,{
         method:'POST',

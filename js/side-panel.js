@@ -108,11 +108,16 @@ async function verBenefPersona(nombre, grupo, nivel){
       const motivoBaja=r.fields['Motivo de baja'];
       const fechaLabel=periodoBenefAsignado(r.fields);
       const asistencia=asistenciaBenefAsignado(r.fields);
+      // El comentario se muestra en la fila y no solo dentro del modal de
+      // edición: el sentido de cargarlo es que se vea de un vistazo junto al
+      // beneficio, sin tener que abrir cada uno para saber si dice algo.
+      const comentario=(r.fields.Comentarios||'').trim();
       return`<div class="bp-detalle-row">
         <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${bNombre}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
           <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
+          ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
         </div>
         ${badgeEstadoBenef(estado)}
         <div class="bp-detalle-actions">
@@ -322,6 +327,7 @@ function editarBenefAsignado(id,nombre,grupo,nivel){
   const benef=cacheBeneficiosRaw.find(b=>b.id===bId||b.fields.Beneficio===bId);
   const bNombre=benef?.fields.Beneficio||bId||'—';
   const esTerapia=esBeneficioTerapia(bNombre),esUdemy=esBeneficioUdemy(bNombre),esConQuarterAuto=esBeneficioConQuarterAuto(bNombre);
+  const esCertif=esBeneficioCertifications(bNombre);
   _openFormModal({
     title:`Editar — ${bNombre}`,
     html:()=>`
@@ -355,6 +361,11 @@ ${esUdemy?`
 <div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-eba-curso" value="${f.Curso||''}"></div>
 <div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-eba-link" type="url" value="${f.Link||''}"></div>
 <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">El Quarter se recalcula solo si cambiás la Fecha activación.</div>
+`:''}
+${esCertif?`
+<div class="field-group"><label class="field-label">Comentarios</label>
+  <textarea class="field-input" id="f-eba-comentarios" placeholder="Ej: qué certificación es, cuándo la rinde, si el monto es estimado…">${f.Comentarios||''}</textarea>
+</div>
 `:''}`,
     save:async()=>{
       const v=id2=>document.getElementById(id2)?.value||'';
@@ -390,6 +401,7 @@ ${esUdemy?`
         fields.Curso=v('f-eba-curso')||null;
         fields.Link=v('f-eba-link')||null;
       }
+      if(esCertif) fields.Comentarios=v('f-eba-comentarios')||null;
       if(esConQuarterAuto) fields.Quarter=fecha?quarterLabel(fecha):null;
       await atPatch(`Beneficios Asignados/${id}`,fields);
       await verBenefPersona(nombre,grupo,nivel);

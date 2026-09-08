@@ -218,7 +218,7 @@ const FORMS={
   </select>
 </div>
 <div class="field-group"><label class="field-label">Beneficio *</label>
-  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef();toggleCamposTerapia();toggleCamposLink();">
+  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef();toggleCamposTerapia();toggleCamposLink();toggleCamposComentarios();">
     <option value="">Seleccioná un beneficio…</option>
   </select>
   <div class="field-hint" id="f-ba-beneficio-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0"></div>
@@ -238,6 +238,11 @@ const FORMS={
     </select>
   </div>
   <div class="field-group"><label class="field-label">Profesional asignado</label><input class="field-input" id="f-ba-profesional" placeholder="Nombre del/de la profesional"></div>
+</div>
+<div id="fg-ba-comentarios" style="display:none">
+  <div class="field-group"><label class="field-label">Comentarios</label>
+    <textarea class="field-input" id="f-ba-comentarios" placeholder="Ej: qué certificación es, cuándo la rinde, si el monto es estimado…"></textarea>
+  </div>
 </div>
 <div id="fg-ba-link" style="display:none">
   <div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-ba-curso" placeholder="Ej: CompTIA Pentest+ PT0-002 (Ethical Hacking)"></div>
@@ -267,6 +272,9 @@ const FORMS={
       if(esBeneficioUdemy(nombreBeneficio)){
         if(v('f-ba-curso')) fields.Curso=v('f-ba-curso');
         if(v('f-ba-link')) fields.Link=v('f-ba-link');
+      }
+      if(esBeneficioCertifications(nombreBeneficio)&&v('f-ba-comentarios')){
+        fields.Comentarios=v('f-ba-comentarios');
       }
       if(esBeneficioConQuarterAuto(nombreBeneficio)&&fecha) fields.Quarter=quarterLabel(fecha);
       await atPost('Beneficios Asignados',fields);

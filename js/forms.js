@@ -244,10 +244,12 @@ const FORMS={
     <textarea class="field-input" id="f-ba-comentarios" placeholder="Ej: qué certificación es, cuándo la rinde, si el monto es estimado…"></textarea>
   </div>
 </div>
-<div id="fg-ba-link" style="display:none">
-  <div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-ba-curso" placeholder="Ej: CompTIA Pentest+ PT0-002 (Ethical Hacking)"></div>
-  <div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-ba-link" type="url" placeholder="https://www.udemy.com/course/…"></div>
+<div id="fg-ba-curso" style="display:none">
+  <div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-ba-curso-nombre" placeholder="Ej: CompTIA Pentest+ PT0-002 (Ethical Hacking)"></div>
   <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">El Quarter se calcula solo a partir de la Fecha activación — no hace falta escribirlo.</div>
+</div>
+<div id="fg-ba-link" style="display:none">
+  <div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-ba-link" type="url" placeholder="https://…"></div>
 </div>
 <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">Si el beneficio tiene valor fijo en el catálogo, se autocompleta. Podés modificarlo.</div>
 `;},
@@ -269,10 +271,9 @@ const FORMS={
         if(v('f-ba-frecuencia')) fields.Frecuencia=v('f-ba-frecuencia');
         if(v('f-ba-profesional')) fields['Profesional Asignado']=v('f-ba-profesional');
       }
-      if(esBeneficioUdemy(nombreBeneficio)){
-        if(v('f-ba-curso')) fields.Curso=v('f-ba-curso');
-        if(v('f-ba-link')) fields.Link=v('f-ba-link');
-      }
+      if(esBeneficioUdemy(nombreBeneficio)&&v('f-ba-curso-nombre')) fields.Curso=v('f-ba-curso-nombre');
+      // El Link lo comparten Udemy (curso) y Blogpost (publicación).
+      if(esBeneficioConLink(nombreBeneficio)&&v('f-ba-link')) fields.Link=v('f-ba-link');
       if(esBeneficioCertifications(nombreBeneficio)&&v('f-ba-comentarios')){
         fields.Comentarios=v('f-ba-comentarios');
       }

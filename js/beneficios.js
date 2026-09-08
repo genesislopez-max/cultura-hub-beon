@@ -542,10 +542,25 @@ function esBeneficioConQuarterAuto(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
   return k==='udemy'||k==='oreilly'||k==='pluralsight';
 }
+// Blogpost no es un beneficio anual como el resto: se paga por cada publicación.
+// Por eso el monto va sin "/año", la fecha es la de publicación (y no un
+// "activo desde"), y lleva el link al post — ver los helpers de presentación en
+// js/side-panel.js.
+function esBeneficioBlogpost(nombreBeneficio){
+  const k=normalizarBeneficioKey(nombreBeneficio);
+  return k==='blogpost'||k==='blogposts';
+}
+// El campo Link lo comparten Udemy (link al curso) y Blogpost (link al post).
+// "Curso" en cambio es solo de Udemy.
+function esBeneficioConLink(nombreBeneficio){
+  return esBeneficioUdemy(nombreBeneficio)||esBeneficioBlogpost(nombreBeneficio);
+}
 function toggleCamposLink(){
   const nombre=document.getElementById('f-ba-beneficio')?.value||'';
-  const fg=document.getElementById('fg-ba-link');
-  if(fg) fg.style.display=esBeneficioUdemy(nombre)?'block':'none';
+  const fgLink=document.getElementById('fg-ba-link');
+  if(fgLink) fgLink.style.display=esBeneficioConLink(nombre)?'block':'none';
+  const fgCurso=document.getElementById('fg-ba-curso');
+  if(fgCurso) fgCurso.style.display=esBeneficioUdemy(nombre)?'block':'none';
 }
 // Certifications necesita un espacio libre al asignarlo: qué certificación es,
 // si la rinde en una fecha puntual, si el monto es estimado… No entra en un

@@ -4,7 +4,9 @@ const assert=require('node:assert/strict');
 const vm=require('node:vm');
 const {loadApp}=require('../test-helpers/load-app');
 
-const ctx=loadApp(['constants.js','utils.js','state.js','side-panel.js']);
+// beneficios.js aporta los helpers esBeneficioBlogpost/esBeneficioConLink, de
+// los que dependen los de presentación de side-panel.js.
+const ctx=loadApp(['constants.js','utils.js','state.js','beneficios.js','side-panel.js']);
 // Las declaraciones `const` de nivel superior no quedan expuestas como
 // propiedades del sandbox — hay que leerlas del contexto.
 const BENEF_ESTADOS=vm.runInContext('BENEF_ESTADOS',ctx);
@@ -143,4 +145,79 @@ test('fecha de baja: volver a Activo limpia fecha y motivo', ()=>{
 test('periodoBenefAsignado: muestra la fecha de baja que se guardó', ()=>{
   const t=ctx.periodoBenefAsignado({Estado:'Inactivo','Fecha activación':'2022-06-03','Fecha de baja':'2022-10-20'});
   assert.match(t,/Baja: 20 de oct de 2022/);
+});
+
+// ─── Blogpost ─────────────────────────────────────────────────────────────────
+// Blogpost se paga por cada publicación, no por año: el "/año" del monto mentía
+// sobre la periodicidad, "Activo desde" no aplica a algo puntual, y el link a
+// la publicación es el dato que más se busca.
+test('montoBenefAsignado: Blogpost va sin "/año"; el resto lo conserva', ()=>{
+  const fields={Monto:150};
+  assert.equal(ctx.montoBenefAsignado(fields,null,'Blogpost'),'$150');
+  assert.equal(ctx.montoBenefAsignado(fields,null,'Terapia'),'$150/año');
+});
+
+test('montoBenefAsignado: cae al valor del catálogo si la asignación no tiene monto', ()=>{
+  const benef={fields:{Valor:200}};
+  assert.equal(ctx.montoBenefAsignado({},benef,'Blogpost'),'$200');
+  assert.equal(ctx.montoBenefAsignado({},benef,'Udemy'),'$200/año');
+});
+
+test('montoBenefAsignado: sin monto ni valor de catálogo no imprime "$"', ()=>{
+  assert.equal(ctx.montoBenefAsignado({},null,'Blogpost'),'');
+  assert.equal(ctx.montoBenefAsignado({},{fields:{}},'Terapia'),'');
+});
+
+test('periodoBenefAsignado: Blogpost muestra la fecha de publicación, no "Activo desde"', ()=>{
+  const t=ctx.periodoBenefAsignado({Estado:'Activo','Fecha activación':'2026-03-12'},'Blogpost');
+  assert.match(t,/^Fecha de publicación: /);
+  assert.doesNotMatch(t,/Activo desde/);
+});
+
+// La publicación no se "despublica": la fecha es la misma aunque el registro
+// quede marcado inactivo.
+test('periodoBenefAsignado: Blogpost no cambia el texto según el estado', ()=>{
+  const base={'Fecha activación':'2026-03-12','Fecha de baja':'2026-06-01'};
+  const activo=ctx.periodoBenefAsignado({...base,Estado:'Activo'},'Blogpost');
+  const inactivo=ctx.periodoBenefAsignado({...base,Estado:'Inactivo'},'Blogpost');
+  assert.equal(activo,inactivo);
+  assert.doesNotMatch(inactivo,/Baja/);
+});
+
+test('periodoBenefAsignado: Blogpost sin fecha lo dice con sus palabras', ()=>{
+  assert.equal(ctx.periodoBenefAsignado({Estado:'Activo'},'Blogpost'),'Sin fecha de publicación');
+});
+
+// Sin nombre de beneficio (el resto de las vistas) se comporta como antes.
+test('periodoBenefAsignado: los demás beneficios no cambian', ()=>{
+  assert.match(ctx.periodoBenefAsignado({Estado:'Activo','Fecha activación':'2026-03-12'},'Terapia'),/^Activo desde /);
+  assert.match(ctx.periodoBenefAsignado({Estado:'Activo','Fecha activación':'2026-03-12'}),/^Activo desde /);
+});
+
+// El link lo carga una persona en Airtable: un "javascript:" en un href se
+// ejecutaría al clickearlo.
+test('linkBenefAsignado: un link http/https sale como enlace que abre en otra pestaña', ()=>{
+  const html=ctx.linkBenefAsignado({Link:'https://blog.beon.tech/mi-post'});
+  assert.match(html,/<a /);
+  assert.match(html,/href="https:\/\/blog\.beon\.tech\/mi-post"/);
+  assert.match(html,/target="_blank"/);
+  assert.match(html,/rel="noopener noreferrer"/);
+});
+
+test('linkBenefAsignado: un javascript: NO se convierte en href', ()=>{
+  const html=ctx.linkBenefAsignado({Link:'javascript:alert(1)'});
+  assert.doesNotMatch(html,/<a /);
+  assert.doesNotMatch(html,/href=/);
+  assert.match(html,/alert\(1\)/); // se muestra como texto, el dato no se pierde
+});
+
+test('linkBenefAsignado: un texto que no es URL se muestra como texto, no como link', ()=>{
+  const html=ctx.linkBenefAsignado({Link:'pendiente de publicar'});
+  assert.doesNotMatch(html,/<a /);
+  assert.match(html,/pendiente de publicar/);
+});
+
+test('linkBenefAsignado: sin link no imprime nada', ()=>{
+  assert.equal(ctx.linkBenefAsignado({}),'');
+  assert.equal(ctx.linkBenefAsignado({Link:'   '}),'');
 });

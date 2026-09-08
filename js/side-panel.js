@@ -99,14 +99,14 @@ async function verBenefPersona(nombre, grupo, nivel){
       const benef=cacheBeneficiosRaw.find(b=>b.id===bId||b.fields.Beneficio===bId);
       const bNombre=benef?.fields.Beneficio||bId||'—';
       const cat=estiloCategoria(benef?.fields.Categoria);
-      // Prioridad al Monto particular de esta asignación (editable) sobre el
-      // valor fijo del catálogo — mismo criterio que se usa para sumar el
-      // total usado más arriba.
-      const valor=r.fields.Monto?`$${Number(r.fields.Monto).toLocaleString('es-AR')}/año`:benef?.fields.Valor?`$${Number(benef.fields.Valor).toLocaleString('es-AR')}/año`:'';
+      const valor=montoBenefAsignado(r.fields,benef,bNombre);
       const estado=r.fields.Estado||'Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
       const motivoBaja=r.fields['Motivo de baja'];
-      const fechaLabel=periodoBenefAsignado(r.fields);
+      const fechaLabel=periodoBenefAsignado(r.fields,bNombre);
+      // El link se muestra en los beneficios que lo usan (Blogpost, Udemy):
+      // el punto de tenerlo cargado es poder ir a la publicación desde acá.
+      const link=esBeneficioConLink(bNombre)?linkBenefAsignado(r.fields):'';
       const asistencia=asistenciaBenefAsignado(r.fields);
       // El comentario se muestra en la fila y no solo dentro del modal de
       // edición: el sentido de cargarlo es que se vea de un vistazo junto al
@@ -118,6 +118,7 @@ async function verBenefPersona(nombre, grupo, nivel){
           <div class="bp-detalle-row-title">${bNombre}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
           <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
+          ${link}
         </div>
         ${badgeEstadoBenef(estado)}
         <div class="bp-detalle-actions">
@@ -267,10 +268,17 @@ function badgeEstadoBenef(estado){
 // dicen cosas distintas: Activo abre un período sin cerrar, En pausa tiene
 // inicio pero no fin (el beneficio no terminó, así que no lleva Fecha de baja),
 // e Inactivo es un período cerrado.
-function periodoBenefAsignado(fields){
+function periodoBenefAsignado(fields,nombreBeneficio){
   const estado=fields.Estado||'Activo';
   const fechaAct=fields['Fecha activación'];
   const fechaBaja=fields['Fecha de baja'];
+  // Blogpost se paga por publicación, no es un beneficio que corra en el
+  // tiempo: no hay un "activo desde" ni un período que cerrar, hay una fecha
+  // en la que se publicó. Se muestra igual en cualquier estado, porque la
+  // fecha de publicación no cambia si después se marca inactivo.
+  if(esBeneficioBlogpost(nombreBeneficio)){
+    return fechaAct?`Fecha de publicación: ${fmt(fechaAct)}`:'Sin fecha de publicación';
+  }
   if(estado==='Activo'){
     return fechaAct?`Activo desde ${fmt(fechaAct)}`:'Sin fecha registrada';
   }
@@ -279,6 +287,38 @@ function periodoBenefAsignado(fields){
   }
   const partes=[fechaAct?`Usado desde ${fmt(fechaAct)}`:'',fechaBaja?`Baja: ${fmt(fechaBaja)}`:''].filter(Boolean);
   return partes.length?partes.join(' · '):'Sin fecha registrada';
+}
+
+// Monto de un beneficio asignado. Prioridad al Monto propio de la asignación
+// (editable) sobre el valor fijo del catálogo — mismo criterio que se usa para
+// sumar el total usado.
+//
+// El "/año" vale para los beneficios anuales, que son casi todos, pero no para
+// Blogpost: ahí se paga cada vez que se publica, así que el sufijo mentía sobre
+// la periodicidad.
+function montoBenefAsignado(fields,benefCatalogo,nombreBeneficio){
+  const monto=fields.Monto||benefCatalogo?.fields?.Valor;
+  if(!monto) return '';
+  const cifra=`$${Number(monto).toLocaleString('es-AR')}`;
+  return esBeneficioBlogpost(nombreBeneficio)?cifra:`${cifra}/año`;
+}
+
+// Link de un beneficio asignado, listo para poner en la fila. Solo se acepta
+// http/https: el valor lo carga una persona en Airtable y un "javascript:" en
+// un href se ejecutaría al clickearlo. Si no valida, se muestra como texto
+// plano en vez de descartarlo — el dato sigue estando cargado.
+function linkBenefAsignado(fields){
+  const url=(fields.Link||'').trim();
+  if(!url) return '';
+  // Regex y no new URL(): el chequeo es una condición de seguridad y no puede
+  // depender de que exista una API del entorno — si URL faltara, todos los
+  // links válidos se degradarían a texto sin que nadie se entere. Con exigir
+  // que arranque en http:// o https:// alcanza para descartar javascript:.
+  const ok=/^https?:\/\//i.test(url);
+  const texto='Ver publicación';
+  return ok
+    ? `<a class="bp-detalle-row-link" href="${url.replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i>${texto}</a>`
+    : `<span class="bp-detalle-row-link" title="El link cargado no es una URL válida"><i class="ti ti-link-off"></i>${url}</span>`;
 }
 
 // Porcentajes de asistencia del histórico migrado del Sheet — son el dato que
@@ -328,6 +368,7 @@ function editarBenefAsignado(id,nombre,grupo,nivel){
   const bNombre=benef?.fields.Beneficio||bId||'—';
   const esTerapia=esBeneficioTerapia(bNombre),esUdemy=esBeneficioUdemy(bNombre),esConQuarterAuto=esBeneficioConQuarterAuto(bNombre);
   const esCertif=esBeneficioCertifications(bNombre);
+  const esBlogpost=esBeneficioBlogpost(bNombre),esConLink=esBeneficioConLink(bNombre);
   _openFormModal({
     title:`Editar — ${bNombre}`,
     html:()=>`
@@ -359,8 +400,10 @@ ${esTerapia?`
 `:''}
 ${esUdemy?`
 <div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-eba-curso" value="${f.Curso||''}"></div>
-<div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-eba-link" type="url" value="${f.Link||''}"></div>
 <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">El Quarter se recalcula solo si cambiás la Fecha activación.</div>
+`:''}
+${esConLink?`
+<div class="field-group"><label class="field-label">${esBlogpost?'Link a la publicación':'Link'}</label><input class="field-input" id="f-eba-link" type="url" value="${f.Link||''}" placeholder="https://…"></div>
 `:''}
 ${esCertif?`
 <div class="field-group"><label class="field-label">Comentarios</label>
@@ -397,10 +440,8 @@ ${esCertif?`
         fields.Frecuencia=v('f-eba-frecuencia')||null;
         fields['Profesional Asignado']=v('f-eba-profesional')||null;
       }
-      if(esUdemy){
-        fields.Curso=v('f-eba-curso')||null;
-        fields.Link=v('f-eba-link')||null;
-      }
+      if(esUdemy) fields.Curso=v('f-eba-curso')||null;
+      if(esConLink) fields.Link=v('f-eba-link')||null;
       if(esCertif) fields.Comentarios=v('f-eba-comentarios')||null;
       if(esConQuarterAuto) fields.Quarter=fecha?quarterLabel(fecha):null;
       await atPatch(`Beneficios Asignados/${id}`,fields);

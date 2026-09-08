@@ -505,6 +505,11 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .bp-detalle-row-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--text);}
 .bp-detalle-row-amount{font-size:12px;font-weight:700;color:var(--green);background:rgba(56,161,105,0.1);padding:2px 7px;border-radius:7px;}
 .bp-detalle-row-sub{font-size:11.5px;color:var(--text3);margin-top:3px;}
+/* Comentario libre de un beneficio asignado (Certifications). Va en su propia
+   línea y no pegado al subtítulo porque puede ser largo: se deja que corte en
+   varias líneas en vez de desbordar la fila. */
+.bp-detalle-row-coment{display:flex;align-items:flex-start;gap:5px;margin-top:4px;font-size:11.5px;line-height:1.45;color:var(--text2);white-space:pre-wrap;overflow-wrap:anywhere;}
+.bp-detalle-row-coment i{font-size:12px;flex-shrink:0;margin-top:1px;color:var(--text3);}
 .bp-detalle-row-meta{flex:none;font-size:12px;color:var(--text2);text-align:right;}
 .bp-detalle-actions{flex:none;display:flex;gap:4px;opacity:0.5;transition:opacity 0.15s;}
 .bp-detalle-row:hover .bp-detalle-actions{opacity:1;}

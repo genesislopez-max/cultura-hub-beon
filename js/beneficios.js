@@ -513,7 +513,7 @@ function actualizarBeneficiosPorPersona(){
   sel.innerHTML='<option value="">Seleccioná un beneficio…</option>'+nombres.map(n=>`<option value="${n}"${n===actual?' selected':''}>${n}</option>`).join('');
   const hint=document.getElementById('f-ba-beneficio-hint');
   if(hint) hint.textContent=grupo?`Mostrando beneficios de ${grupo}`:'Elegí una persona para filtrar por su grupo';
-  if(!nombres.includes(actual)){ actualizarMontoBenef(); toggleCamposTerapia(); toggleCamposLink(); }
+  if(!nombres.includes(actual)){ actualizarMontoBenef(); toggleCamposTerapia(); toggleCamposLink(); toggleCamposComentarios(); }
 }
 
 // Terapia es el único beneficio que hoy necesita datos extra al asignarlo
@@ -546,6 +546,20 @@ function toggleCamposLink(){
   const nombre=document.getElementById('f-ba-beneficio')?.value||'';
   const fg=document.getElementById('fg-ba-link');
   if(fg) fg.style.display=esBeneficioUdemy(nombre)?'block':'none';
+}
+// Certifications necesita un espacio libre al asignarlo: qué certificación es,
+// si la rinde en una fecha puntual, si el monto es estimado… No entra en un
+// campo estructurado como los de Terapia o Udemy, porque cada certificación es
+// un caso distinto. normalizarBeneficioKey saca espacios, tildes y mayúsculas,
+// así que matchea "Certifications", "certifications" o "Certification".
+function esBeneficioCertifications(nombreBeneficio){
+  const k=normalizarBeneficioKey(nombreBeneficio);
+  return k==='certifications'||k==='certification'||k==='certificaciones';
+}
+function toggleCamposComentarios(){
+  const nombre=document.getElementById('f-ba-beneficio')?.value||'';
+  const fg=document.getElementById('fg-ba-comentarios');
+  if(fg) fg.style.display=esBeneficioCertifications(nombre)?'block':'none';
 }
 function actualizarMontoBenef(){
   const sel=document.getElementById('f-ba-beneficio');

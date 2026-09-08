@@ -3,7 +3,8 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {loadApp}=require('../test-helpers/load-app');
 
-const ctx=loadApp(['utils.js','api.js','ingresos-egresos.js']);
+// state.js aporta clState/recMeta/cachePersonasRaw, que deleteIngreso limpia.
+const ctx=loadApp(['constants.js','state.js','utils.js','api.js','ingresos-egresos.js']);
 
 function mockAirtable(ctx,{checklistRecs=[]}={}){
   const posts=[];
@@ -102,4 +103,71 @@ test('ordenar "Offboarding completo": las dos fuentes se comparan por último d�
     ...historicos.map(p=>({fecha:p.fields['Fecha de egreso'],nombre:p.fields.Nombre})),
   ].sort((a,b)=>b.fecha.localeCompare(a.fecha));
   assert.deepEqual(completos.map(c=>c.nombre),['Braulio','Vieja Historica']);
+});
+
+// ─── Protección al borrar un ingreso ──────────────────────────────────────────
+// El botón de la papelera en una tarjeta de Ingreso está pensado para cancelar
+// un alta cargada por error, y por eso borra también el registro de Personas.
+// Pero el mismo botón se puede apretar sobre alguien que sí trabajó en BEON:
+// pasó, y una persona con su offboarding completo desapareció de Personas,
+// dejando su tarjeta de Egreso huérfana (sin correo, país ni último día).
+function mockBorrado(ctx,{personas=[],checklistEgreso=[],fallaConsulta=false}={}){
+  const borrados=[];
+  vm.runInContext('cachePersonasRaw=__p',Object.assign(ctx,{__p:personas}));
+  ctx.atGet=async(table,qs)=>{
+    if(table==='Checklist'){
+      if(fallaConsulta) throw new Error('Airtable caído');
+      return {records:checklistEgreso};
+    }
+    if(table==='Personas') return {records:personas};
+    return {records:[]};
+  };
+  ctx.atDelete=async(table,id)=>{ borrados.push({table,id}); };
+  ctx.atDeleteBatch=async(table,ids)=>{ ids.forEach(id=>borrados.push({table,id})); };
+  ctx.toast=()=>{};
+  ctx.loadAll=async()=>{};
+  return borrados;
+}
+
+test('deleteIngreso: un alta cancelada (sin historial) sí borra a la persona', async()=>{
+  const borrados=mockBorrado(ctx,{personas:[{id:'pNUEVO',fields:{Nombre:'Alta Erronea'}}]});
+  await ctx.deleteIngreso('chk1','Alta Erronea');
+  assert.ok(borrados.some(b=>b.table==='Checklist'&&b.id==='chk1'));
+  assert.ok(borrados.some(b=>b.table==='Personas'&&b.id==='pNUEVO'));
+});
+
+// El caso real: tenía offboarding cargado, así que trabajó en BEON.
+test('deleteIngreso: con un Checklist de Egreso, NO borra a la persona', async()=>{
+  const borrados=mockBorrado(ctx,{
+    personas:[{id:'pREAL',fields:{Nombre:'Cesar Welchez'}}],
+    checklistEgreso:[{id:'chkEgreso',fields:{Persona:'Cesar Welchez',Tipo:'Egreso'}}],
+  });
+  await ctx.deleteIngreso('chk1','Cesar Welchez');
+  assert.ok(borrados.some(b=>b.table==='Checklist'&&b.id==='chk1')); // la tarjeta sí
+  assert.equal(borrados.filter(b=>b.table==='Personas').length,0);   // la persona no
+  assert.equal(borrados.filter(b=>b.table==='Eventos').length,0);    // sus eventos tampoco
+});
+
+test('deleteIngreso: con Fecha de egreso cargada, NO borra a la persona', async()=>{
+  const borrados=mockBorrado(ctx,{
+    personas:[{id:'pREAL',fields:{Nombre:'Ya Se Va','Fecha de egreso':'2026-12-01'}}],
+  });
+  await ctx.deleteIngreso('chk1','Ya Se Va');
+  assert.equal(borrados.filter(b=>b.table==='Personas').length,0);
+});
+
+// Ante la duda no se borra: recuperar un registro perdido cuesta mucho más que
+// volver a borrarlo si de verdad hacía falta.
+test('deleteIngreso: si no se puede verificar el historial, no borra a la persona', async()=>{
+  const borrados=mockBorrado(ctx,{
+    personas:[{id:'pX',fields:{Nombre:'Dudoso'}}],
+    fallaConsulta:true,
+  });
+  await ctx.deleteIngreso('chk1','Dudoso');
+  assert.equal(borrados.filter(b=>b.table==='Personas').length,0);
+});
+
+test('tieneHistorialEnBeon: el nombre matchea sin importar mayúsculas ni espacios', async()=>{
+  mockBorrado(ctx,{checklistEgreso:[{id:'c',fields:{Persona:'Cesar Welchez',Tipo:'Egreso'}}]});
+  assert.equal(await ctx.tieneHistorialEnBeon('  Cesar Welchez  ',null),true);
 });

@@ -1,22 +1,60 @@
 
-// Elimina un ingreso: Checklist + Persona + Eventos relacionados
+// ¿Esta persona llegó a trabajar en BEON de verdad?
+//
+// El borrado de un ingreso está pensado para cancelar un alta cargada por error
+// —alguien que nunca entró— y por eso arrastra el registro de Personas. Pero el
+// mismo botón se puede apretar sobre alguien que sí estuvo, y ahí borra un
+// histórico entero sin vuelta atrás desde el Hub. Pasó: una persona con su
+// offboarding completo (7/7) desapareció de Personas y quedó su tarjeta de
+// Egreso huérfana, sin correo, sin país y sin último día.
+//
+// Dos señales inequívocas de que la persona existió: tiene fecha de egreso
+// cargada, o tiene una tarjeta de Egreso en Checklist. Un alta cancelada no
+// tiene ninguna de las dos.
+// Se consulta a Airtable en vez de mirar un cache: el borrado es una acción
+// rara y destructiva, así que una request de más no importa, y así la
+// protección no depende de qué secciones del Hub estén cargadas en ese momento.
+// Si la consulta falla, se asume que SÍ tiene historial: ante la duda, no
+// borrar (recuperar un registro perdido cuesta mucho más que borrarlo después).
+async function tieneHistorialEnBeon(nombre,personaRec){
+  if(personaRec?.fields?.['Fecha de egreso']) return true;
+  const esc=(nombre||'').replace(/"/g,'\\"');
+  try{
+    const d=await atGet('Checklist',`&filterByFormula=AND({Tipo}="Egreso",{Persona}="${esc}")`);
+    return (d.records||[]).length>0;
+  }catch(e){
+    console.error('No se pudo verificar el historial de',nombre,'—',e.message);
+    return true;
+  }
+}
+
+// Elimina un ingreso: Checklist + Persona + Eventos relacionados.
+// Si la persona tiene historial, se borra SOLO la tarjeta: ver
+// tieneHistorialEnBeon() para el porqué.
 async function deleteIngreso(checklistId, nombre){
-  // 1. Eliminar de Checklist
+  const personaRec=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===(nombre||'').trim());
+  const conHistorial=await tieneHistorialEnBeon(nombre,personaRec);
+
+  // 1. Eliminar de Checklist (la tarjeta de ingreso, siempre)
   await atDelete('Checklist', checklistId).catch(()=>{});
 
-  // 2. Eliminar de Personas (buscar por nombre exacto)
-  const pRecs=await atGet('Personas',`&filterByFormula={Nombre}="${nombre.replace(/"/g,'\\"')}"`).then(d=>d.records||[]).catch(()=>[]);
-  await atDeleteBatch('Personas', pRecs.map(r=>r.id));
+  if(!conHistorial){
+    // 2. Eliminar de Personas (buscar por nombre exacto)
+    const pRecs=await atGet('Personas',`&filterByFormula={Nombre}="${nombre.replace(/"/g,'\\"')}"`).then(d=>d.records||[]).catch(()=>[]);
+    await atDeleteBatch('Personas', pRecs.map(r=>r.id));
 
-  // 3. Eliminar Eventos que contengan el nombre en el título
-  const eRecs=await atGet('Eventos',`&filterByFormula=FIND("${nombre.replace(/"/g,'\\"')}",{Evento})`).then(d=>d.records||[]).catch(()=>[]);
-  await atDeleteBatch('Eventos', eRecs.map(r=>r.id));
+    // 3. Eliminar Eventos que contengan el nombre en el título
+    const eRecs=await atGet('Eventos',`&filterByFormula=FIND("${nombre.replace(/"/g,'\\"')}",{Evento})`).then(d=>d.records||[]).catch(()=>[]);
+    await atDeleteBatch('Eventos', eRecs.map(r=>r.id));
+  }
 
   // Limpiar estado local
   delete clState[checklistId];
   delete recMeta[checklistId];
 
-  toast(`${nombre} eliminado ✓`);
+  toast(conHistorial
+    ? `Se borró la tarjeta de ingreso de ${nombre}. Su registro en Personas y sus eventos NO se tocaron, porque ya tiene historial en BEON.`
+    : `${nombre} eliminado ✓`);
   await loadAll();
 }
 
@@ -176,6 +214,13 @@ function renderEgresoCard(r){
     // se busca de un vistazo; el aviso aparece al abrir la tarjeta.
     pf['Fecha de egreso']&&{icon:'ti-calendar-x',label:'Último día',value:fmt(pf['Fecha de egreso'])},
   ].filter(Boolean);
+  // Sin registro en Personas la tarjeta se dibujaba a medias y en silencio: sin
+  // correo, sin país y sin último día, como si esos datos no estuvieran
+  // cargados. Es un estado roto —la tarjeta apunta a alguien que no existe en
+  // la base— y tiene que decirlo, no disimularlo. Pasó de verdad: borrar una
+  // tarjeta de Ingreso borra también a la persona, y su tarjeta de Egreso queda
+  // huérfana (ver deleteIngreso).
+  const sinPersona=!persona;
   const div=document.createElement('div');
   div.className='eg-card';
   div.dataset.nombre=nombre.toLowerCase();
@@ -190,6 +235,7 @@ function renderEgresoCard(r){
       </div>
       <span class="badge ${rbc}">${rol}</span>
     </div>
+    ${sinPersona?`<div class="eg-sin-persona"><i class="ti ti-alert-triangle"></i><span><strong>${nombre}</strong> no está en la tabla Personas — la tarjeta quedó sin sus datos. Revisá el historial de Airtable para recuperar el registro.</span></div>`:''}
     ${metaRows.length?`<div class="eg-meta">
       ${metaRows.map(m=>`<div class="eg-meta-row"><i class="ti ${m.icon}"></i><span class="eg-meta-label">${m.label}</span><span class="eg-meta-val">${m.value}</span></div>`).join('')}
     </div>`:''}
@@ -278,8 +324,8 @@ function filtrarEgresos(){ filtrarKanbanChecklist('kb-egresos','egresos-search',
 
 function confirmarEliminar(checklistId, nombre){
   showConfirm(
-    `¿Eliminar a ${nombre}?`,
-    `Se borrará el registro de Checklist, la persona de la tabla Personas y todos los reminders/eventos creados para ${nombre}. Esta acción no se puede deshacer.`,
+    `¿Eliminar el ingreso de ${nombre}?`,
+    `Sirve para cancelar un alta cargada por error. Se borra la tarjeta y, si ${nombre} nunca llegó a trabajar en BEON, también su registro de Personas y sus reminders/eventos — eso no se puede deshacer desde el Hub.\n\nSi ya tiene historial (fecha de egreso o un offboarding cargado), se borra solo la tarjeta y su registro queda intacto.`,
     ()=>deleteIngreso(checklistId, nombre)
   );
 }

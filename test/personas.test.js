@@ -167,3 +167,36 @@ test('badgeNivelHtml: los cinco niveles tienen ícono definido', ()=>{
     assert.doesNotMatch(ctx.badgeNivelHtml(n),/undefined/);
   }
 });
+
+// ─── Resumen plegable de la ficha de persona ──────────────────────────────────
+// La ficha mostraba solo datos personales; beneficios/actividades/viajes vivían
+// en otra card. Ahora van acá en secciones plegadas, para tener todo junto sin
+// convertir el panel en una pared de texto.
+const vmPf=require('node:vm');
+const PF_SECCIONES=vmPf.runInContext('PF_SECCIONES',ctx);
+
+test('PF_SECCIONES: están las seis secciones del resumen', ()=>{
+  assert.equal(PF_SECCIONES.length,6);
+  assert.equal(
+    PF_SECCIONES.map(s=>s.titulo).join(' | '),
+    'Beneficios | Certifications Sponsorship | Actividades | Ambassador Week | Off Sites | Get Togethers',
+  );
+});
+
+// Mismo criterio que la card de Beneficios: primero lo formativo, después lo
+// de comunidad.
+test('PF_SECCIONES: Actividades va antes que Ambassador Week, Off Sites y Get Togethers', ()=>{
+  const pos=t=>PF_SECCIONES.findIndex(s=>s.titulo===t);
+  for(const t of ['Ambassador Week','Off Sites','Get Togethers']){
+    assert.ok(pos('Actividades')<pos(t),`Actividades quedó después de ${t}`);
+  }
+});
+
+test('PF_SECCIONES: cada sección tiene clave e ícono, y las claves no se repiten', ()=>{
+  const claves=PF_SECCIONES.map(s=>s.clave);
+  assert.equal(new Set(claves).size,claves.length);
+  for(const s of PF_SECCIONES){
+    assert.ok(s.clave,`falta clave en ${s.titulo}`);
+    assert.match(s.icono,/^ti-/,`ícono raro en ${s.titulo}: ${s.icono}`);
+  }
+});

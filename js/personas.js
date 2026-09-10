@@ -152,9 +152,95 @@ function verFichaPersona(id){
     row('Antigüedad',calcAntiguedad(f['Fecha de ingreso']))+
     row('Fecha de cumpleaños',fmt(f['Fecha de cumpleaños']))+
     (f['Fecha de egreso']?row('Fecha de egreso',fmt(f['Fecha de egreso'])):'')+
-    row('Comentarios',f.Comentarios);
+    row('Comentarios',f.Comentarios)+
+    `<div id="pf-extra" class="pf-extra" data-persona="${(f.Nombre||'').replace(/"/g,'&quot;')}"><div class="pf-extra-cargando">Cargando el resto de la info…</div></div>`;
 
   document.getElementById('pf-overlay').style.display='flex';
+  // Los datos personales se pintan ya; el resto llega después. Sin await: que
+  // seis consultas a Airtable retrasen la apertura del panel sería peor que
+  // verlo completarse.
+  renderResumenPersona(f.Nombre||'');
+}
+
+// ─── Resumen de actividad de la persona ───────────────────────────────────────
+// Todo lo que el Hub sabe de alguien vivía repartido: los datos personales acá
+// y beneficios/certificaciones/actividades/viajes en otra card (Beneficios →
+// Por persona). Para verlo junto sin que abrume, va en secciones plegadas, cada
+// una con su contador: de un vistazo se ve CUÁNTO hay de cada cosa, y se abre
+// solo lo que interesa.
+//
+// Es un resumen, no un reemplazo: una línea por registro. El detalle completo
+// (montos, estados, links, edición) sigue en la card de Beneficios.
+const PF_SECCIONES=[
+  {clave:'beneficios', titulo:'Beneficios',                icono:'ti-gift'},
+  {clave:'certifs',    titulo:'Certifications Sponsorship',icono:'ti-certificate'},
+  {clave:'actividades',titulo:'Actividades',               icono:'ti-presentation'},
+  {clave:'aw',         titulo:'Ambassador Week',           icono:'ti-star'},
+  {clave:'offsites',   titulo:'Off Sites',                 icono:'ti-plane'},
+  {clave:'gt',         titulo:'Get Togethers',             icono:'ti-users-group'},
+];
+
+async function renderResumenPersona(nombre){
+  const cont=document.getElementById('pf-extra');
+  if(!cont||!nombre) return;
+  const esc=nombre.replace(/"/g,'\\"');
+  const pedir=(tabla,qs)=>atGet(tabla,qs).catch(()=>({records:[]}));
+  const [dBen,dCap,dAV,dAW,dOS,dGT]=await Promise.all([
+    pedir('Beneficios Asignados',`&filterByFormula=FIND("${esc}",{Persona})`),
+    pedir('Capacitaciones',`&filterByFormula=FIND("${esc}",{Persona})`),
+    pedir('Asistencia a Actividades',`&filterByFormula=FIND("${esc}",{Persona})&sort[0][field]=Fecha&sort[0][direction]=desc`),
+    // Ambassador Week no tiene campo Fecha — pedir sort por Fecha hace que
+    // Airtable rechace el pedido entero (ver verBenefPersona en side-panel.js).
+    pedir('Ambassador Week',`&filterByFormula=FIND("${esc}",{Persona})`),
+    pedir('Off Sites',`&filterByFormula=FIND("${esc}",{Persona})&sort[0][field]=Fecha inicio&sort[0][direction]=desc`),
+    pedir('Get Together',`&filterByFormula=FIND("${esc}",{BEONer})&sort[0][field]=Fecha&sort[0][direction]=desc`),
+  ]);
+
+  // El panel puede haberse cerrado (o abierto sobre otra persona) mientras
+  // llegaban las consultas: sin este chequeo, el resumen de una persona podría
+  // pintarse dentro de la ficha de otra. Se compara contra data-persona y no
+  // contra el título visible, que incluye las iniciales del avatar.
+  const contAhora=document.getElementById('pf-extra');
+  if(!contAhora||contAhora.dataset.persona!==nombre) return;
+  if(document.getElementById('pf-overlay')?.style.display==='none') return;
+
+  const nombreBenef=r=>{
+    const id=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
+    return (cacheBeneficiosRaw||[]).find(b=>b.id===id)?.fields.Beneficio||id||'—';
+  };
+  const items={
+    beneficios:ordenarBenefAsignados((dBen.records||[]).map(r=>({r,nombre:nombreBenef(r)})))
+      .map(({r,nombre:n})=>({txt:n,meta:r.fields.Estado||'Activo'})),
+    certifs:(dCap.records||[]).map(r=>({txt:r.fields['Descripción']||'—',meta:r.fields.Fecha?fmt(r.fields.Fecha):''})),
+    // Deduplicadas por evento+fecha, igual que agruparAVPorEvento: con carga
+    // manual es normal que quede más de una fila por la misma actividad.
+    actividades:[...new Map((dAV.records||[]).map(r=>[`${r.fields.Evento||''}|${r.fields.Fecha||''}`,r])).values()]
+      .map(r=>({txt:r.fields.Evento||'—',meta:r.fields.Fecha?fmt(r.fields.Fecha):''})),
+    aw:(dAW.records||[]).map(r=>({txt:getEdicionAW(r.fields)||'Edición sin cargar',meta:''})),
+    offsites:(dOS.records||[]).map(r=>({txt:r.fields.Destino||'—',meta:r.fields['Fecha inicio']?fmt(r.fields['Fecha inicio']):''})),
+    gt:(dGT.records||[]).map(r=>({txt:r.fields.Ciudad||'—',meta:r.fields.Fecha?fmt(r.fields.Fecha):''})),
+  };
+
+  contAhora.innerHTML=PF_SECCIONES.map(s=>{
+    const lista=items[s.clave]||[];
+    // Las secciones vacías se muestran igual, deshabilitadas: "0" es
+    // información (no tiene beneficios cargados), y esconderlas haría que el
+    // panel cambiara de forma según la persona.
+    const vacia=!lista.length;
+    return`<details class="pf-sec"${vacia?'':''}>
+      <summary class="pf-sec-sum${vacia?' pf-sec-vacia':''}">
+        <i class="ti ${s.icono}"></i>
+        <span class="pf-sec-titulo">${s.titulo}</span>
+        <span class="pf-sec-count">${lista.length}</span>
+        <i class="ti ti-chevron-down pf-sec-chev"></i>
+      </summary>
+      ${vacia
+        ?`<div class="pf-sec-empty">Sin registros</div>`
+        :`<div class="pf-sec-body">${lista.map(i=>
+            `<div class="pf-sec-item"><span class="pf-sec-item-txt">${i.txt}</span>${i.meta?`<span class="pf-sec-item-meta">${i.meta}</span>`:''}</div>`
+          ).join('')}</div>`}
+    </details>`;
+  }).join('');
 }
 
 function closeFichaPersona(){

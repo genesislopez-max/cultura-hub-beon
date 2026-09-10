@@ -204,6 +204,29 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .side-panel-section{margin-bottom:24px;}
 .side-panel-section-title{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);}
 .side-panel-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+
+/* ─── Ficha de persona: resumen plegable ────────────────────────────────────
+   Secciones cerradas por defecto, con el contador siempre visible: la idea es
+   ver cuánto hay de cada cosa sin que el panel se vuelva una pared de texto. */
+.pf-extra{margin-top:16px;}
+.pf-extra-cargando{padding:14px 0;text-align:center;font-size:12px;color:var(--text3);}
+.pf-sec{border-bottom:1px solid var(--border);}
+.pf-sec-sum{display:flex;align-items:center;gap:8px;padding:9px 2px;font-size:13px;cursor:pointer;list-style:none;user-select:none;}
+.pf-sec-sum::-webkit-details-marker{display:none;}   /* el chevron propio reemplaza al triangulito */
+.pf-sec-sum:hover{color:var(--blue);}
+.pf-sec-sum>i:first-child{font-size:15px;color:var(--text3);flex-shrink:0;}
+.pf-sec-titulo{flex:1;font-weight:600;}
+.pf-sec-count{min-width:22px;text-align:center;padding:1px 7px;border-radius:999px;font-size:11px;font-weight:700;background:var(--tinte-eng);color:var(--blue);}
+.pf-sec-chev{font-size:14px;color:var(--text3);transition:transform 0.15s;}
+.pf-sec[open] .pf-sec-chev{transform:rotate(180deg);}
+/* Sin registros: el contador en gris para que el 0 no compita con los que sí
+   tienen algo, pero la sección sigue estando (que falte diría otra cosa). */
+.pf-sec-vacia .pf-sec-count{background:var(--border);color:var(--text3);}
+.pf-sec-body{padding:0 2px 10px;}
+.pf-sec-empty{padding:0 2px 10px;font-size:12px;color:var(--text3);font-style:italic;}
+.pf-sec-item{display:flex;justify-content:space-between;gap:10px;padding:5px 0 5px 23px;font-size:12.5px;color:var(--text2);}
+.pf-sec-item-txt{overflow-wrap:anywhere;}
+.pf-sec-item-meta{flex-shrink:0;color:var(--text3);font-size:11.5px;white-space:nowrap;}
 .side-panel-row:last-child{border-bottom:none;}
 .sp-empty{font-size:12px;color:var(--text3);padding:18px 10px;text-align:center;border:1.5px dashed var(--border);border-radius:10px;}
 .sp-empty::before{content:"📭";display:block;font-size:18px;margin-bottom:5px;opacity:0.55;}

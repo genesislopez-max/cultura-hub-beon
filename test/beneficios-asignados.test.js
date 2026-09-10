@@ -221,3 +221,49 @@ test('linkBenefAsignado: sin link no imprime nada', ()=>{
   assert.equal(ctx.linkBenefAsignado({}),'');
   assert.equal(ctx.linkBenefAsignado({Link:'   '}),'');
 });
+
+// ─── Orden de los beneficios asignados ────────────────────────────────────────
+// Clases de Inglés encabeza la lista: es el beneficio que más se consulta y
+// quedaba mezclado según el orden en que Airtable devolvía los registros, que
+// no es ninguno en particular.
+test('esBeneficioIngles: reconoce las formas en que está escrito el beneficio', ()=>{
+  assert.equal(ctx.esBeneficioIngles('Clases de Inglés'),true);  // con tilde
+  assert.equal(ctx.esBeneficioIngles('Clases de Ingles'),true);  // sin tilde
+  assert.equal(ctx.esBeneficioIngles('English Classes'),true);
+  assert.equal(ctx.esBeneficioIngles('Clases de Portugués'),false);
+  assert.equal(ctx.esBeneficioIngles('Udemy'),false);
+  assert.equal(ctx.esBeneficioIngles(''),false);
+});
+
+// La tilde importa: normalizarBeneficioKey borraba los acentos en vez de
+// convertirlos, así que "Inglés" quedaba como "ingls" y no matcheaba "ingles".
+test('normalizarBeneficioKey: las tildes se convierten a su letra base', ()=>{
+  assert.equal(ctx.normalizarBeneficioKey('Clases de Inglés'),'clasesdeingles');
+  assert.equal(ctx.normalizarBeneficioKey('Clases de Portugués'),'clasesdeportugues');
+  // Los que no tienen tildes siguen dando lo mismo que antes
+  assert.equal(ctx.normalizarBeneficioKey('Udemy'),'udemy');
+  assert.equal(ctx.normalizarBeneficioKey('Blogpost'),'blogpost');
+});
+
+test('ordenarBenefAsignados: Clases de Inglés queda primero', ()=>{
+  const filas=[{nombre:'Udemy'},{nombre:'Terapia'},{nombre:'Clases de Inglés'},{nombre:'Blogpost'}];
+  assert.equal(ctx.ordenarBenefAsignados(filas)[0].nombre,'Clases de Inglés');
+});
+
+test('ordenarBenefAsignados: el resto queda alfabético', ()=>{
+  const filas=[{nombre:'Udemy'},{nombre:'Terapia'},{nombre:'Clases de Inglés'},{nombre:'Blogpost'}];
+  const orden=ctx.ordenarBenefAsignados(filas).map(f=>f.nombre);
+  assert.equal(orden.join(' | '),'Clases de Inglés | Blogpost | Terapia | Udemy');
+});
+
+test('ordenarBenefAsignados: sin Clases de Inglés, todo alfabético', ()=>{
+  const orden=ctx.ordenarBenefAsignados([{nombre:'Udemy'},{nombre:'Blogpost'}]).map(f=>f.nombre);
+  assert.equal(orden.join(' | '),'Blogpost | Udemy');
+});
+
+// No muta el array que recibe: verBenefPersona lo arma a partir del cache.
+test('ordenarBenefAsignados: no modifica el array original', ()=>{
+  const filas=[{nombre:'Udemy'},{nombre:'Clases de Inglés'}];
+  ctx.ordenarBenefAsignados(filas);
+  assert.equal(filas[0].nombre,'Udemy');
+});

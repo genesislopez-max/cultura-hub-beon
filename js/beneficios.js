@@ -532,8 +532,14 @@ function toggleCamposTerapia(){
 // no hay nada individual que enlazar). El Quarter de los tres se calcula
 // solo a partir de la Fecha activación (ver quarterLabel en utils.js), sin
 // tipearlo, aunque no tengan campos propios en el formulario.
+// Las tildes se convierten a su letra base (normalize NFD + quitar los signos
+// diacríticos) en vez de borrarse: con el replace a secas, "Inglés" quedaba
+// como "ingls" y no matcheaba contra "ingles". Para los beneficios sin tildes
+// (Udemy, Blogpost) el resultado es el mismo que antes.
 function normalizarBeneficioKey(nombreBeneficio){
-  return (nombreBeneficio||'').trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  return (nombreBeneficio||'').trim().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9]/g,'');
 }
 function esBeneficioUdemy(nombreBeneficio){
   return normalizarBeneficioKey(nombreBeneficio)==='udemy';
@@ -549,6 +555,12 @@ function esBeneficioConQuarterAuto(nombreBeneficio){
 function esBeneficioBlogpost(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
   return k==='blogpost'||k==='blogposts';
+}
+// Clases de Inglés: el beneficio más consultado, así que encabeza la lista del
+// detalle de cada persona (ver ordenarBenefAsignados en js/side-panel.js).
+function esBeneficioIngles(nombreBeneficio){
+  const k=normalizarBeneficioKey(nombreBeneficio);
+  return k.includes('ingles')||k.includes('english');
 }
 // El campo Link lo comparten Udemy (link al curso) y Blogpost (link al post).
 // "Curso" en cambio es solo de Udemy.

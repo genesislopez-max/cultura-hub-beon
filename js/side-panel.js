@@ -10,6 +10,18 @@ function bpEmptyBox(icon, texto, accion){
   </div>`;
 }
 
+// Orden de la lista de beneficios asignados. Clases de Inglés va primero: es el
+// beneficio que más se consulta, y quedaba mezclado en medio de la lista según
+// el orden en que Airtable devolvía los registros (que no es ninguno en
+// particular). El resto queda alfabético, que es previsible — antes el orden
+// cambiaba sin motivo aparente entre una persona y otra.
+function ordenarBenefAsignados(filas){
+  const prioridad=f=>esBeneficioIngles(f.nombre)?0:1;
+  return [...filas].sort((a,b)=>
+    prioridad(a)-prioridad(b)||a.nombre.localeCompare(b.nombre,'es',{sensitivity:'base'})
+  );
+}
+
 async function verBenefPersona(nombre, grupo, nivel){
   const overlay=document.getElementById('bp-detalle-overlay');
 
@@ -24,7 +36,7 @@ async function verBenefPersona(nombre, grupo, nivel){
   document.body.style.overflow='hidden';
 
   // Cargar datos en paralelo
-  const [dBenefAsig, dCap, dAW, dOS, dGT] = await Promise.all([
+  const [dBenefAsig, dCap, dAW, dOS, dGT, dAV] = await Promise.all([
     atGet('Beneficios Asignados',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
     atGet('Capacitaciones',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
     // Ambassador Week no tiene campo "Fecha" (ver comentario en getEdicionAW,
@@ -35,6 +47,7 @@ async function verBenefPersona(nombre, grupo, nivel){
     atGet('Ambassador Week',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
     atGet('Off Sites',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha inicio&sort[0][direction]=desc`).catch(()=>({records:[]})),
     atGet('Get Together',`&filterByFormula=FIND("${nombre}",{BEONer})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
+    atGet('Asistencia a Actividades',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
   ]);
 
   const benefAsig=dBenefAsig.records||[];
@@ -94,10 +107,14 @@ async function verBenefPersona(nombre, grupo, nivel){
     <button class="bp-detalle-assign-btn" onclick="abrirAsignarBeneficioPara('${nombreEscJs}')"><i class="ti ti-plus"></i>Asignar</button>
   </div>`;
   if(benefAsig.length){
-    html+=`<div class="bp-detalle-rows">${benefAsig.map(r=>{
+    // El nombre del beneficio se resuelve antes de ordenar: el registro guarda
+    // un id de linked record, y ordenar por eso no significaría nada.
+    const filasBenef=ordenarBenefAsignados(benefAsig.map(r=>{
       const bId=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
       const benef=cacheBeneficiosRaw.find(b=>b.id===bId||b.fields.Beneficio===bId);
-      const bNombre=benef?.fields.Beneficio||bId||'—';
+      return {r,benef,nombre:benef?.fields.Beneficio||bId||'—'};
+    }));
+    html+=`<div class="bp-detalle-rows">${filasBenef.map(({r,benef,nombre:bNombre})=>{
       const cat=estiloCategoria(benef?.fields.Categoria);
       const valor=montoBenefAsignado(r.fields,benef,bNombre);
       const estado=r.fields.Estado||'Activo';
@@ -136,13 +153,13 @@ async function verBenefPersona(nombre, grupo, nivel){
   html+=`<div class="bp-detalle-section-head">
     <div class="bp-detalle-section-left">
       <div class="bp-detalle-section-icon" style="background:${capEstilo.tinte};color:${capEstilo.accent}"><i class="ti ${capEstilo.icon}"></i></div>
-      <span class="bp-detalle-section-title">Capacitaciones</span>
+      <span class="bp-detalle-section-title">Certifications Sponsorship</span>
     </div>
   </div>`;
   if(topeCap>0){
     html+=`<div style="margin:0 2px 12px">
       <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:4px">
-        <span>Capacitación usada (anual)</span>
+        <span>Presupuesto usado (anual)</span>
         <span style="font-weight:600;color:${capPct>=90?'var(--critical)':capPct>=70?'var(--warning)':'var(--text)'}">$${totalCap.toLocaleString('es-AR')} / $${topeCap.toLocaleString('es-AR')}</span>
       </div>
       <div style="height:6px;background:var(--border);border-radius:3px;overflow:hidden">
@@ -163,7 +180,39 @@ async function verBenefPersona(nombre, grupo, nivel){
       </div>`;
     }).join('')}</div>`;
   } else {
-    html+=bpEmptyBox(capEstilo.icon,'Sin capacitaciones registradas',null);
+    html+=bpEmptyBox(capEstilo.icon,'Sin certificaciones registradas',null);
+  }
+
+  // ── Actividades (workshops, webinars, tech tables)
+  // Va antes de Ambassador Week / Off Sites / Get Togethers: primero lo
+  // formativo, después lo de comunidad. Se deduplican los registros por
+  // evento+fecha porque en la carga manual es normal que quede más de una fila
+  // de la misma persona para la misma actividad (mismo criterio que
+  // agruparAVPorEvento en js/actividades-virtuales.js).
+  const avEstilo=estiloCategoria('Aprendizaje');
+  const avUnicos=[...new Map((dAV.records||[]).map(r=>[
+    `${r.fields.Evento||''}|${r.fields.Fecha||''}`,r,
+  ])).values()];
+  html+=`<div class="bp-detalle-section-head">
+    <div class="bp-detalle-section-left">
+      <div class="bp-detalle-section-icon" style="background:${avEstilo.tinte};color:${avEstilo.accent}"><i class="ti ti-presentation"></i></div>
+      <span class="bp-detalle-section-title">Actividades</span>
+      <span class="bp-detalle-section-badge" style="background:${avEstilo.tinte};color:${avEstilo.accent}">${avUnicos.length} asistencia${avUnicos.length!==1?'s':''}</span>
+    </div>
+  </div>`;
+  if(avUnicos.length){
+    html+=`<div class="bp-detalle-rows">${avUnicos.map(r=>{
+      const f=r.fields;
+      return`<div class="bp-detalle-row">
+        <div class="bp-detalle-row-icon" style="background:${avEstilo.tinte};color:${avEstilo.accent}"><i class="ti ti-presentation"></i></div>
+        <div class="bp-detalle-row-mid">
+          <div class="bp-detalle-row-title">${f.Evento||'—'}</div>
+          <div class="bp-detalle-row-sub">${f.Fecha?fmt(f.Fecha):'Sin fecha'}${f.Grupo&&f.Grupo!=='Todos'?` · ${f.Grupo}`:''}</div>
+        </div>
+      </div>`;
+    }).join('')}</div>`;
+  } else {
+    html+=bpEmptyBox('ti-presentation','Sin actividades registradas',null);
   }
 
   // ── Ambassador Week

@@ -400,14 +400,15 @@ function periodoBenefAsignado(fields,nombreBeneficio){
 // (editable) sobre el valor fijo del catálogo — mismo criterio que se usa para
 // sumar el total usado.
 //
-// El "/año" vale para los beneficios anuales, que son casi todos, pero no para
-// Blogpost: ahí se paga cada vez que se publica, así que el sufijo mentía sobre
-// la periodicidad.
+// El "/año" vale para los beneficios anuales, pero no para los que se pagan por
+// unidad (ver esBeneficioPorUnidad en js/beneficios.js): en Udemy el monto es
+// lo que costó ese curso, no un cupo anual — y con tres cursos juntos el sufijo
+// además hacía leer tres montos anuales donde hay tres compras.
 function montoBenefAsignado(fields,benefCatalogo,nombreBeneficio){
   const monto=fields.Monto||benefCatalogo?.fields?.Valor;
   if(!monto) return '';
   const cifra=`$${Number(monto).toLocaleString('es-AR')}`;
-  return esBeneficioBlogpost(nombreBeneficio)?cifra:`${cifra}/año`;
+  return esBeneficioPorUnidad(nombreBeneficio)?cifra:`${cifra}/año`;
 }
 
 // Link de un beneficio asignado, listo para poner en la fila. Solo se acepta

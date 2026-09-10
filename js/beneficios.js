@@ -579,6 +579,19 @@ function toggleCamposLink(){
 // campo estructurado como los de Terapia o Udemy, porque cada certificación es
 // un caso distinto. normalizarBeneficioKey saca espacios, tildes y mayúsculas,
 // así que matchea "Certifications", "certifications" o "Certification".
+// Beneficios que se pagan por unidad y no por año: el monto es lo que costó
+// ESA cosa concreta —un curso de Udemy, una certificación, una publicación— y
+// no un cupo anual. Mostrarlos con "/año" dice algo que no es cierto, y encima
+// engaña al leer varias asignaciones juntas (tres cursos de Udemy no son tres
+// montos anuales, son tres compras).
+//
+// El resto (Terapia, Clases de Inglés, Hardware Bonus…) sí son anuales y
+// conservan el sufijo. Ver montoBenefAsignado() en js/side-panel.js.
+function esBeneficioPorUnidad(nombreBeneficio){
+  return esBeneficioUdemy(nombreBeneficio)
+    ||esBeneficioBlogpost(nombreBeneficio)
+    ||esBeneficioCertifications(nombreBeneficio);
+}
 function esBeneficioCertifications(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
   return k==='certifications'||k==='certification'||k==='certificaciones';

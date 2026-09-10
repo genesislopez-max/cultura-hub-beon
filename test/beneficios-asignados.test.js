@@ -151,16 +151,26 @@ test('periodoBenefAsignado: muestra la fecha de baja que se guardó', ()=>{
 // Blogpost se paga por cada publicación, no por año: el "/año" del monto mentía
 // sobre la periodicidad, "Activo desde" no aplica a algo puntual, y el link a
 // la publicación es el dato que más se busca.
-test('montoBenefAsignado: Blogpost va sin "/año"; el resto lo conserva', ()=>{
+// Los que se pagan por unidad (un curso, una certificación, una publicación)
+// van sin "/año": el monto es lo que costó ESA cosa, no un cupo anual.
+test('montoBenefAsignado: los beneficios por unidad van sin "/año"', ()=>{
   const fields={Monto:150};
-  assert.equal(ctx.montoBenefAsignado(fields,null,'Blogpost'),'$150');
-  assert.equal(ctx.montoBenefAsignado(fields,null,'Terapia'),'$150/año');
+  for(const b of ['Blogpost','Udemy','Certifications']){
+    assert.equal(ctx.montoBenefAsignado(fields,null,b),'$150',`${b} no debería llevar /año`);
+  }
+});
+
+test('montoBenefAsignado: los beneficios anuales conservan el "/año"', ()=>{
+  const fields={Monto:150};
+  for(const b of ['Terapia','Clases de Inglés','Hardware Bonus',"O'Reilly"]){
+    assert.equal(ctx.montoBenefAsignado(fields,null,b),'$150/año',`${b} debería llevar /año`);
+  }
 });
 
 test('montoBenefAsignado: cae al valor del catálogo si la asignación no tiene monto', ()=>{
   const benef={fields:{Valor:200}};
   assert.equal(ctx.montoBenefAsignado({},benef,'Blogpost'),'$200');
-  assert.equal(ctx.montoBenefAsignado({},benef,'Udemy'),'$200/año');
+  assert.equal(ctx.montoBenefAsignado({},benef,'Terapia'),'$200/año');
 });
 
 test('montoBenefAsignado: sin monto ni valor de catálogo no imprime "$"', ()=>{

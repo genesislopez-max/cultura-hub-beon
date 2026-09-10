@@ -22,6 +22,27 @@ function ordenarBenefAsignados(filas){
   );
 }
 
+// Agrupa las asignaciones por beneficio conservando el orden de
+// ordenarBenefAsignados(). Una persona puede tener el mismo beneficio varias
+// veces (tres cursos de Udemy, por ejemplo) y listarlos sueltos hacía que la
+// card repitiera el mismo título una y otra vez sin dejar claro que son usos
+// distintos del mismo beneficio.
+//
+// Dentro de cada grupo las asignaciones van de la más reciente a la más vieja:
+// lo último que hizo la persona es lo que se busca primero.
+function agruparBenefAsignados(filas){
+  const grupos=new Map();
+  for(const fila of ordenarBenefAsignados(filas)){
+    if(!grupos.has(fila.nombre)) grupos.set(fila.nombre,{nombre:fila.nombre,benef:fila.benef,items:[]});
+    grupos.get(fila.nombre).items.push(fila);
+  }
+  for(const g of grupos.values()){
+    g.items.sort((a,b)=>(b.r.fields['Fecha activación']||'').localeCompare(a.r.fields['Fecha activación']||''));
+    g.activos=g.items.filter(f=>(f.r.fields.Estado||'Activo')==='Activo').length;
+  }
+  return [...grupos.values()];
+}
+
 async function verBenefPersona(nombre, grupo, nivel){
   const overlay=document.getElementById('bp-detalle-overlay');
 
@@ -114,8 +135,14 @@ async function verBenefPersona(nombre, grupo, nivel){
       const benef=cacheBeneficiosRaw.find(b=>b.id===bId||b.fields.Beneficio===bId);
       return {r,benef,nombre:benef?.fields.Beneficio||bId||'—'};
     }));
-    html+=`<div class="bp-detalle-rows">${filasBenef.map(({r,benef,nombre:bNombre})=>{
+    // Una fila por asignación. Se usa suelta cuando el beneficio aparece una
+    // sola vez, y dentro del desplegable cuando hay varias del mismo.
+    const filaBenefHtml=({r,benef,nombre:bNombre},dentroDeGrupo)=>{
       const cat=estiloCategoria(benef?.fields.Categoria);
+      // Dentro de un grupo, repetir el nombre del beneficio en cada fila es
+      // ruido: ya lo dice el encabezado. Si la asignación tiene Curso cargado
+      // (Udemy), ese es el dato que distingue una de otra.
+      const titulo=dentroDeGrupo?((r.fields.Curso||'').trim()||bNombre):bNombre;
       const valor=montoBenefAsignado(r.fields,benef,bNombre);
       const estado=r.fields.Estado||'Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
@@ -132,7 +159,7 @@ async function verBenefPersona(nombre, grupo, nivel){
       return`<div class="bp-detalle-row">
         <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
         <div class="bp-detalle-row-mid">
-          <div class="bp-detalle-row-title">${bNombre}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
+          <div class="bp-detalle-row-title">${titulo}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
           <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
@@ -143,6 +170,30 @@ async function verBenefPersona(nombre, grupo, nivel){
           <button class="bp-detalle-action-btn danger" onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar"><i class="ti ti-trash"></i></button>
         </div>
       </div>`;
+    };
+
+    // Un beneficio con una sola asignación se muestra tal cual: envolverlo en
+    // un desplegable de un elemento sería un click de más para nada. Con dos o
+    // más, el grupo se pliega y el encabezado dice cuántas hay.
+    html+=`<div class="bp-detalle-rows">${agruparBenefAsignados(filasBenef).map(g=>{
+      if(g.items.length===1) return filaBenefHtml(g.items[0]);
+      const cat=estiloCategoria(g.benef?.fields.Categoria);
+      const total=g.items.reduce((s,f)=>{
+        const m=f.r.fields.Monto||g.benef?.fields?.Valor||0;
+        return s+Number(m);
+      },0);
+      return`<details class="bp-grupo">
+        <summary class="bp-grupo-sum">
+          <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
+          <div class="bp-grupo-mid">
+            <div class="bp-detalle-row-title">${g.nombre}${total?`<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} en total</span>`:''}</div>
+            <div class="bp-detalle-row-sub">${g.items.length} asignaciones${g.activos?` · ${g.activos} activa${g.activos!==1?'s':''}`:''}</div>
+          </div>
+          <span class="bp-grupo-count">${g.items.length}</span>
+          <i class="ti ti-chevron-down bp-detalle-chev"></i>
+        </summary>
+        <div class="bp-grupo-items">${g.items.map(f=>filaBenefHtml(f,true)).join('')}</div>
+      </details>`;
     }).join('')}</div>`;
   } else {
     html+=bpEmptyBox('ti-gift','Sin beneficios asignados',null);

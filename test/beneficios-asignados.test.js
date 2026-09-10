@@ -267,3 +267,57 @@ test('ordenarBenefAsignados: no modifica el array original', ()=>{
   ctx.ordenarBenefAsignados(filas);
   assert.equal(filas[0].nombre,'Udemy');
 });
+
+// ─── Agrupado por beneficio ───────────────────────────────────────────────────
+// Una persona puede tener el mismo beneficio varias veces (tres cursos de
+// Udemy): listarlos sueltos repetía el mismo título sin dejar claro que son
+// usos distintos del mismo beneficio.
+const fila=(nombre,fecha,estado)=>({nombre,benef:{fields:{Beneficio:nombre}},r:{fields:{'Fecha activación':fecha,Estado:estado||'Activo'}}});
+
+test('agruparBenefAsignados: junta las asignaciones del mismo beneficio', ()=>{
+  const gs=ctx.agruparBenefAsignados([
+    fila('Udemy','2024-06-28'),fila('Terapia','2025-01-01'),
+    fila('Udemy','2023-08-22'),fila('Udemy','2026-04-01'),
+  ]);
+  assert.equal(gs.length,2);
+  const udemy=gs.find(g=>g.nombre==='Udemy');
+  assert.equal(udemy.items.length,3);
+  assert.equal(gs.find(g=>g.nombre==='Terapia').items.length,1);
+});
+
+// Lo último que hizo la persona es lo que se busca primero.
+test('agruparBenefAsignados: dentro del grupo, la más reciente primero', ()=>{
+  const g=ctx.agruparBenefAsignados([
+    fila('Udemy','2024-06-28'),fila('Udemy','2026-04-01'),fila('Udemy','2023-08-22'),
+  ])[0];
+  assert.equal(
+    g.items.map(i=>i.r.fields['Fecha activación']).join(' | '),
+    '2026-04-01 | 2024-06-28 | 2023-08-22',
+  );
+});
+
+test('agruparBenefAsignados: cuenta cuántas del grupo están activas', ()=>{
+  const g=ctx.agruparBenefAsignados([
+    fila('Udemy','2026-04-01','Inactivo'),fila('Udemy','2024-06-28'),fila('Udemy','2023-08-22'),
+  ])[0];
+  assert.equal(g.items.length,3);
+  assert.equal(g.activos,2);
+});
+
+// El orden de los grupos respeta el criterio de la lista: Inglés primero.
+test('agruparBenefAsignados: mantiene el orden de ordenarBenefAsignados', ()=>{
+  const gs=ctx.agruparBenefAsignados([
+    fila('Udemy','2024-01-01'),fila('Terapia','2025-01-01'),fila('Clases de Inglés','2022-01-01'),
+  ]);
+  assert.equal(gs.map(g=>g.nombre).join(' | '),'Clases de Inglés | Terapia | Udemy');
+});
+
+test('agruparBenefAsignados: una asignación sin fecha no rompe el orden', ()=>{
+  const g=ctx.agruparBenefAsignados([fila('Udemy',undefined),fila('Udemy','2024-01-01')])[0];
+  assert.equal(g.items.length,2);
+  assert.equal(g.items[0].r.fields['Fecha activación'],'2024-01-01');
+});
+
+test('agruparBenefAsignados: sin asignaciones devuelve lista vacía', ()=>{
+  assert.equal(ctx.agruparBenefAsignados([]).length,0);
+});

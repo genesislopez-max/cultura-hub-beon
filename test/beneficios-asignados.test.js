@@ -151,16 +151,26 @@ test('periodoBenefAsignado: muestra la fecha de baja que se guardó', ()=>{
 // Blogpost se paga por cada publicación, no por año: el "/año" del monto mentía
 // sobre la periodicidad, "Activo desde" no aplica a algo puntual, y el link a
 // la publicación es el dato que más se busca.
-test('montoBenefAsignado: Blogpost va sin "/año"; el resto lo conserva', ()=>{
+// Los que se pagan por unidad (un curso, una certificación, una publicación)
+// van sin "/año": el monto es lo que costó ESA cosa, no un cupo anual.
+test('montoBenefAsignado: los beneficios por unidad van sin "/año"', ()=>{
   const fields={Monto:150};
-  assert.equal(ctx.montoBenefAsignado(fields,null,'Blogpost'),'$150');
-  assert.equal(ctx.montoBenefAsignado(fields,null,'Terapia'),'$150/año');
+  for(const b of ['Blogpost','Udemy','Certifications']){
+    assert.equal(ctx.montoBenefAsignado(fields,null,b),'$150',`${b} no debería llevar /año`);
+  }
+});
+
+test('montoBenefAsignado: los beneficios anuales conservan el "/año"', ()=>{
+  const fields={Monto:150};
+  for(const b of ['Terapia','Clases de Inglés','Hardware Bonus',"O'Reilly"]){
+    assert.equal(ctx.montoBenefAsignado(fields,null,b),'$150/año',`${b} debería llevar /año`);
+  }
 });
 
 test('montoBenefAsignado: cae al valor del catálogo si la asignación no tiene monto', ()=>{
   const benef={fields:{Valor:200}};
   assert.equal(ctx.montoBenefAsignado({},benef,'Blogpost'),'$200');
-  assert.equal(ctx.montoBenefAsignado({},benef,'Udemy'),'$200/año');
+  assert.equal(ctx.montoBenefAsignado({},benef,'Terapia'),'$200/año');
 });
 
 test('montoBenefAsignado: sin monto ni valor de catálogo no imprime "$"', ()=>{
@@ -266,4 +276,58 @@ test('ordenarBenefAsignados: no modifica el array original', ()=>{
   const filas=[{nombre:'Udemy'},{nombre:'Clases de Inglés'}];
   ctx.ordenarBenefAsignados(filas);
   assert.equal(filas[0].nombre,'Udemy');
+});
+
+// ─── Agrupado por beneficio ───────────────────────────────────────────────────
+// Una persona puede tener el mismo beneficio varias veces (tres cursos de
+// Udemy): listarlos sueltos repetía el mismo título sin dejar claro que son
+// usos distintos del mismo beneficio.
+const fila=(nombre,fecha,estado)=>({nombre,benef:{fields:{Beneficio:nombre}},r:{fields:{'Fecha activación':fecha,Estado:estado||'Activo'}}});
+
+test('agruparBenefAsignados: junta las asignaciones del mismo beneficio', ()=>{
+  const gs=ctx.agruparBenefAsignados([
+    fila('Udemy','2024-06-28'),fila('Terapia','2025-01-01'),
+    fila('Udemy','2023-08-22'),fila('Udemy','2026-04-01'),
+  ]);
+  assert.equal(gs.length,2);
+  const udemy=gs.find(g=>g.nombre==='Udemy');
+  assert.equal(udemy.items.length,3);
+  assert.equal(gs.find(g=>g.nombre==='Terapia').items.length,1);
+});
+
+// Lo último que hizo la persona es lo que se busca primero.
+test('agruparBenefAsignados: dentro del grupo, la más reciente primero', ()=>{
+  const g=ctx.agruparBenefAsignados([
+    fila('Udemy','2024-06-28'),fila('Udemy','2026-04-01'),fila('Udemy','2023-08-22'),
+  ])[0];
+  assert.equal(
+    g.items.map(i=>i.r.fields['Fecha activación']).join(' | '),
+    '2026-04-01 | 2024-06-28 | 2023-08-22',
+  );
+});
+
+test('agruparBenefAsignados: cuenta cuántas del grupo están activas', ()=>{
+  const g=ctx.agruparBenefAsignados([
+    fila('Udemy','2026-04-01','Inactivo'),fila('Udemy','2024-06-28'),fila('Udemy','2023-08-22'),
+  ])[0];
+  assert.equal(g.items.length,3);
+  assert.equal(g.activos,2);
+});
+
+// El orden de los grupos respeta el criterio de la lista: Inglés primero.
+test('agruparBenefAsignados: mantiene el orden de ordenarBenefAsignados', ()=>{
+  const gs=ctx.agruparBenefAsignados([
+    fila('Udemy','2024-01-01'),fila('Terapia','2025-01-01'),fila('Clases de Inglés','2022-01-01'),
+  ]);
+  assert.equal(gs.map(g=>g.nombre).join(' | '),'Clases de Inglés | Terapia | Udemy');
+});
+
+test('agruparBenefAsignados: una asignación sin fecha no rompe el orden', ()=>{
+  const g=ctx.agruparBenefAsignados([fila('Udemy',undefined),fila('Udemy','2024-01-01')])[0];
+  assert.equal(g.items.length,2);
+  assert.equal(g.items[0].r.fields['Fecha activación'],'2024-01-01');
+});
+
+test('agruparBenefAsignados: sin asignaciones devuelve lista vacía', ()=>{
+  assert.equal(ctx.agruparBenefAsignados([]).length,0);
 });

@@ -522,6 +522,22 @@ textarea.field-input{resize:vertical;min-height:80px;}
 .bp-detalle-section-sum:hover .bp-detalle-section-title{color:var(--blue);}
 .bp-detalle-chev{font-size:15px;color:var(--text3);transition:transform 0.15s;margin-left:auto;}
 .bp-detalle-plegable[open] .bp-detalle-chev{transform:rotate(180deg);}
+
+/* Grupo de asignaciones del mismo beneficio (ej. tres cursos de Udemy). El
+   summary imita una fila normal para que la lista se lea pareja; lo que lo
+   distingue es el contador y el chevron. */
+.bp-grupo{border:1px solid var(--border);border-radius:12px;margin-bottom:8px;background:var(--bg2);}
+.bp-grupo[open]{border-color:color-mix(in srgb,var(--blue) 28%,var(--border));}
+.bp-grupo-sum{display:flex;align-items:center;gap:11px;padding:12px 14px;cursor:pointer;list-style:none;user-select:none;}
+.bp-grupo-sum::-webkit-details-marker{display:none;}
+.bp-grupo-sum:hover .bp-detalle-row-title{color:var(--blue);}
+.bp-grupo-mid{flex:1;min-width:0;}
+.bp-grupo-count{flex-shrink:0;min-width:24px;text-align:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:var(--tinte-eng);color:var(--blue);}
+.bp-grupo .bp-detalle-chev{margin-left:0;}
+/* Las filas de adentro pierden su marco propio: ya están dentro del recuadro
+   del grupo, y anidar dos bordes hace ruido. Se separan con una línea. */
+.bp-grupo-items{padding:0 8px 8px;}
+.bp-grupo-items .bp-detalle-row{border:none;border-top:1px solid var(--border);border-radius:0;background:transparent;margin:0;}
 .bp-detalle-section-icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;flex:none;}
 .bp-detalle-section-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:-0.01em;}
 .bp-detalle-section-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;}

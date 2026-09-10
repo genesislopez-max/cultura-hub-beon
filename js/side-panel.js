@@ -193,13 +193,19 @@ async function verBenefPersona(nombre, grupo, nivel){
   const avUnicos=[...new Map((dAV.records||[]).map(r=>[
     `${r.fields.Evento||''}|${r.fields.Fecha||''}`,r,
   ])).values()];
-  html+=`<div class="bp-detalle-section-head">
-    <div class="bp-detalle-section-left">
-      <div class="bp-detalle-section-icon" style="background:${avEstilo.tinte};color:${avEstilo.accent}"><i class="ti ti-presentation"></i></div>
-      <span class="bp-detalle-section-title">Actividades</span>
-      <span class="bp-detalle-section-badge" style="background:${avEstilo.tinte};color:${avEstilo.accent}">${avUnicos.length} asistencia${avUnicos.length!==1?'s':''}</span>
-    </div>
-  </div>`;
+  // Plegada por defecto: es la única sección que crece sin techo (una fila por
+  // actividad a la que fue la persona — 28 en un caso real), y desplegada
+  // empujaba Ambassador Week, Off Sites y Get Togethers fuera de la vista. El
+  // contador queda visible, así que se sabe cuántas hay sin abrirla.
+  html+=`<details class="bp-detalle-plegable">
+    <summary class="bp-detalle-section-head bp-detalle-section-sum">
+      <div class="bp-detalle-section-left">
+        <div class="bp-detalle-section-icon" style="background:${avEstilo.tinte};color:${avEstilo.accent}"><i class="ti ti-presentation"></i></div>
+        <span class="bp-detalle-section-title">Actividades</span>
+        <span class="bp-detalle-section-badge" style="background:${avEstilo.tinte};color:${avEstilo.accent}">${avUnicos.length} asistencia${avUnicos.length!==1?'s':''}</span>
+      </div>
+      <i class="ti ti-chevron-down bp-detalle-chev"></i>
+    </summary>`;
   if(avUnicos.length){
     html+=`<div class="bp-detalle-rows">${avUnicos.map(r=>{
       const f=r.fields;
@@ -214,6 +220,7 @@ async function verBenefPersona(nombre, grupo, nivel){
   } else {
     html+=bpEmptyBox('ti-presentation','Sin actividades registradas',null);
   }
+  html+=`</details>`;
 
   // ── Ambassador Week
   html+=`<div class="bp-detalle-section-head">

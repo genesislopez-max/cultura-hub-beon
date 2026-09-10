@@ -185,7 +185,13 @@ async function renderResumenPersona(nombre){
   if(!cont||!nombre) return;
   const esc=nombre.replace(/"/g,'\\"');
   const pedir=(tabla,qs)=>atGet(tabla,qs).catch(()=>({records:[]}));
-  const [dBen,dCap,dAV,dAW,dOS,dGT]=await Promise.all([
+  // El catálogo de beneficios (cacheBeneficiosRaw) lo llena loadBeneficios(),
+  // que es LAZY: corre recién al entrar a la sección Beneficios. Esta ficha se
+  // abre desde Engineers & Tech, así que muchas veces el cache está vacío y sin
+  // él los beneficios salían con el id crudo de Airtable (recIIgV8A2X5Wheyk…)
+  // en vez del nombre. Se pide solo si hace falta.
+  const faltaCatalogo=!(cacheBeneficiosRaw&&cacheBeneficiosRaw.length);
+  const [dBen,dCap,dAV,dAW,dOS,dGT,dCat]=await Promise.all([
     pedir('Beneficios Asignados',`&filterByFormula=FIND("${esc}",{Persona})`),
     pedir('Capacitaciones',`&filterByFormula=FIND("${esc}",{Persona})`),
     pedir('Asistencia a Actividades',`&filterByFormula=FIND("${esc}",{Persona})&sort[0][field]=Fecha&sort[0][direction]=desc`),
@@ -194,6 +200,7 @@ async function renderResumenPersona(nombre){
     pedir('Ambassador Week',`&filterByFormula=FIND("${esc}",{Persona})`),
     pedir('Off Sites',`&filterByFormula=FIND("${esc}",{Persona})&sort[0][field]=Fecha inicio&sort[0][direction]=desc`),
     pedir('Get Together',`&filterByFormula=FIND("${esc}",{BEONer})&sort[0][field]=Fecha&sort[0][direction]=desc`),
+    faltaCatalogo?pedir('Beneficios',''):Promise.resolve(null),
   ]);
 
   // El panel puede haberse cerrado (o abierto sobre otra persona) mientras
@@ -204,9 +211,12 @@ async function renderResumenPersona(nombre){
   if(!contAhora||contAhora.dataset.persona!==nombre) return;
   if(document.getElementById('pf-overlay')?.style.display==='none') return;
 
+  const catalogo=faltaCatalogo?(dCat?.records||[]):cacheBeneficiosRaw;
+  // Por id O por nombre, igual que verBenefPersona: el campo Beneficio puede
+  // venir como linked record (id) o ya resuelto a texto según de dónde salga.
   const nombreBenef=r=>{
-    const id=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
-    return (cacheBeneficiosRaw||[]).find(b=>b.id===id)?.fields.Beneficio||id||'—';
+    const ref=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
+    return catalogo.find(b=>b.id===ref||b.fields.Beneficio===ref)?.fields.Beneficio||ref||'—';
   };
   const items={
     beneficios:ordenarBenefAsignados((dBen.records||[]).map(r=>({r,nombre:nombreBenef(r)})))

@@ -45,8 +45,13 @@ function valorSelectOtro(id){
   return sel.value;
 }
 
-function proyectosDelCache(){
-  return [...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+// Solo los proyectos vigentes — los de baja e inactivos no se ofrecen para
+// cargar gente. `yaCargado` se suma igual aunque esté inactivo: es el valor
+// que la persona ya tenía, y degradarlo a "Otro (escribir a mano)" al abrir
+// la edición hace parecer que se cargó a mano algo que está bien cargado.
+function proyectosDelCache(yaCargado){
+  const nombres=(cacheProyectosRaw||[]).filter(proyectoVigente).map(p=>p.fields.Proyecto||'');
+  return [...new Set([...nombres,yaCargado||''].filter(Boolean))].sort();
 }
 
 // Form completo de Persona — lo usan "Nueva persona", "Nuevo ingreso" (misma carga,
@@ -55,7 +60,7 @@ function proyectosDelCache(){
 // editar: la fecha de egreso se carga desde la pestaña de Egresos, no al
 // dar de alta a alguien nuevo.
 function buildPersonaCompletaHTML(v={},mostrarEgreso=false,ocultarNivel=false){
-  const proyectos=proyectosDelCache();
+  const proyectos=proyectosDelCache(v.Proyecto);
   const opt=(val,cur)=>`<option value="${val}"${val===(cur||'')?' selected':''}>${val}</option>`;
   // COO/Founder ya no se pueden asignar al dar de alta — son roles fijos de
   // 1 persona. Si ya estaba cargado así (edición), se deja la opción para
@@ -91,16 +96,22 @@ ${mostrarEgreso?`<div class="field-group"><label class="field-label">Fecha de eg
 `;
 }
 // Sugerencias de Manager según el Rol en empresa elegido: Engineers ven a
-// los TEM, Core Team ve a Supervisor/Lead/Manager/Founder/COO.
+// los TEM, Core Team ve a Supervisor/Lead/Manager/Founder/COO. Solo gente que
+// sigue en BEON — a quien ya pasó su último día no se le asigna a nadie más.
+// El manager que la persona ya tenía se conserva aunque hoy no sea candidato
+// (se fue, o cambió de rol) para no degradarlo a "Otro (escribir a mano)".
+const ROLES_MANAGER_ENGINEER=new Set(['TEM']);
+const ROLES_MANAGER_CORE=new Set(['Supervisor','Lead','Manager','Founder','COO']);
+function managersCandidatos(rol){
+  const rolesValidos=rol==='Engineer'?ROLES_MANAGER_ENGINEER:rol==='Core Team'?ROLES_MANAGER_CORE:null;
+  if(!rolesValidos) return [];
+  return nombresPersonas(p=>esPersonaActiva(p)&&rolesValidos.has((p.fields['Rol en empresa']||'').trim()));
+}
 function actualizarManagerOptions(){
   if(!document.getElementById('f-per-manager')) return;
-  const rol=document.getElementById('f-per-rol')?.value;
-  const ROLES_MANAGER_ENGINEER=new Set(['TEM']);
-  const ROLES_MANAGER_CORE=new Set(['Supervisor','Lead','Manager','Founder','COO']);
-  const rolesValidos=rol==='Engineer'?ROLES_MANAGER_ENGINEER:rol==='Core Team'?ROLES_MANAGER_CORE:null;
-  const candidatos=rolesValidos?(cachePersonasRaw||[]).filter(p=>rolesValidos.has((p.fields['Rol en empresa']||'').trim())):[];
-  const nombres=[...new Set(candidatos.map(p=>p.fields.Nombre).filter(Boolean))].sort();
-  poblarSelectConOtro('f-per-manager',nombres);
+  const candidatos=managersCandidatos(document.getElementById('f-per-rol')?.value);
+  const yaCargado=valorSelectOtro('f-per-manager');
+  poblarSelectConOtro('f-per-manager',[...new Set([...candidatos,yaCargado].filter(Boolean))].sort());
 }
 
 // Los selects de Proyecto y Manager se arman con cacheProyectosRaw y
@@ -116,7 +127,7 @@ async function montarFormPersona(){
   marcarSelectsPersonaCargando(true);
   if(!await esperarDatosDelForm()) return;
   marcarSelectsPersonaCargando(false);
-  poblarSelectConOtro('f-per-proyecto',proyectosDelCache());
+  poblarSelectConOtro('f-per-proyecto',proyectosDelCache(valorSelectOtro('f-per-proyecto')));
   actualizarManagerOptions();
 }
 // Espera a tener los datos que alimentan los selects: si la carga inicial está
@@ -140,7 +151,11 @@ async function esperarDatosDelForm(){
 }
 // Misma carrera en los forms que listan personas (Nuevo offboarding, Nuevo
 // checklist, reminder de Glassdoor): el <select> se rearma cuando llegan.
-function esEngineer(p){ return (p.fields['Rol en empresa']||'').trim()==='Engineer'; }
+// Gente que sigue en BEON. A quien ya pasó su último día no se le carga nada
+// nuevo, pero sí sigue apareciendo en los eventos que se completan hacia atrás
+// (Ambassador Week, Off Sites, Get Togethers), que por eso no usan este filtro.
+function esPersonaActiva(p){ return !yaEgreso(p); }
+function esEngineerActivo(p){ return esPersonaActiva(p)&&(p.fields['Rol en empresa']||'').trim()==='Engineer'; }
 function nombresPersonas(filtro){
   const recs=filtro?(cachePersonasRaw||[]).filter(filtro):(cachePersonasRaw||[]);
   return [...new Set(recs.map(p=>p.fields.Nombre||'').filter(Boolean))].sort();
@@ -493,11 +508,11 @@ const FORMS={
   egresos:{title:'Nuevo offboarding',
     // Solo gente activa hoy — alguien que ya tiene Fecha de egreso cargada no
     // tiene que volver a aparecer acá (ver yaEgreso() en js/personas.js).
-    onMount:()=>montarSelectPersonas('f-egr-persona',p=>!yaEgreso(p)),
+    onMount:()=>montarSelectPersonas('f-egr-persona',esPersonaActiva),
     html:()=>`
 <div class="field-group"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-egr-persona">
-    ${opcionesPersonas(p=>!yaEgreso(p))}
+    ${opcionesPersonas(esPersonaActiva)}
   </select>
 </div>
 <div class="field-group"><label class="field-label">Fecha de aviso *</label><input class="field-input" id="f-egr-fecha" type="date"></div>
@@ -522,9 +537,9 @@ const FORMS={
     }},
 
   checklist:{title:'Nuevo checklist',
-    onMount:()=>montarSelectPersonas('f-cl-persona',null,true),
+    onMount:()=>montarSelectPersonas('f-cl-persona',esPersonaActiva,true),
     html:()=>{
-    const personas=nombresPersonas();
+    const personas=nombresPersonas(esPersonaActiva);
     return`
 <div class="field-group"><label class="field-label">Tipo *</label>
   <select class="field-input" id="f-tipo" onchange="toggleRol()">
@@ -557,11 +572,11 @@ const FORMS={
     }},
 
   reviews:{title:'Nuevo reminder de Glassdoor',
-    onMount:()=>montarSelectPersonas('f-rv-persona',esEngineer),
+    onMount:()=>montarSelectPersonas('f-rv-persona',esEngineerActivo),
     html:()=>`
 <div class="field-group" id="fg-rv-persona"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-rv-persona">
-    ${opcionesPersonas(esEngineer)}
+    ${opcionesPersonas(esEngineerActivo)}
   </select>
 </div>
 <div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-rv-fecha" type="date"></div>

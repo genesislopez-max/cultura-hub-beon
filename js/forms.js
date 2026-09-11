@@ -45,8 +45,8 @@ function valorSelectOtro(id){
   return sel.value;
 }
 
-// Solo los proyectos vigentes — los de baja e inactivos no se ofrecen para
-// cargar gente. `yaCargado` se suma igual aunque esté inactivo: es el valor
+// Solo los proyectos activos — los inactivos no se ofrecen para cargar
+// gente. `yaCargado` se suma igual aunque esté inactivo: es el valor
 // que la persona ya tenía, y degradarlo a "Otro (escribir a mano)" al abrir
 // la edición hace parecer que se cargó a mano algo que está bien cargado.
 function proyectosDelCache(yaCargado){
@@ -465,9 +465,7 @@ const FORMS={
 <div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-proy-fecha" type="date"></div>
 <div class="field-group"><label class="field-label">Estado</label>
   <select class="field-input" id="f-proy-estado">
-    <option value="Activo">Activo</option>
-    <option value="Inactivo">Inactivo</option>
-    <option value="De Baja">De Baja</option>
+    ${PROYECTO_ESTADOS.map(e=>`<option value="${e}">${e}</option>`).join('')}
   </select>
 </div>`,
     save:async()=>{

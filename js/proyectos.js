@@ -8,10 +8,10 @@ function filtrarProyectos(){
   tb.querySelectorAll('tr').forEach(tr=>{
     if(tr.classList.contains('empty-row')){tr.style.display='none';return;}
     const texto=tr.textContent.toLowerCase();
-    const estado=tr.dataset.estado||'';
+    const estado=normalizarEstadoProyecto(tr.dataset.estado||'');
     const tems=(tr.dataset.tems||'').split('|');
     const matchQ=!q||texto.includes(q);
-    const matchEstado=!estadoFil?true:estadoFil==='activos'?(estado!=='De Baja'&&estado!=='Inactivo'):estado===estadoFil;
+    const matchEstado=!estadoFil?true:estadoFil==='activos'?estado==='Activo':estado===estadoFil;
     const matchTem=!temFil||tems.includes(temFil);
     const visible=matchQ&&matchEstado&&matchTem;
     tr.style.display=visible?'':'none';
@@ -80,8 +80,10 @@ async function loadProyectos(){
   tb.innerHTML=todosRecs.length?todosRecs.map(r=>{
     const f=r.fields;
     const nombre=f.Proyecto||'—';
-    const estado=f.Estado||'';
-    const estadoBadge=estado==='De Baja'?'<span class="badge badge-red">De Baja</span>':estado==='Inactivo'?'<span class="badge badge-amber">Inactivo</span>':estado?`<span class="badge badge-green">${estado}</span>`:'<span style="color:var(--text3);font-size:12px">—</span>';
+    const estado=normalizarEstadoProyecto(f.Estado);
+    const estadoBadge=estado==='Inactivo'
+      ?'<span class="badge badge-amber">Inactivo</span>'
+      :'<span class="badge badge-green">Activo</span>';
     const c=devs[nombre]||0;
     const devBadge=c>0
       ?`<span class="badge badge-blue"><i class="ti ti-users" style="font-size:11px"></i> ${c}</span>`
@@ -142,9 +144,7 @@ function editarProyecto(id){
 <div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-ep-fecha" type="date" value="${fechaInicioVal}"></div>
 <div class="field-group"><label class="field-label">Estado</label>
   <select class="field-input" id="f-ep-estado">
-    <option value="Activo"${(f.Estado||'Activo')==='Activo'?' selected':''}>Activo</option>
-    <option value="Inactivo"${f.Estado==='Inactivo'?' selected':''}>Inactivo</option>
-    <option value="De Baja"${f.Estado==='De Baja'?' selected':''}>De Baja</option>
+    ${PROYECTO_ESTADOS.map(e=>`<option value="${e}"${e===normalizarEstadoProyecto(f.Estado)?' selected':''}>${e}</option>`).join('')}
   </select>
 </div>`,
     save:async()=>{

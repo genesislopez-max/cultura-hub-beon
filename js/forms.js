@@ -45,8 +45,8 @@ function valorSelectOtro(id){
   return sel.value;
 }
 
-// Solo los proyectos vigentes — los de baja e inactivos no se ofrecen para
-// cargar gente. `yaCargado` se suma igual aunque esté inactivo: es el valor
+// Solo los proyectos activos — los inactivos no se ofrecen para cargar
+// gente. `yaCargado` se suma igual aunque esté inactivo: es el valor
 // que la persona ya tenía, y degradarlo a "Otro (escribir a mano)" al abrir
 // la edición hace parecer que se cargó a mano algo que está bien cargado.
 function proyectosDelCache(yaCargado){
@@ -464,17 +464,18 @@ const FORMS={
 <div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-proy-nombre" placeholder="Ej: Atlas"></div>
 <div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-proy-fecha" type="date"></div>
 <div class="field-group"><label class="field-label">Estado</label>
-  <select class="field-input" id="f-proy-estado">
-    <option value="Activo">Activo</option>
-    <option value="Inactivo">Inactivo</option>
-    <option value="De Baja">De Baja</option>
+  <select class="field-input" id="f-proy-estado" onchange="toggleFechaFinProyecto('f-proy')">
+    ${PROYECTO_ESTADOS.map(e=>`<option value="${e}">${e}</option>`).join('')}
   </select>
-</div>`,
+</div>
+${campoFechaFinProyecto('f-proy','Activo','')}`,
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       if(!v('f-proy-nombre')){toast('El nombre es obligatorio',true);return false;}
       const fields={Proyecto:v('f-proy-nombre'),Estado:v('f-proy-estado')||'Activo'};
       if(v('f-proy-fecha')) fields['Fecha de Inicio']=v('f-proy-fecha');
+      const fin=fechaFinAGuardar(fields.Estado,v('f-proy-fin'),null);
+      if(fin) fields['Fecha de fin']=fin;
       await atPost('Proyectos',fields);return true;
     }},
 

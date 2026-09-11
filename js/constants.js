@@ -162,8 +162,15 @@ const SECCION_ROLES_PERMITIDOS={
   gettogether:new Set(['full','tem','manager','equipo']), // HR no ve Get Together
   coreteam:new Set(['full','hr','manager','equipo']), // TEM no ve la pestaña Core Team
 };
-// Un proyecto deja de ofrecerse para cargar gente nueva cuando se da de baja
-// o se marca inactivo. El criterio estaba repetido con la lista a mano en
-// varios lugares (js/proyectos.js, js/forms.js), así que vive acá.
+// Un proyecto tiene dos estados: Activo e Inactivo. "De Baja" era un tercero
+// que significaba exactamente lo mismo que Inactivo, así que ya no se ofrece
+// al cargar ni al editar — pero se sigue reconociendo al LEER, para que los
+// registros que todavía lo tengan en Airtable se muestren y se filtren bien
+// en vez de pasar por activos. Se puede borrar del Single Select de Airtable
+// una vez que no quede ninguno con ese valor.
+const PROYECTO_ESTADOS=['Activo','Inactivo'];
 const PROYECTO_ESTADOS_INACTIVOS=new Set(['De Baja','Inactivo']);
-function proyectoVigente(r){ return !PROYECTO_ESTADOS_INACTIVOS.has(r?.fields?.Estado||''); }
+function normalizarEstadoProyecto(estado){
+  return PROYECTO_ESTADOS_INACTIVOS.has((estado||'').trim())?'Inactivo':'Activo';
+}
+function proyectoVigente(r){ return normalizarEstadoProyecto(r?.fields?.Estado)==='Activo'; }

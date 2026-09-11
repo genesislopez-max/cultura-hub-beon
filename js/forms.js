@@ -464,15 +464,18 @@ const FORMS={
 <div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-proy-nombre" placeholder="Ej: Atlas"></div>
 <div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-proy-fecha" type="date"></div>
 <div class="field-group"><label class="field-label">Estado</label>
-  <select class="field-input" id="f-proy-estado">
+  <select class="field-input" id="f-proy-estado" onchange="toggleFechaFinProyecto('f-proy')">
     ${PROYECTO_ESTADOS.map(e=>`<option value="${e}">${e}</option>`).join('')}
   </select>
-</div>`,
+</div>
+${campoFechaFinProyecto('f-proy','Activo','')}`,
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       if(!v('f-proy-nombre')){toast('El nombre es obligatorio',true);return false;}
       const fields={Proyecto:v('f-proy-nombre'),Estado:v('f-proy-estado')||'Activo'};
       if(v('f-proy-fecha')) fields['Fecha de Inicio']=v('f-proy-fecha');
+      const fin=fechaFinAGuardar(fields.Estado,v('f-proy-fin'),null);
+      if(fin) fields['Fecha de fin']=fin;
       await atPost('Proyectos',fields);return true;
     }},
 

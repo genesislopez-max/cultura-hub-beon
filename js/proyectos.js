@@ -81,8 +81,9 @@ async function loadProyectos(){
     const f=r.fields;
     const nombre=f.Proyecto||'—';
     const estado=normalizarEstadoProyecto(f.Estado);
+    const fechaFinVal=f['Fecha de fin']||'';
     const estadoBadge=estado==='Inactivo'
-      ?'<span class="badge badge-amber">Inactivo</span>'
+      ?`<span class="badge badge-amber">Inactivo</span>${fechaFinVal?`<div style="font-size:11px;color:var(--text3);margin-top:3px">Fin: ${fmt(fechaFinVal)}</div>`:''}`
       :'<span class="badge badge-green">Activo</span>';
     const c=devs[nombre]||0;
     const devBadge=c>0
@@ -129,6 +130,33 @@ async function loadProyectos(){
   calcularSugerenciaProyecto();
 }
 
+// La fecha de fin solo aplica a un proyecto inactivo: es cuándo terminó el
+// partnership. Aparece al pasar a Inactivo —proponiendo hoy, que es el caso
+// típico— y se esconde al volver a Activo, donde no tiene sentido.
+function campoFechaFinProyecto(prefijo,estadoActual,valor){
+  const visible=normalizarEstadoProyecto(estadoActual)==='Inactivo';
+  return`<div class="field-group" id="${prefijo}-fg-fin" style="display:${visible?'block':'none'}">
+  <label class="field-label">Fecha de fin del partnership</label>
+  <input class="field-input" id="${prefijo}-fin" type="date" value="${valor||''}">
+  <div class="field-hint">Cuándo terminó el partnership. Solo aplica a proyectos inactivos.</div>
+</div>`;
+}
+function toggleFechaFinProyecto(prefijo){
+  const grupo=document.getElementById(`${prefijo}-fg-fin`);
+  const input=document.getElementById(`${prefijo}-fin`);
+  if(!grupo||!input) return;
+  const inactivo=document.getElementById(`${prefijo}-estado`)?.value==='Inactivo';
+  grupo.style.display=inactivo?'block':'none';
+  if(inactivo&&!input.value) input.value=new Date().toISOString().slice(0,10);
+}
+// Qué mandar en "Fecha de fin" al guardar. Devuelve undefined cuando no hay
+// nada que cambiar: así un proyecto que sigue activo y nunca tuvo fecha no
+// toca el campo, y la edición no se rompe si todavía no se creó en Airtable.
+function fechaFinAGuardar(estado,valor,finPrevio){
+  const nuevo=estado==='Inactivo'?(valor||null):null; // volver a Activo la limpia
+  return nuevo===(finPrevio||null)?undefined:nuevo;
+}
+
 // Editar un proyecto ya existente (Nombre/Fecha de inicio/Estado) — antes solo
 // se podía cargar uno nuevo, no había forma de pasar uno a "Inactivo" (ni
 // corregir nada) sin ir directo a Airtable.
@@ -143,15 +171,18 @@ function editarProyecto(id){
 <div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-ep-nombre" value="${(f.Proyecto||'').replace(/"/g,'&quot;')}"></div>
 <div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-ep-fecha" type="date" value="${fechaInicioVal}"></div>
 <div class="field-group"><label class="field-label">Estado</label>
-  <select class="field-input" id="f-ep-estado">
+  <select class="field-input" id="f-ep-estado" onchange="toggleFechaFinProyecto('f-ep')">
     ${PROYECTO_ESTADOS.map(e=>`<option value="${e}"${e===normalizarEstadoProyecto(f.Estado)?' selected':''}>${e}</option>`).join('')}
   </select>
-</div>`,
+</div>
+${campoFechaFinProyecto('f-ep',f.Estado,f['Fecha de fin'])}`,
     save:async()=>{
       const v=id2=>document.getElementById(id2)?.value||'';
       if(!v('f-ep-nombre')){toast('El nombre es obligatorio',true);return false;}
       const fields={Proyecto:v('f-ep-nombre'),Estado:v('f-ep-estado')||'Activo'};
       fields['Fecha de Inicio']=v('f-ep-fecha')||null;
+      const fin=fechaFinAGuardar(fields.Estado,v('f-ep-fin'),f['Fecha de fin']);
+      if(fin!==undefined) fields['Fecha de fin']=fin;
       await atPatch(`Proyectos/${id}`,fields);
       return true;
     },

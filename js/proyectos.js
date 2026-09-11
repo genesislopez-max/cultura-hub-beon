@@ -29,7 +29,7 @@ async function loadProyectos(){
   console.log('Proyectos cargados:', todosRecs.length, todosRecs.map(r=>r.fields.Proyecto+' ['+r.fields.Estado+']'));
 
   // Mostrar todos excepto los dados de baja e inactivos
-  const recs=todosRecs.filter(r=>!['De Baja','Inactivo'].includes(r.fields.Estado||''));
+  const recs=todosRecs.filter(proyectoVigente);
 
   // Cache para selects — mismos proyectos visibles
   cacheProyectos=recs.map(r=>r.fields.Proyecto||'').filter(Boolean);
@@ -172,7 +172,7 @@ function calcularSugerenciaProyecto(){
   cachePersonasRaw.forEach(p=>{if(yaEgreso(p))return;const pr=(p.fields.Proyecto||'').trim();if(pr)devs[pr]=(devs[pr]||0)+1;});
 
   const candidatos=cacheProyectosRaw
-    .filter(r=>!['De Baja','Inactivo'].includes(r.fields.Estado||''))
+    .filter(proyectoVigente)
     .map(r=>{
       const f=r.fields;
       const nombre=f.Proyecto||'';

@@ -255,8 +255,14 @@ async function saveRecord(){
   btn.disabled=false;lbl.textContent='Guardar';
 }
 
-// Secciones que necesita el dashboard de Inicio — se cargan siempre al arrancar
-async function cargarSeccionesIniciales(){
+// Secciones que necesita el dashboard de Inicio — se cargan siempre al arrancar.
+// Deja la promesa en cargaInicialEnCurso para que quien necesite los caches
+// (los forms de persona) pueda esperarla en vez de leerlos a medio llenar.
+function cargarSeccionesIniciales(){
+  cargaInicialEnCurso=_cargarSeccionesIniciales().finally(()=>{cargaInicialEnCurso=null;});
+  return cargaInicialEnCurso;
+}
+async function _cargarSeccionesIniciales(){
   const personas=await loadPersonas();
   await loadProyectos();
   // Escribe en Checklist (crea/completa tarjetas) — el servidor ya bloquea esas

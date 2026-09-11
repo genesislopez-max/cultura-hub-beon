@@ -19,6 +19,22 @@ function toggleOtroSelect(id){
   if(!sel||!otro) return;
   otro.style.display=sel.value==='__otro__'?'block':'none';
 }
+// Reconstruye las opciones de un select armado con buildSelectConOtro()
+// preservando lo que ya estaba elegido/tipeado — si ese valor no entra en la
+// nueva lista, cae en "Otro" con el texto conservado en vez de perderse.
+function poblarSelectConOtro(id,opciones){
+  const sel=document.getElementById(id);
+  if(!sel) return;
+  const valorPrevio=valorSelectOtro(id);
+  const enLista=!!valorPrevio&&opciones.includes(valorPrevio);
+  const esOtro=!!valorPrevio&&!enLista;
+  sel.innerHTML=`<option value="">Seleccioná…</option>${opciones.map(o=>`<option value="${o}"${o===valorPrevio?' selected':''}>${o}</option>`).join('')}<option value="__otro__"${esOtro?' selected':''}>Otro (escribir a mano)</option>`;
+  const otro=document.getElementById(id+'-otro');
+  if(otro){
+    otro.style.display=esOtro?'block':'none';
+    if(esOtro) otro.value=valorPrevio;
+  }
+}
 function valorSelectOtro(id){
   const sel=document.getElementById(id);
   if(!sel) return '';
@@ -29,13 +45,17 @@ function valorSelectOtro(id){
   return sel.value;
 }
 
+function proyectosDelCache(){
+  return [...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+}
+
 // Form completo de Persona — lo usan "Nueva persona", "Nuevo ingreso" (misma carga,
 // es la forma de no tener que completar nada aparte) y la edición desde la
 // tarjeta del Kanban de Ingresos/Egresos. mostrarEgreso solo se activa al
 // editar: la fecha de egreso se carga desde la pestaña de Egresos, no al
 // dar de alta a alguien nuevo.
 function buildPersonaCompletaHTML(v={},mostrarEgreso=false,ocultarNivel=false){
-  const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+  const proyectos=proyectosDelCache();
   const opt=(val,cur)=>`<option value="${val}"${val===(cur||'')?' selected':''}>${val}</option>`;
   // COO/Founder ya no se pueden asignar al dar de alta — son roles fijos de
   // 1 persona. Si ya estaba cargado así (edición), se deja la opción para
@@ -71,27 +91,87 @@ ${mostrarEgreso?`<div class="field-group"><label class="field-label">Fecha de eg
 `;
 }
 // Sugerencias de Manager según el Rol en empresa elegido: Engineers ven a
-// los TEM, Core Team ve a Supervisor/Lead/Manager/Founder/COO. Reconstruye
-// las opciones del <select> preservando lo que ya estaba elegido/tipeado —
-// si ese valor no entra en la nueva lista de candidatos, cae en "Otro" con
-// el texto conservado en vez de perderse.
+// los TEM, Core Team ve a Supervisor/Lead/Manager/Founder/COO.
 function actualizarManagerOptions(){
-  const sel=document.getElementById('f-per-manager');
-  if(!sel) return;
-  const valorPrevio=valorSelectOtro('f-per-manager');
+  if(!document.getElementById('f-per-manager')) return;
   const rol=document.getElementById('f-per-rol')?.value;
   const ROLES_MANAGER_ENGINEER=new Set(['TEM']);
   const ROLES_MANAGER_CORE=new Set(['Supervisor','Lead','Manager','Founder','COO']);
   const rolesValidos=rol==='Engineer'?ROLES_MANAGER_ENGINEER:rol==='Core Team'?ROLES_MANAGER_CORE:null;
   const candidatos=rolesValidos?(cachePersonasRaw||[]).filter(p=>rolesValidos.has((p.fields['Rol en empresa']||'').trim())):[];
   const nombres=[...new Set(candidatos.map(p=>p.fields.Nombre).filter(Boolean))].sort();
-  const enLista=!!valorPrevio&&nombres.includes(valorPrevio);
-  sel.innerHTML=`<option value="">Seleccioná…</option>${nombres.map(n=>`<option value="${n}"${n===valorPrevio?' selected':''}>${n}</option>`).join('')}<option value="__otro__"${valorPrevio&&!enLista?' selected':''}>Otro (escribir a mano)</option>`;
-  const otro=document.getElementById('f-per-manager-otro');
-  if(otro){
-    otro.style.display=valorPrevio&&!enLista?'block':'none';
-    if(valorPrevio&&!enLista) otro.value=valorPrevio;
+  poblarSelectConOtro('f-per-manager',nombres);
+}
+
+// Los selects de Proyecto y Manager se arman con cacheProyectosRaw y
+// cachePersonasRaw, que recién se llenan al terminar la carga inicial. Pero el
+// botón para dar de alta a alguien ya está visible y clickeable mientras esa
+// carga corre (con la base real tarda varios segundos), así que el form se
+// podía abrir con las dos listas vacías — y se quedaban vacías para siempre,
+// porque nadie las volvía a armar cuando los datos llegaban.
+// Ahora: si falta algo, se muestran como "Cargando…" y se rearman solas.
+async function montarFormPersona(){
+  actualizarManagerOptions();
+  if((cachePersonasRaw||[]).length&&(cacheProyectosRaw||[]).length) return;
+  marcarSelectsPersonaCargando(true);
+  if(!await esperarDatosDelForm()) return;
+  marcarSelectsPersonaCargando(false);
+  poblarSelectConOtro('f-per-proyecto',proyectosDelCache());
+  actualizarManagerOptions();
+}
+// Espera a tener los datos que alimentan los selects: si la carga inicial está
+// en curso la acompaña (no duplica los pedidos), y si nunca corrió o falló pide
+// solo las tablas que falten. Devuelve false si mientras tanto el usuario cerró
+// el form o abrió otro, así el que llama no toca un DOM que ya no está.
+async function esperarDatosDelForm(){
+  const formAlAbrir=window._activeForm;
+  try{
+    if(cargaInicialEnCurso) await cargaInicialEnCurso;
+    else{
+      const pendientes=[];
+      if(!(cachePersonasRaw||[]).length) pendientes.push(loadPersonas());
+      if(!(cacheProyectosRaw||[]).length) pendientes.push(loadProyectos());
+      await Promise.all(pendientes);
+    }
+  }catch(e){
+    console.error('No se pudieron cargar los datos del formulario:',e);
   }
+  return window._activeForm===formAlAbrir;
+}
+// Misma carrera en los forms que listan personas (Nuevo offboarding, Nuevo
+// checklist, reminder de Glassdoor): el <select> se rearma cuando llegan.
+function esEngineer(p){ return (p.fields['Rol en empresa']||'').trim()==='Engineer'; }
+function nombresPersonas(filtro){
+  const recs=filtro?(cachePersonasRaw||[]).filter(filtro):(cachePersonasRaw||[]);
+  return [...new Set(recs.map(p=>p.fields.Nombre||'').filter(Boolean))].sort();
+}
+function opcionesPersonas(filtro,seleccionada){
+  return`<option value="">Seleccioná una persona…</option>${nombresPersonas(filtro).map(n=>`<option value="${n}"${n===seleccionada?' selected':''}>${n}</option>`).join('')}`;
+}
+// conOtro: el select se armó con buildSelectConOtro() y lleva su opción final.
+// idProyectos: el form también trae un select de proyectos que rearmar.
+async function montarSelectPersonas(id,filtro,conOtro,idProyectos){
+  const sel=document.getElementById(id);
+  if(!sel) return;
+  if((cachePersonasRaw||[]).length&&(!idProyectos||(cacheProyectosRaw||[]).length)) return;
+  sel.disabled=true;
+  if(sel.options[0]&&!sel.options[0].value) sel.options[0].textContent='Cargando…';
+  if(!await esperarDatosDelForm()) return;
+  const selAhora=document.getElementById(id);
+  if(!selAhora) return;
+  selAhora.disabled=false;
+  if(conOtro) poblarSelectConOtro(id,nombresPersonas(filtro));
+  else selAhora.innerHTML=opcionesPersonas(filtro,selAhora.value);
+  if(idProyectos) fillProyectosSelect(idProyectos,document.getElementById(idProyectos)?.value);
+}
+function marcarSelectsPersonaCargando(cargando){
+  ['f-per-proyecto','f-per-manager'].forEach(id=>{
+    const sel=document.getElementById(id);
+    if(!sel) return;
+    sel.disabled=cargando;
+    const placeholder=sel.options[0];
+    if(placeholder&&!placeholder.value) placeholder.textContent=cargando?'Cargando…':'Seleccioná…';
+  });
 }
 
 // esEdicion=true permite vaciar un campo para borrarlo; en alta simplemente se omite
@@ -121,7 +201,7 @@ function abrirEdicionPersona(nombre){
   _openFormModal({
     title:`Editar — ${nombre}`,
     html:()=>buildPersonaCompletaHTML(persona.fields,true),
-    onMount:actualizarManagerOptions,
+    onMount:montarFormPersona,
     save:async()=>{
       const fields=leerPersonaCompletaForm(true);
       if(!fields) return false;
@@ -175,8 +255,10 @@ const FORMS={
       return true;
     }},
 
-  ambassadors:{title:'Registrar asistencia AW',html:()=>{
-    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+  ambassadors:{title:'Registrar asistencia AW',
+    onMount:()=>montarSelectPersonas('f-aw-persona'),
+    html:()=>{
+    const personas=nombresPersonas();
     const ediciones=[...new Set(cacheAWRaw.map(r=>r.fields['Edición AW']||'').filter(Boolean))].sort();
     return`
 <div class="field-group"><label class="field-label">Persona *</label>
@@ -318,9 +400,11 @@ const FORMS={
       await atPost('Beneficios',fields);return true;
     }},
 
-  gettogether:{title:'Registrar Get Together',html:()=>{
-    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
-    const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+  gettogether:{title:'Registrar Get Together',
+    onMount:()=>montarSelectPersonas('f-gt-persona',null,false,'f-gt-proyecto'),
+    html:()=>{
+    const personas=nombresPersonas();
+    const proyectos=proyectosDelCache();
     const paises=[...new Set(cacheGetTogetherRaw.map(r=>r.fields['País']||'').filter(Boolean))].sort();
     return`
 <div class="field-group"><label class="field-label">BEONer *</label>
@@ -354,7 +438,7 @@ const FORMS={
     }},
 
   engineers:{title:'Nueva persona',html:()=>buildPersonaCompletaHTML(),
-    onMount:actualizarManagerOptions,
+    onMount:montarFormPersona,
     save:async()=>{
       const fields=leerPersonaCompletaForm(false);
       if(!fields) return false;
@@ -383,7 +467,7 @@ const FORMS={
   // El checklist en el Kanban se crea solo al recargar (sincronizarPersonasEnKanban),
   // ya con el proyecto/mail/país copiados para que se vean en la tarjeta.
   ingresos:{title:'Nuevo ingreso',html:()=>buildPersonaCompletaHTML(),
-    onMount:actualizarManagerOptions,
+    onMount:montarFormPersona,
     save:async()=>{
       const fields=leerPersonaCompletaForm(false);
       if(!fields) return false;
@@ -397,7 +481,7 @@ const FORMS={
   historico:{title:'Cargar persona histórica',html:()=>`
 <div class="field-hint" style="margin-bottom:14px">Para gente que ya no está en BEON. No se crea tarjeta en los Kanban de Ingresos/Egresos ni se avisa por Slack — queda cargada en silencio para poder asignarle después los eventos a los que asistió mientras estuvo.</div>
 `+buildPersonaCompletaHTML({},true,true),
-    onMount:actualizarManagerOptions,
+    onMount:montarFormPersona,
     save:async()=>{
       const fields=leerPersonaCompletaForm(false);
       if(!fields) return false;
@@ -406,21 +490,20 @@ const FORMS={
       await atPost('Personas',fields);return true;
     }},
 
-  egresos:{title:'Nuevo offboarding',html:()=>{
+  egresos:{title:'Nuevo offboarding',
     // Solo gente activa hoy — alguien que ya tiene Fecha de egreso cargada no
     // tiene que volver a aparecer acá (ver yaEgreso() en js/personas.js).
-    const personas=cachePersonasRaw.filter(p=>!yaEgreso(p)).map(p=>p.fields.Nombre||'').filter(Boolean).sort();
-    return`
+    onMount:()=>montarSelectPersonas('f-egr-persona',p=>!yaEgreso(p)),
+    html:()=>`
 <div class="field-group"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-egr-persona">
-    <option value="">Seleccioná una persona…</option>
-    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
+    ${opcionesPersonas(p=>!yaEgreso(p))}
   </select>
 </div>
 <div class="field-group"><label class="field-label">Fecha de aviso *</label><input class="field-input" id="f-egr-fecha" type="date"></div>
 <div class="field-group"><label class="field-label">Fecha del último día *</label><input class="field-input" id="f-egr-ultimo-dia" type="date"></div>
 <div class="field-hint">A partir de esa fecha, la persona deja de contar como activa en Personas.</div>
-`;},
+`,
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       const nombre=v('f-egr-persona');
@@ -438,8 +521,10 @@ const FORMS={
       return true;
     }},
 
-  checklist:{title:'Nuevo checklist',html:()=>{
-    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+  checklist:{title:'Nuevo checklist',
+    onMount:()=>montarSelectPersonas('f-cl-persona',null,true),
+    html:()=>{
+    const personas=nombresPersonas();
     return`
 <div class="field-group"><label class="field-label">Tipo *</label>
   <select class="field-input" id="f-tipo" onchange="toggleRol()">
@@ -471,17 +556,16 @@ const FORMS={
       await atPost('Checklist',fields);return true;
     }},
 
-  reviews:{title:'Nuevo reminder de Glassdoor',html:()=>{
-    const personas=cachePersonasRaw.filter(p=>(p.fields['Rol en empresa']||'').trim()==='Engineer').map(p=>p.fields.Nombre||'').filter(Boolean).sort();
-    return`
+  reviews:{title:'Nuevo reminder de Glassdoor',
+    onMount:()=>montarSelectPersonas('f-rv-persona',esEngineer),
+    html:()=>`
 <div class="field-group" id="fg-rv-persona"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-rv-persona">
-    <option value="">Seleccioná una persona…</option>
-    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
+    ${opcionesPersonas(esEngineer)}
   </select>
 </div>
 <div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-rv-fecha" type="date"></div>
-`;},
+`,
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       const fecha=v('f-rv-fecha');
@@ -568,9 +652,11 @@ const FORMS={
       return true;
     }},
 
-  offsites:{title:'Registrar Off Site',html:()=>{
-    const personas=cachePersonasRaw.map(p=>p.fields.Nombre||'').filter(Boolean).sort();
-    const proyectos=[...new Set((cacheProyectosRaw||[]).map(p=>p.fields.Proyecto||'').filter(Boolean))].sort();
+  offsites:{title:'Registrar Off Site',
+    onMount:()=>montarSelectPersonas('f-os-persona',null,false,'f-os-proyecto'),
+    html:()=>{
+    const personas=nombresPersonas();
+    const proyectos=proyectosDelCache();
     return`
 <div class="field-group"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-os-persona">

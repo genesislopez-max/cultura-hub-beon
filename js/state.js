@@ -9,6 +9,11 @@
 let cachePersonasPorRol={};
 let cacheProyectos=[], cacheProyectosRaw=[];
 let cachePersonasRaw=[];
+// Promesa de la carga inicial mientras está en curso (null cuando terminó).
+// Los forms que dependen de estos caches la esperan en vez de abrirse vacíos:
+// el botón "Añadir persona" ya está visible y clickeable mientras se cargan
+// las tablas, que con la base real tarda varios segundos.
+let cargaInicialEnCurso=null;
 let pagState={eng:{page:0,data:[]},core:{page:0,data:[]}};
 let pagBenefPersonas={page:0};
 

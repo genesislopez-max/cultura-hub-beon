@@ -105,7 +105,7 @@ const ROLES_MANAGER_CORE=new Set(['Supervisor','Lead','Manager','Founder','COO']
 function managersCandidatos(rol){
   const rolesValidos=rol==='Engineer'?ROLES_MANAGER_ENGINEER:rol==='Core Team'?ROLES_MANAGER_CORE:null;
   if(!rolesValidos) return [];
-  return nombresPersonas(p=>!yaEgreso(p)&&rolesValidos.has((p.fields['Rol en empresa']||'').trim()));
+  return nombresPersonas(p=>esPersonaActiva(p)&&rolesValidos.has((p.fields['Rol en empresa']||'').trim()));
 }
 function actualizarManagerOptions(){
   if(!document.getElementById('f-per-manager')) return;
@@ -151,7 +151,11 @@ async function esperarDatosDelForm(){
 }
 // Misma carrera en los forms que listan personas (Nuevo offboarding, Nuevo
 // checklist, reminder de Glassdoor): el <select> se rearma cuando llegan.
-function esEngineer(p){ return (p.fields['Rol en empresa']||'').trim()==='Engineer'; }
+// Gente que sigue en BEON. A quien ya pasó su último día no se le carga nada
+// nuevo, pero sí sigue apareciendo en los eventos que se completan hacia atrás
+// (Ambassador Week, Off Sites, Get Togethers), que por eso no usan este filtro.
+function esPersonaActiva(p){ return !yaEgreso(p); }
+function esEngineerActivo(p){ return esPersonaActiva(p)&&(p.fields['Rol en empresa']||'').trim()==='Engineer'; }
 function nombresPersonas(filtro){
   const recs=filtro?(cachePersonasRaw||[]).filter(filtro):(cachePersonasRaw||[]);
   return [...new Set(recs.map(p=>p.fields.Nombre||'').filter(Boolean))].sort();
@@ -504,11 +508,11 @@ const FORMS={
   egresos:{title:'Nuevo offboarding',
     // Solo gente activa hoy — alguien que ya tiene Fecha de egreso cargada no
     // tiene que volver a aparecer acá (ver yaEgreso() en js/personas.js).
-    onMount:()=>montarSelectPersonas('f-egr-persona',p=>!yaEgreso(p)),
+    onMount:()=>montarSelectPersonas('f-egr-persona',esPersonaActiva),
     html:()=>`
 <div class="field-group"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-egr-persona">
-    ${opcionesPersonas(p=>!yaEgreso(p))}
+    ${opcionesPersonas(esPersonaActiva)}
   </select>
 </div>
 <div class="field-group"><label class="field-label">Fecha de aviso *</label><input class="field-input" id="f-egr-fecha" type="date"></div>
@@ -533,9 +537,9 @@ const FORMS={
     }},
 
   checklist:{title:'Nuevo checklist',
-    onMount:()=>montarSelectPersonas('f-cl-persona',null,true),
+    onMount:()=>montarSelectPersonas('f-cl-persona',esPersonaActiva,true),
     html:()=>{
-    const personas=nombresPersonas();
+    const personas=nombresPersonas(esPersonaActiva);
     return`
 <div class="field-group"><label class="field-label">Tipo *</label>
   <select class="field-input" id="f-tipo" onchange="toggleRol()">
@@ -568,11 +572,11 @@ const FORMS={
     }},
 
   reviews:{title:'Nuevo reminder de Glassdoor',
-    onMount:()=>montarSelectPersonas('f-rv-persona',esEngineer),
+    onMount:()=>montarSelectPersonas('f-rv-persona',esEngineerActivo),
     html:()=>`
 <div class="field-group" id="fg-rv-persona"><label class="field-label">Persona *</label>
   <select class="field-input" id="f-rv-persona">
-    ${opcionesPersonas(esEngineer)}
+    ${opcionesPersonas(esEngineerActivo)}
   </select>
 </div>
 <div class="field-group"><label class="field-label">Fecha *</label><input class="field-input" id="f-rv-fecha" type="date"></div>

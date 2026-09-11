@@ -46,8 +46,8 @@ test('nombresPersonas ordena, deduplica y aplica el filtro',()=>{
   const ctx=ctxForms();
   sembrar(ctx,'cachePersonasRaw',PERSONAS);
   assert.equal(leer(ctx,'nombresPersonas().join("|")'),'Ana TEM|Beto TEM|Caro Lead|Dani Dev|Eli Ex|Fede TEM');
-  assert.equal(leer(ctx,'nombresPersonas(esEngineer).join("|")'),'Dani Dev|Eli Ex');
-  assert.equal(leer(ctx,'nombresPersonas(p=>!yaEgreso(p)).join("|")'),'Ana TEM|Beto TEM|Caro Lead|Dani Dev');
+  assert.equal(leer(ctx,'nombresPersonas(esEngineerActivo).join("|")'),'Dani Dev'); // Eli Ex ya egresó
+  assert.equal(leer(ctx,'nombresPersonas(esPersonaActiva).join("|")'),'Ana TEM|Beto TEM|Caro Lead|Dani Dev');
 });
 
 test('proyectosDelCache ordena, deduplica y descarta los vacíos',()=>{
@@ -81,10 +81,37 @@ test('no se ofrecen como Manager personas que ya no están en BEON',()=>{
 test('opcionesPersonas arma el placeholder y marca la seleccionada',()=>{
   const ctx=ctxForms();
   sembrar(ctx,'cachePersonasRaw',PERSONAS);
-  const html=leer(ctx,'opcionesPersonas(esEngineer,"Dani Dev")');
+  const html=leer(ctx,'opcionesPersonas(esEngineerActivo,"Dani Dev")');
   assert.match(html,/<option value="">Seleccioná una persona…<\/option>/);
   assert.match(html,/<option value="Dani Dev" selected>/);
   assert.doesNotMatch(html,/Ana TEM/);
+});
+
+// Los forms que cargan algo NUEVO no deben ofrecer gente que ya no está en
+// BEON. Los de eventos ya vividos (AW, Off Sites, Get Togethers) sí: se
+// completan hacia atrás para recolectar info de quienes participaron.
+test('los forms de carga nueva solo ofrecen gente que sigue en BEON',()=>{
+  const ctx=ctxForms();
+  sembrar(ctx,'cachePersonasRaw',PERSONAS);
+  const opciones=nombre=>leer(ctx,`FORMS[${JSON.stringify(nombre)}].html()`);
+  for(const form of ['egresos','checklist','reviews']){
+    assert.doesNotMatch(opciones(form),/Eli Ex|Fede TEM/,
+      `el form "${form}" ofrece gente que ya no está en BEON`);
+  }
+  assert.match(opciones('reviews'),/Dani Dev/);   // el Engineer activo sí
+  assert.doesNotMatch(opciones('reviews'),/Ana TEM/); // pero no los que no son Engineer
+  assert.match(opciones('checklist'),/Ana TEM/);
+});
+
+test('los forms de eventos ya vividos sí ofrecen a quienes ya no están',()=>{
+  const ctx=ctxForms();
+  sembrar(ctx,'cachePersonasRaw',PERSONAS);
+  sembrar(ctx,'cacheAWRaw',[]);
+  sembrar(ctx,'cacheGetTogetherRaw',[]);
+  for(const form of ['ambassadors','offsites','gettogether']){
+    assert.match(leer(ctx,`FORMS[${JSON.stringify(form)}].html()`),/Eli Ex/,
+      `el form "${form}" debería listar también a quienes ya no están`);
+  }
 });
 
 // Regresión del bug: "Nuevo ingreso" se abría con Proyecto y Manager vacíos

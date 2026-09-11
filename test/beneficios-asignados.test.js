@@ -155,14 +155,14 @@ test('periodoBenefAsignado: muestra la fecha de baja que se guardó', ()=>{
 // van sin "/año": el monto es lo que costó ESA cosa, no un cupo anual.
 test('montoBenefAsignado: los beneficios por unidad van sin "/año"', ()=>{
   const fields={Monto:150};
-  for(const b of ['Blogpost','Udemy','Certifications']){
+  for(const b of ['Blogpost','Udemy','Certifications',"O'Reilly",'Pluralsight']){
     assert.equal(ctx.montoBenefAsignado(fields,null,b),'$150',`${b} no debería llevar /año`);
   }
 });
 
 test('montoBenefAsignado: los beneficios anuales conservan el "/año"', ()=>{
   const fields={Monto:150};
-  for(const b of ['Terapia','Clases de Inglés','Hardware Bonus',"O'Reilly"]){
+  for(const b of ['Terapia','Clases de Inglés','Hardware Bonus','Gimnasio']){
     assert.equal(ctx.montoBenefAsignado(fields,null,b),'$150/año',`${b} debería llevar /año`);
   }
 });

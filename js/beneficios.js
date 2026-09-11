@@ -588,7 +588,11 @@ function toggleCamposLink(){
 // El resto (Terapia, Clases de Inglés, Hardware Bonus…) sí son anuales y
 // conservan el sufijo. Ver montoBenefAsignado() en js/side-panel.js.
 function esBeneficioPorUnidad(nombreBeneficio){
-  return esBeneficioUdemy(nombreBeneficio)
+  // esBeneficioConQuarterAuto ya agrupa a Udemy, O'Reilly y Pluralsight, y por
+  // el mismo motivo: son compras puntuales que se imputan al trimestre en que
+  // se hicieron. Reusarlo evita mantener dos listas con los mismos tres
+  // nombres que después se desincronizan.
+  return esBeneficioConQuarterAuto(nombreBeneficio)
     ||esBeneficioBlogpost(nombreBeneficio)
     ||esBeneficioCertifications(nombreBeneficio);
 }

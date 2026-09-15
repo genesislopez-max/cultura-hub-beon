@@ -3,7 +3,7 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {loadApp}=require('../test-helpers/load-app');
 
-const ctx=loadApp(['actividades-virtuales.js','eventos.js']);
+const ctx=loadApp(['state.js','utils.js','actividades-virtuales.js','eventos.js']);
 
 test('agruparGTPorEncuentro: agrupa por Ciudad+Fecha y sintetiza el nombre del evento', ()=>{
   const rows=[

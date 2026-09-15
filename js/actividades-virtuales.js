@@ -49,6 +49,19 @@ function switchAVTab(tab,btn){
   }
 }
 
+// El nombre del asistente se carga a mano y no siempre coincide carácter a
+// carácter con el de Personas ("juan perez", "Juan  Perez", "JUAN PEREZ").
+// Todo el módulo compara nombres contra Personas, así que un nombre tipeado
+// distinto no se reconocía: no entraba al numerador del % (que salía más bajo
+// de lo real) y la misma persona cargada de dos formas contaba como dos
+// asistentes. Se resuelve una sola vez acá, al nombre tal como figura en
+// Personas; si no está en Personas, queda como vino.
+function nombreCanonicoAV(nombre){
+  const buscado=normalizarNombre(nombre);
+  if(!buscado) return '';
+  const p=(cachePersonasRaw||[]).find(x=>normalizarNombre(x.fields.Nombre)===buscado);
+  return p?(p.fields.Nombre||'').trim():String(nombre||'').trim();
+}
 // Agrupa las asistencias por evento+fecha — clave compartida por varias
 // funciones (render de "Por evento", métricas, % de asistencia).
 // Los asistentes se deduplican por nombre: "quiénes fueron" es una lista de
@@ -56,12 +69,17 @@ function switchAVTab(tab,btn){
 // fila de la misma persona para el mismo evento, y antes cada fila contaba como
 // un asistente más — inflaba el conteo de la tabla y el numerador del % de
 // asistencia, que así podía pasar de 100%.
+// Personas distintas que participaron. Por el mismo motivo que arriba se
+// cuenta sobre el nombre resuelto: "eng 8" y "ENG 8" son una sola persona.
+function personasUnicasAV(rows){
+  return new Set(rows.map(r=>nombreCanonicoAV(r.fields.Persona)).filter(Boolean)).size;
+}
 function agruparAVPorEvento(rows){
   const mapa={};
   rows.forEach(r=>{
     const key=`${r.fields.Evento||'—'}|${r.fields.Fecha||''}`;
     if(!mapa[key]) mapa[key]={evento:r.fields.Evento||'—',fecha:r.fields.Fecha||'',grupo:r.fields.Grupo||'Todos',asistentes:[]};
-    const persona=(r.fields.Persona||'').trim();
+    const persona=nombreCanonicoAV(r.fields.Persona);
     if(persona&&!mapa[key].asistentes.includes(persona)) mapa[key].asistentes.push(persona);
   });
   return mapa;
@@ -127,15 +145,26 @@ function universoAV(evento,grupo){
   return nombres;
 }
 
-// % de asistencia de un evento sobre un grupo puntual (Core Team/Engineers &
-// Tech), sin importar a quién estaba dirigido el evento — así un evento
-// "Todos" se puede leer separado por grupo en vez de un solo número mezclado.
-// Sin `grupo`, usa el grupo al que estaba dirigido el evento.
-function pctPorGrupoAV(evento,grupo){
+// Asistencia de un evento sobre un grupo puntual (Core Team/Engineers & Tech):
+// cuántos fueron, sobre cuántos podían ir, y el % — un evento "Todos" se lee
+// así separado por grupo en vez de un solo número mezclado. Sin `grupo`, usa
+// el grupo al que estaba dirigido el evento.
+//
+// Devuelve null cuando el % no significa nada: si el evento estaba dirigido a
+// UN grupo, el otro no tiene porcentaje. Antes se calculaba igual y daba 0%,
+// que se leía como "no fue nadie" cuando en realidad era "no estaban
+// invitados" (un All Hands solo para Core Team mostraba 0% en Engineers).
+function asistenciaPorGrupoAV(evento,grupo){
+  const dirigidoA=evento.grupo||'Todos';
+  if(grupo&&dirigidoA!=='Todos'&&dirigidoA!==grupo) return null;
   const universo=universoAV(evento,grupo);
   if(!universo.size) return null;
-  const asistio=evento.asistentes.filter(nombre=>universo.has((nombre||'').trim())).length;
-  return Math.round(asistio/universo.size*100);
+  const asistieron=evento.asistentes.filter(nombre=>universo.has((nombre||'').trim())).length;
+  return {asistieron,universo:universo.size,pct:Math.round(asistieron/universo.size*100)};
+}
+function pctPorGrupoAV(evento,grupo){
+  const a=asistenciaPorGrupoAV(evento,grupo);
+  return a?a.pct:null;
 }
 
 function promPorGrupoAV(eventos,grupo){
@@ -143,19 +172,26 @@ function promPorGrupoAV(eventos,grupo){
   return pcts.length?Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length):null;
 }
 
-function barraPctAV(pct,color){
+// Un % suelto no se puede interpretar: "31%" no dice si fueron 12 de 39 o 60
+// de 194. La barra va siempre acompañada del conteo.
+function textoAsistenciaAV(a){
+  return a?`${a.asistieron} de ${a.universo} · ${a.pct}%`:'—';
+}
+function barraPctAV(a,color){
+  const pct=a?a.pct:0;
   return `<div style="display:flex;align-items:center;gap:8px;">
-    <div style="flex:1;max-width:100px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct||0}%;height:100%;background:${color};border-radius:3px"></div></div>
-    <span style="font-size:12px;color:var(--text2)">${pct!=null?pct+'%':'—'}</span>
+    <div style="flex:0 0 60px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${color};border-radius:3px"></div></div>
+    <span style="font-size:12px;color:var(--text2);white-space:nowrap">${textoAsistenciaAV(a)}</span>
   </div>`;
 }
 
 function renderAVMetricas(){
   const eventos=Object.values(agruparAVPorEvento(cacheAVRaw));
   document.getElementById('av-total-eventos').textContent=eventos.length;
-  document.getElementById('av-total-asistencias').textContent=cacheAVRaw.length;
-  const personas=new Set(cacheAVRaw.map(r=>r.fields.Persona).filter(Boolean));
-  document.getElementById('av-total-personas').textContent=personas.size;
+  // Sobre los asistentes ya deduplicados, no sobre los registros crudos: la
+  // misma persona cargada dos veces para un evento es una asistencia, no dos.
+  document.getElementById('av-total-asistencias').textContent=eventos.reduce((n,e)=>n+e.asistentes.length,0);
+  document.getElementById('av-total-personas').textContent=personasUnicasAV(cacheAVRaw);
 
   const pcts=eventos.map(e=>pctPorGrupoAV(e)).filter(p=>p!=null);
   const prom=pcts.length?Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length):0;
@@ -355,17 +391,15 @@ function renderAVEvento(){
   const tb=document.getElementById('av-tbody-evento');
   if(!tb) return;
   tb.innerHTML=filas.map(([key,d],idx)=>{
-    const pct=pctPorGrupoAV(d);
-    // El "(N activos)" del label es el mismo denominador que usa el porcentaje
-    // — si se recalcula aparte se vuelven a desincronizar, que es justo lo que
-    // producía el 102%.
-    const universo=universoAV(d).size;
+    // El conteo y el porcentaje salen del mismo cálculo — si se recalculan
+    // aparte se vuelven a desincronizar, que es justo lo que producía el 102%.
+    const asist=asistenciaPorGrupoAV(d);
     const bg=idx%2===0?'background:var(--bg2)':'';
     const fila=`<tr class="tr-clickable" style="${bg}" onclick="toggleAVEventoDetalle('${key.replace(/'/g,"\\'")}')">
       <td><strong>${d.evento}</strong> ${d.grupo&&d.grupo!=='Todos'?`<span class="badge badge-gray" style="font-size:10px">${d.grupo}</span>`:''}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(d.fecha)}</td>
       <td style="font-weight:600;font-size:15px;color:var(--blue)">${d.asistentes.length}</td>
-      <td style="font-size:12px;color:var(--text2)">${pct!=null?pct+'% ('+universo+' activos)':'—'}</td>
+      <td style="font-size:12px;color:var(--text2)">${asist?`${asist.asistieron} de ${asist.universo} · ${asist.pct}%`:'—'}</td>
     </tr>`;
     return avEventoExpandido===key?fila+filaDetalleAVEvento(d):fila;
   }).join('')||'<tr class="empty-row"><td colspan="4">Sin resultados</td></tr>';
@@ -479,8 +513,7 @@ function renderAVMetricasQ(){
   document.getElementById('avq-total').textContent=eventos.length;
   document.getElementById('avq-total-sub').textContent=`Q${q} ${anio}`;
 
-  const personas=new Set(enQ.map(r=>r.fields.Persona).filter(Boolean));
-  document.getElementById('avq-personas').textContent=personas.size;
+  document.getElementById('avq-personas').textContent=personasUnicasAV(enQ);
 
   const promCore=promPorGrupoAV(eventos,'Core Team');
   const promEng=promPorGrupoAV(eventos,'Engineers & Tech');
@@ -502,13 +535,13 @@ function renderAVMetricasQ(){
   // un solo % mezclado) — sobre todo relevante en eventos "Todos", donde antes
   // un solo número escondía que la asistencia real puede ser muy distinta
   // entre los dos grupos.
-  cont.innerHTML=`<table class="data-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Asistentes</th><th>% Core Team</th><th>% Engineers & Tech</th></tr></thead><tbody>
+  cont.innerHTML=`<table class="data-table"><thead><tr><th>Evento</th><th>Fecha</th><th>Asistentes</th><th>Asistencia Core Team</th><th>Asistencia Engineers &amp; Tech</th></tr></thead><tbody>
     ${ranking.map(e=>{
-      const pctCore=pctPorGrupoAV(e,'Core Team');
-      const pctEng=pctPorGrupoAV(e,'Engineers & Tech');
+      const core=asistenciaPorGrupoAV(e,'Core Team');
+      const eng=asistenciaPorGrupoAV(e,'Engineers & Tech');
       return`<tr><td>${e.evento}</td><td style="font-size:12px;color:var(--text2)">${fmt(e.fecha)}</td><td style="font-weight:600">${e.asistentes.length}</td>
-        <td>${barraPctAV(pctCore,'var(--purple)')}</td>
-        <td>${barraPctAV(pctEng,'var(--blue)')}</td>
+        <td>${barraPctAV(core,'var(--purple)')}</td>
+        <td>${barraPctAV(eng,'var(--blue)')}</td>
       </tr>`;
     }).join('')}
   </tbody></table>`;

@@ -4,8 +4,8 @@
 // esas dos fuentes) y le suma el nivel de satisfacción que sale de la
 // encuesta que se manda post-evento solo a quienes asistieron. Ese puntaje
 // vive en una tabla aparte ("Eventos Feedback": Evento, Fecha, Fuente,
-// Puntaje 1-5, Respuestas, Comentario) porque ninguna de las dos tablas de
-// asistencia tiene ni va a tener ese dato.
+// Puntaje 1-5, Respuestas, Comentario, Invitados totales, Conclusiones)
+// porque ninguna de las dos tablas de asistencia tiene ni va a tener ese dato.
 
 // Get Together no tiene un campo de nombre de evento (se identifica por
 // Ciudad+Fecha) — se sintetiza un nombre para poder tratarlo igual que un
@@ -39,6 +39,8 @@ function combinarEventos(avRows,gtRows,feedbackRows){
       puntaje:f.Puntaje!=null?Number(f.Puntaje):null,
       respuestas:f.Respuestas!=null?Number(f.Respuestas):null,
       comentario:f.Comentario||null,
+      invitados:f['Invitados totales']!=null?Number(f['Invitados totales']):null,
+      conclusiones:f.Conclusiones||null,
     };
   });
 
@@ -47,7 +49,12 @@ function combinarEventos(avRows,gtRows,feedbackRows){
     ...Object.values(gtMapa).map(e=>({fuente:'Get Together',evento:e.evento,fecha:e.fecha,asistentes:e.asistentes.length})),
   ].map(ev=>{
     const fb=feedbackPorClave[`${ev.fuente}|${ev.evento}|${ev.fecha}`];
-    return {...ev,puntaje:fb?fb.puntaje:null,respuestas:fb?fb.respuestas:null,comentario:fb?fb.comentario:null};
+    return {...ev,
+      puntaje:fb?fb.puntaje:null,
+      respuestas:fb?fb.respuestas:null,
+      comentario:fb?fb.comentario:null,
+      invitados:fb?fb.invitados:null,
+      conclusiones:fb?fb.conclusiones:null};
   });
 
   lista.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
@@ -497,9 +504,12 @@ function abrirPuntajeEventoModal(fuente,evento,fecha){
   document.getElementById('ev-puntaje-valor').value=existente?.puntaje??'';
   document.getElementById('ev-puntaje-respuestas').value=existente?.respuestas??'';
   document.getElementById('ev-puntaje-comentario').value=existente?.comentario??'';
+  document.getElementById('ev-puntaje-invitados').value=existente?.invitados??'';
+  document.getElementById('ev-puntaje-conclusiones').value=existente?.conclusiones??'';
   document.getElementById('ev-puntaje-btn-borrar').style.display=existente?.puntaje!=null?'flex':'none';
   actualizarPreviewPuntaje();
   actualizarTasaRespuesta();
+  actualizarTasaAsistencia();
   document.getElementById('ev-puntaje-overlay').style.display='flex';
 }
 
@@ -529,8 +539,22 @@ function actualizarPreviewPuntaje(){
   });
 }
 
-// Respuestas de la encuesta sobre el total de asistentes al evento — solo
-// informativo, no se guarda (Respuestas ya es el dato que se persiste).
+// Asistentes sobre invitados: cuánta de la gente convocada terminó yendo.
+// Como la de respuesta, es derivado y no se guarda.
+function actualizarTasaAsistencia(){
+  const el=document.getElementById('ev-puntaje-tasa-asistencia');
+  if(!el||!evPuntajeActual) return;
+  const invitados=Number(document.getElementById('ev-puntaje-invitados')?.value)||0;
+  const asistentes=evPuntajeActual.asistentes||0;
+  if(!invitados){ el.textContent='—'; el.style.color='var(--text2)'; return; }
+  const pct=Math.round((asistentes/invitados)*100);
+  el.textContent=`${asistentes} de ${invitados} · ${pct}%`;
+  el.style.color=pct>=50?'var(--green)':'var(--amber)';
+}
+
+// Respuestas de la encuesta sobre el total de ASISTENTES (la encuesta se manda
+// solo a quienes fueron, no a todos los invitados) — solo informativo, no se
+// guarda (Respuestas ya es el dato que se persiste).
 function actualizarTasaRespuesta(){
   const el=document.getElementById('ev-puntaje-tasa');
   if(!el||!evPuntajeActual) return;
@@ -557,6 +581,16 @@ async function guardarPuntajeEvento(){
   if(respuestas) fields.Respuestas=Number(respuestas);
 
   const existenteRaw=feedbackRawDe(fuente,evento,fecha);
+  // "Invitados totales" y "Conclusiones" se mandan solo cuando cambian, así un
+  // puntaje que no los usa se sigue guardando aunque el campo todavía no
+  // exista en Airtable (mismo criterio que la fecha de fin en Proyectos).
+  const invitados=document.getElementById('ev-puntaje-invitados')?.value;
+  const conclusiones=(document.getElementById('ev-puntaje-conclusiones')?.value||'').trim();
+  const invitadosNuevo=invitados?Number(invitados):null;
+  const invitadosPrevio=existenteRaw?.fields?.['Invitados totales']??null;
+  if(invitadosNuevo!==invitadosPrevio) fields['Invitados totales']=invitadosNuevo;
+  if(conclusiones!==(existenteRaw?.fields?.Conclusiones||'')) fields.Conclusiones=conclusiones;
+
   try{
     if(existenteRaw) await atPatch(`Eventos Feedback/${existenteRaw.id}`,fields);
     else await atPost('Eventos Feedback',fields);

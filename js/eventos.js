@@ -506,7 +506,7 @@ function abrirPuntajeEventoModal(fuente,evento,fecha){
   document.getElementById('ev-puntaje-comentario').value=existente?.comentario??'';
   document.getElementById('ev-puntaje-invitados').value=existente?.invitados??'';
   document.getElementById('ev-puntaje-conclusiones').value=existente?.conclusiones??'';
-  document.getElementById('ev-puntaje-btn-borrar').style.display=existente?.puntaje!=null?'flex':'none';
+  document.getElementById('ev-puntaje-btn-borrar').style.display=feedbackRawDe(fuente,evento,fecha)?'flex':'none';
   actualizarPreviewPuntaje();
   actualizarTasaRespuesta();
   actualizarTasaAsistencia();
@@ -570,22 +570,37 @@ function feedbackRawDe(fuente,evento,fecha){
   return cacheEventosFeedbackRaw.find(r=>(r.fields.Fuente||'')===fuente&&(r.fields.Evento||'')===evento&&(r.fields.Fecha||'')===fecha);
 }
 
+// El puntaje es OPCIONAL: la card dejó de ser solo "cargar el puntaje" cuando
+// sumó invitados y conclusiones, y hay casos normales donde todavía no hay
+// encuesta — anotar a cuánta gente se invitó apenas terminó el evento, o
+// dejar las conclusiones sin que se haya mandado encuesta. Se valida el rango
+// solo si se completó; lo que no se puede es guardar la card entera vacía.
 async function guardarPuntajeEvento(){
   if(!evPuntajeActual) return;
-  const valor=Number(document.getElementById('ev-puntaje-valor')?.value);
-  if(!valor||valor<1||valor>5){ toast('Ingresá un puntaje entre 1 y 5 (puede tener decimales)',true); return; }
+  const crudoPuntaje=(document.getElementById('ev-puntaje-valor')?.value||'').trim();
+  const valor=crudoPuntaje?Number(crudoPuntaje):null;
+  if(valor!=null&&(!(valor>=1)||valor>5)){
+    toast('El puntaje va entre 1 y 5 (puede tener decimales). Dejalo vacío si todavía no hay encuesta.',true);
+    return;
+  }
   const {fuente,evento,fecha}=evPuntajeActual;
   const respuestas=document.getElementById('ev-puntaje-respuestas')?.value;
   const comentario=(document.getElementById('ev-puntaje-comentario')?.value||'').trim();
-  const fields={Fuente:fuente,Evento:evento,Fecha:fecha,Puntaje:valor,Comentario:comentario};
-  if(respuestas) fields.Respuestas=Number(respuestas);
-
-  const existenteRaw=feedbackRawDe(fuente,evento,fecha);
-  // "Invitados totales" y "Conclusiones" se mandan solo cuando cambian, así un
-  // puntaje que no los usa se sigue guardando aunque el campo todavía no
-  // exista en Airtable (mismo criterio que la fecha de fin en Proyectos).
   const invitados=document.getElementById('ev-puntaje-invitados')?.value;
   const conclusiones=(document.getElementById('ev-puntaje-conclusiones')?.value||'').trim();
+  const existenteRaw=feedbackRawDe(fuente,evento,fecha);
+  if(valor==null&&!respuestas&&!comentario&&!invitados&&!conclusiones&&!existenteRaw){
+    toast('Completá al menos un dato para guardar',true);
+    return;
+  }
+
+  const fields={Fuente:fuente,Evento:evento,Fecha:fecha,Puntaje:valor,Comentario:comentario};
+  // null vacía el campo: si se borra el número de respuestas, no queda el viejo
+  fields.Respuestas=respuestas?Number(respuestas):null;
+
+  // "Invitados totales" y "Conclusiones" se mandan solo cuando cambian, así la
+  // card se sigue guardando aunque el campo todavía no exista en Airtable
+  // (mismo criterio que la fecha de fin en Proyectos).
   const invitadosNuevo=invitados?Number(invitados):null;
   const invitadosPrevio=existenteRaw?.fields?.['Invitados totales']??null;
   if(invitadosNuevo!==invitadosPrevio) fields['Invitados totales']=invitadosNuevo;
@@ -598,7 +613,7 @@ async function guardarPuntajeEvento(){
     toast('Error al guardar: '+e.message,true);
     return;
   }
-  toast('✅ Puntaje guardado');
+  toast('✅ Guardado');
   cerrarPuntajeEventoModal();
   await recargarFeedbackEventos();
 }
@@ -608,14 +623,14 @@ async function borrarPuntajeEvento(){
   const {fuente,evento,fecha}=evPuntajeActual;
   const existenteRaw=feedbackRawDe(fuente,evento,fecha);
   if(!existenteRaw) return;
-  if(!confirm('¿Borrar el puntaje cargado para este evento?')) return;
+  if(!confirm('¿Borrar todo lo cargado para este evento (puntaje, invitados, comentario y conclusiones)?')) return;
   try{
     await atDelete('Eventos Feedback',existenteRaw.id);
   }catch(e){
     toast('Error al borrar: '+e.message,true);
     return;
   }
-  toast('✅ Puntaje borrado');
+  toast('✅ Datos borrados');
   cerrarPuntajeEventoModal();
   await recargarFeedbackEventos();
 }

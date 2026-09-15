@@ -116,12 +116,29 @@ test('pctPorGrupoAV: los ausentes bajan el porcentaje', ()=>{
   assert.equal(ctx.pctPorGrupoAV(e,'Engineers & Tech'),50);
 });
 
-test('pctPorGrupoAV: separa por grupo — un evento de Engineers da 0% en Core Team', ()=>{
+// Un evento dirigido a UN grupo no tiene porcentaje del otro: nadie de ese
+// otro grupo estaba invitado. Antes daba 0%, que se lee como "no fue nadie"
+// cuando en realidad era "no correspondía" — un All Hands solo para Core Team
+// mostraba 0% en Engineers & Tech.
+test('pctPorGrupoAV: un evento dirigido a un grupo no tiene % del otro', ()=>{
   const ctx=ctxAV([
     P('Ana'),
     P('Jefa',{'Rol en empresa':'Founder'}),
   ]);
   const e=Object.values(ctx.agruparAVPorEvento([fila('Ana','All Hands','2026-08-19')]))[0];
+  assert.equal(e.grupo,'Engineers & Tech');
+  assert.equal(ctx.pctPorGrupoAV(e,'Engineers & Tech'),100);
+  assert.equal(ctx.pctPorGrupoAV(e,'Core Team'),null);
+});
+
+// Pero en un evento abierto a todos, 0% sí significa que no fue nadie de ese
+// grupo — ahí el dato es real y se tiene que mostrar.
+test('pctPorGrupoAV: en un evento para todos, 0% sigue significando que no fue nadie', ()=>{
+  const ctx=ctxAV([
+    P('Ana'),
+    P('Jefa',{'Rol en empresa':'Founder'}),
+  ]);
+  const e=Object.values(ctx.agruparAVPorEvento([fila('Ana','All Hands','2026-08-19','Todos')]))[0];
   assert.equal(ctx.pctPorGrupoAV(e,'Engineers & Tech'),100);
   assert.equal(ctx.pctPorGrupoAV(e,'Core Team'),0);
 });
@@ -180,4 +197,61 @@ test('% por persona: duplicados no lo llevan arriba de 100%', ()=>{
   const elegibles=ctx.eventosElegiblesAV(persona,eventos,asistio).length;
   const pct=Math.round(ctx.eventosDistintosAV(asistio)/elegibles*100);
   assert.equal(pct,100);
+});
+
+// ─── Nombres tipeados distinto ────────────────────────────────────────────────
+// El nombre del asistente se carga a mano y no siempre coincide carácter a
+// carácter con el de Personas. Antes solo se recortaban los espacios de los
+// extremos, así que "ana perez" o "Ana  Perez" no se reconocían: no entraban al
+// numerador (el % salía más bajo de lo real) y la misma persona cargada de dos
+// formas contaba como dos asistentes.
+test('nombreCanonicoAV: resuelve al nombre tal como figura en Personas', ()=>{
+  const ctx=ctxAV([P('Ana Perez')]);
+  assert.equal(ctx.nombreCanonicoAV('ana perez'),'Ana Perez');
+  assert.equal(ctx.nombreCanonicoAV('ANA PEREZ'),'Ana Perez');
+  assert.equal(ctx.nombreCanonicoAV('Ana  Perez'),'Ana Perez');
+  assert.equal(ctx.nombreCanonicoAV('  Ana Perez  '),'Ana Perez');
+  // Quien no está en Personas queda como vino (recortado): no se puede resolver
+  assert.equal(ctx.nombreCanonicoAV(' Invitada Externa '),'Invitada Externa');
+  assert.equal(ctx.nombreCanonicoAV(''),'');
+});
+
+test('un nombre tipeado distinto cuenta igual en el % y no duplica al asistente', ()=>{
+  const ctx=ctxAV([P('Ana Perez'),P('Beto Gil'),P('Caro Diaz'),P('Dani Paz')]);
+  const e=Object.values(ctx.agruparAVPorEvento([
+    fila('ana perez','All Hands','2026-08-19'),
+    fila('Ana  Perez','All Hands','2026-08-19'),  // la misma, tipeada distinto
+    fila('BETO GIL','All Hands','2026-08-19'),
+  ]))[0];
+  assert.equal(e.asistentes.join('|'),'Ana Perez|Beto Gil'); // 2 personas, no 3
+  assert.equal(ctx.pctPorGrupoAV(e,'Engineers & Tech'),50);  // 2 de 4
+});
+
+// ─── El % siempre acompañado del conteo ───────────────────────────────────────
+// "31%" solo no se puede interpretar: no dice si fueron 12 de 39 o 60 de 194.
+test('asistenciaPorGrupoAV: devuelve cuántos fueron y sobre cuántos', ()=>{
+  const ctx=ctxAV([P('Ana'),P('Beto'),P('Caro'),P('Dani')]);
+  const e=Object.values(ctx.agruparAVPorEvento([
+    fila('Ana','All Hands','2026-08-19'),
+    fila('Beto','All Hands','2026-08-19'),
+  ]))[0];
+  const a=ctx.asistenciaPorGrupoAV(e,'Engineers & Tech');
+  assert.equal(a.asistieron,2);
+  assert.equal(a.universo,4);
+  assert.equal(a.pct,50);
+  assert.equal(ctx.textoAsistenciaAV(a),'2 de 4 · 50%');
+  assert.equal(ctx.textoAsistenciaAV(null),'—');
+});
+
+test('asistenciaPorGrupoAV: el conteo nunca supera el universo', ()=>{
+  // Alguien que asistió pero cuyas fechas dicen que no estaba: entra a los dos
+  // lados de la fracción, nunca solo al numerador (era la causa del 102%).
+  const ctx=ctxAV([P('Ana'),P('Tarde',{'Fecha de ingreso':'2030-01-01'})]);
+  const e=Object.values(ctx.agruparAVPorEvento([
+    fila('Ana','All Hands','2026-08-19'),
+    fila('Tarde','All Hands','2026-08-19'),
+  ]))[0];
+  const a=ctx.asistenciaPorGrupoAV(e,'Engineers & Tech');
+  assert.ok(a.asistieron<=a.universo,`${a.asistieron} de ${a.universo}`);
+  assert.equal(a.pct,100);
 });

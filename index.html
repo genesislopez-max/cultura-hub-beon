@@ -1726,7 +1726,7 @@
 
 <!-- MODAL PUNTAJE DE EVENTO -->
 <div class="modal-overlay" id="ev-puntaje-overlay" onclick="cerrarPuntajeEventoModal()" style="display:none;opacity:1;pointer-events:all">
-  <div class="modal" onclick="event.stopPropagation()" style="max-width:560px;width:95vw;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 56px)">
+  <div class="modal" onclick="event.stopPropagation()" style="max-width:720px;width:95vw;padding:0;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 40px)">
     <div class="ev-modal-header">
       <div class="ev-modal-glow"></div>
       <button class="ev-modal-close" onclick="cerrarPuntajeEventoModal()"><i class="ti ti-x"></i></button>
@@ -1761,6 +1761,17 @@
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px">
         <div class="field-group" style="margin:0">
+          <label class="field-label">Personas invitadas</label>
+          <input class="field-input" id="ev-puntaje-invitados" type="number" min="0" placeholder="Opcional" oninput="actualizarTasaAsistencia()">
+        </div>
+        <div class="field-group" style="margin:0">
+          <label class="field-label">Tasa de asistencia</label>
+          <div class="ev-rate-box"><i class="ti ti-users"></i><span id="ev-puntaje-tasa-asistencia">—</span></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0 18px">
+        <div class="field-group" style="margin:0">
           <label class="field-label">Respuestas de la encuesta</label>
           <input class="field-input" id="ev-puntaje-respuestas" type="number" min="0" placeholder="Opcional" oninput="actualizarTasaRespuesta()">
         </div>
@@ -1774,6 +1785,14 @@
         <label class="field-label">Comentario destacado</label>
         <textarea class="field-input" id="ev-puntaje-comentario" rows="3" placeholder="Ej: &quot;El workshop fue realmente útil para...&quot;"></textarea>
         <div class="field-hint">Opcional — una frase de la encuesta que resuma bien el evento.</div>
+      </div>
+
+      <div class="ev-modal-separador"></div>
+
+      <div class="field-group">
+        <label class="field-label"><i class="ti ti-notes" style="margin-right:5px;color:var(--purple)"></i>Conclusiones</label>
+        <textarea class="field-input" id="ev-puntaje-conclusiones" rows="6" placeholder="Qué funcionó, qué no, y qué conviene repetir o cambiar la próxima vez."></textarea>
+        <div class="field-hint">Opcional — el análisis del evento, más allá del puntaje.</div>
       </div>
     </div>
 

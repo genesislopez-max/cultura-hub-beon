@@ -331,3 +331,53 @@ test('agruparBenefAsignados: una asignación sin fecha no rompe el orden', ()=>{
 test('agruparBenefAsignados: sin asignaciones devuelve lista vacía', ()=>{
   assert.equal(ctx.agruparBenefAsignados([]).length,0);
 });
+
+// ─── Beneficios que no corren en el tiempo ────────────────────────────────────
+// "Activo desde" no describe un curso de Udemy ni unas credenciales de
+// O'Reilly/Pluralsight: el curso se solicitó una vez y las credenciales se
+// compartieron un día. Lo que importa es la fecha de ese hecho.
+test('Udemy dice "Solicitado el", no "Activo desde"', ()=>{
+  const f={'Fecha activación':'2025-07-11',Estado:'Activo'};
+  assert.equal(ctx.periodoBenefAsignado(f,'Udemy'),'Solicitado el 11 de jul de 2025');
+  assert.doesNotMatch(ctx.periodoBenefAsignado(f,'Udemy'),/Activo desde/);
+});
+
+test('O\'Reilly y Pluralsight dicen "Credenciales compartidas el"', ()=>{
+  const f={'Fecha activación':'2024-07-26',Estado:'Activo'};
+  for(const n of ["O'Reilly",'OReilly','Pluralsight','pluralsight']){
+    assert.equal(ctx.periodoBenefAsignado(f,n),'Credenciales compartidas el 26 de jul de 2024',n);
+  }
+});
+
+test('los beneficios que sí corren en el tiempo siguen diciendo "Activo desde"', ()=>{
+  const f={'Fecha activación':'2025-07-11',Estado:'Activo'};
+  assert.match(ctx.periodoBenefAsignado(f,'Terapia'),/^Activo desde/);
+  assert.match(ctx.periodoBenefAsignado(f,'Clases de Inglés'),/^Activo desde/);
+});
+
+test('al darse de baja, un acceso conserva la fecha en que se compartió', ()=>{
+  const f={'Fecha activación':'2024-07-26','Fecha de baja':'2025-01-31',Estado:'Inactivo'};
+  assert.equal(ctx.periodoBenefAsignado(f,"O'Reilly"),
+    'Credenciales compartidas el 26 de jul de 2024 · Baja: 31 de ene de 2025');
+  // Un blogpost publicado no se "cierra": no lleva baja aunque esté inactivo
+  assert.equal(ctx.periodoBenefAsignado(f,'Blogpost'),'Fecha de publicación: 26 de jul de 2024');
+});
+
+// ─── Credenciales recompartidas ───────────────────────────────────────────────
+// Caso real: una persona con dos asignaciones de O'Reilly (2024 y 2025) se leía
+// como dos accesos activos distintos, cuando es el mismo acceso recompartido
+// porque cambió la contraseña. Lo que importa es desde cuándo lo tiene.
+test('un acceso recompartido no se cuenta como dos beneficios activos', ()=>{
+  const fila=(fecha)=>({r:{id:'r'+fecha,fields:{'Fecha activación':fecha,Estado:'Activo'}},benef:null,nombre:"O'Reilly"});
+  const g=ctx.agruparBenefAsignados([fila('2024-07-26'),fila('2025-07-11')])[0];
+  const resumen=ctx.resumenGrupoBenef(g);
+  assert.match(resumen,/Compartidas el 26 de jul de 2024/); // la PRIMERA vez
+  assert.match(resumen,/recompartidas 1 vez/);
+  assert.doesNotMatch(resumen,/2 activas/);
+});
+
+test('el resumen del grupo no cambia para los beneficios que no son credenciales', ()=>{
+  const fila=(curso)=>({r:{id:curso,fields:{'Fecha activación':'2025-01-01',Estado:'Activo',Curso:curso}},benef:null,nombre:'Udemy'});
+  const g=ctx.agruparBenefAsignados([fila('Docker'),fila('Kubernetes')])[0];
+  assert.equal(ctx.resumenGrupoBenef(g),'2 asignaciones · 2 activas');
+});

@@ -142,7 +142,8 @@ async function verBenefPersona(nombre, grupo, nivel){
       // Dentro de un grupo, repetir el nombre del beneficio en cada fila es
       // ruido: ya lo dice el encabezado. Si la asignación tiene Curso cargado
       // (Udemy), ese es el dato que distingue una de otra.
-      const titulo=dentroDeGrupo?((r.fields.Curso||'').trim()||bNombre):bNombre;
+      const curso=(r.fields.Curso||'').trim();
+      const titulo=dentroDeGrupo?(curso||bNombre):bNombre;
       const valor=montoBenefAsignado(r.fields,benef,bNombre);
       const estado=r.fields.Estado||'Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
@@ -161,6 +162,7 @@ async function verBenefPersona(nombre, grupo, nivel){
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${titulo}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
           <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
+          ${!dentroDeGrupo&&curso?`<div class="bp-detalle-row-coment"><i class="ti ti-book"></i><span>${curso}</span></div>`:''}
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
         </div>
@@ -178,7 +180,10 @@ async function verBenefPersona(nombre, grupo, nivel){
     html+=`<div class="bp-detalle-rows">${agruparBenefAsignados(filasBenef).map(g=>{
       if(g.items.length===1) return filaBenefHtml(g.items[0]);
       const cat=estiloCategoria(g.benef?.fields.Categoria);
-      const total=g.items.reduce((s,f)=>{
+      // En credenciales no se suman los montos: las dos asignaciones son el
+      // mismo acceso recompartido, así que un total sería contar dos veces la
+      // misma licencia.
+      const total=esBeneficioCredenciales(g.nombre)?0:g.items.reduce((s,f)=>{
         const m=f.r.fields.Monto||g.benef?.fields?.Valor||0;
         return s+Number(m);
       },0);
@@ -187,7 +192,7 @@ async function verBenefPersona(nombre, grupo, nivel){
           <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
           <div class="bp-grupo-mid">
             <div class="bp-detalle-row-title">${g.nombre}${total?`<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} en total</span>`:''}</div>
-            <div class="bp-detalle-row-sub">${g.items.length} asignaciones${g.activos?` · ${g.activos} activa${g.activos!==1?'s':''}`:''}</div>
+            <div class="bp-detalle-row-sub">${resumenGrupoBenef(g)}</div>
           </div>
           <span class="bp-grupo-count">${g.items.length}</span>
           <i class="ti ti-chevron-down bp-detalle-chev"></i>
@@ -331,13 +336,15 @@ async function verBenefPersona(nombre, grupo, nivel){
     </div>
   </div>`;
   if(gtRecs.length){
+    // Sin el Proyecto: un Get Together es un encuentro de BEON, no una
+    // actividad del partner en el que la persona trabaja, así que nombrarlo
+    // acá sugería una relación que no existe.
     html+=`<div class="bp-detalle-rows">${gtRecs.map(r=>{
       const f=r.fields;
       return`<div class="bp-detalle-row">
         <div class="bp-detalle-row-icon" style="background:var(--tinte-pink);color:var(--text-pink-accent)"><i class="ti ti-users"></i></div>
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${f.Ciudad||'—'}${f['País']?` <span style="font-weight:500;color:var(--text3)">(${f['País']})</span>`:''}</div>
-          <div class="bp-detalle-row-sub">${f.Proyecto||''}</div>
         </div>
         <div class="bp-detalle-row-meta">${fmt(f.Fecha)}</div>
       </div>`;
@@ -375,16 +382,28 @@ function badgeEstadoBenef(estado){
 // dicen cosas distintas: Activo abre un período sin cerrar, En pausa tiene
 // inicio pero no fin (el beneficio no terminó, así que no lleva Fecha de baja),
 // e Inactivo es un período cerrado.
+//
+// Pero hay beneficios que NO corren en el tiempo, y para esos "Activo desde"
+// no describe nada: lo que importa es la fecha del hecho puntual que los
+// origina. Un blogpost se publicó, un curso de Udemy se solicitó, y en
+// O'Reilly/Pluralsight se compartieron credenciales.
 function periodoBenefAsignado(fields,nombreBeneficio){
   const estado=fields.Estado||'Activo';
   const fechaAct=fields['Fecha activación'];
   const fechaBaja=fields['Fecha de baja'];
-  // Blogpost se paga por publicación, no es un beneficio que corra en el
-  // tiempo: no hay un "activo desde" ni un período que cerrar, hay una fecha
-  // en la que se publicó. Se muestra igual en cualquier estado, porque la
-  // fecha de publicación no cambia si después se marca inactivo.
   if(esBeneficioBlogpost(nombreBeneficio)){
+    // Se muestra igual en cualquier estado: la fecha de publicación no cambia
+    // si después se marca inactivo, y un post publicado no se "cierra".
     return fechaAct?`Fecha de publicación: ${fmt(fechaAct)}`:'Sin fecha de publicación';
+  }
+  const etiquetaPuntual=esBeneficioUdemy(nombreBeneficio)?'Solicitado el'
+    :esBeneficioCredenciales(nombreBeneficio)?'Credenciales compartidas el':'';
+  if(etiquetaPuntual){
+    if(!fechaAct) return 'Sin fecha registrada';
+    const base=`${etiquetaPuntual} ${fmt(fechaAct)}`;
+    // Estos sí se pueden cerrar (un acceso que se dio de baja), y ahí la fecha
+    // de baja agrega información.
+    return estado!=='Activo'&&fechaBaja?`${base} · Baja: ${fmt(fechaBaja)}`:base;
   }
   if(estado==='Activo'){
     return fechaAct?`Activo desde ${fmt(fechaAct)}`:'Sin fecha registrada';
@@ -394,6 +413,24 @@ function periodoBenefAsignado(fields,nombreBeneficio){
   }
   const partes=[fechaAct?`Usado desde ${fmt(fechaAct)}`:'',fechaBaja?`Baja: ${fmt(fechaBaja)}`:''].filter(Boolean);
   return partes.length?partes.join(' · '):'Sin fecha registrada';
+}
+
+// Encabezado del desplegable de un beneficio con varias asignaciones.
+// En O'Reilly/Pluralsight, volver a compartir las credenciales (porque cambió
+// la contraseña) suma una asignación más, y el encabezado las contaba como
+// accesos activos distintos: "2 asignaciones · 2 activas" para una sola
+// persona con un solo acceso. Lo que interesa ahí es desde cuándo lo tiene y
+// cuántas veces hubo que recompartírselas.
+function resumenGrupoBenef(g){
+  const items=g.items||[];
+  if(esBeneficioCredenciales(g.nombre)){
+    const fechas=items.map(f=>f.r.fields['Fecha activación']).filter(Boolean).sort();
+    const partes=[fechas.length?`Compartidas el ${fmt(fechas[0])}`:'Sin fecha registrada'];
+    const renovaciones=items.length-1;
+    if(renovaciones>0) partes.push(`recompartidas ${renovaciones} ${renovaciones===1?'vez':'veces'}`);
+    return partes.join(' · ');
+  }
+  return `${items.length} asignaciones${g.activos?` · ${g.activos} activa${g.activos!==1?'s':''}`:''}`;
 }
 
 // Monto de un beneficio asignado. Prioridad al Monto propio de la asignación

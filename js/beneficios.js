@@ -556,6 +556,14 @@ function esBeneficioBlogpost(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
   return k==='blogpost'||k==='blogposts';
 }
+// O'Reilly y Pluralsight no son un beneficio que "esté activo": lo que se hace
+// es compartir las credenciales de una licencia. Por eso la fecha dice cuándo
+// se compartieron, y volver a compartirlas (porque cambió la contraseña) es
+// una renovación del mismo acceso, no un segundo beneficio activo.
+function esBeneficioCredenciales(nombreBeneficio){
+  const k=normalizarBeneficioKey(nombreBeneficio);
+  return k==='oreilly'||k==='pluralsight';
+}
 // Clases de Inglés: el beneficio más consultado, así que encabeza la lista del
 // detalle de cada persona (ver ordenarBenefAsignados en js/side-panel.js).
 function esBeneficioIngles(nombreBeneficio){

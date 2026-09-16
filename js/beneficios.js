@@ -169,16 +169,8 @@ function renderBenefMetricas(){
   document.getElementById('mb-activos').textContent=activos;
 
   // Presupuesto total usado = suma de valores de beneficios asignados activos
-  let totalUsado=0;
-  cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo').forEach(a=>{
-    if(a.fields.Monto){
-      totalUsado+=Number(a.fields.Monto)||0;
-    } else {
-      const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
-      const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===bNombre);
-      if(benef?.fields.Valor) totalUsado+=Number(benef.fields.Valor)||0;
-    }
-  });
+  const totalUsado=sumarMontosAsignados(
+    cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo'));
   // "Resto del equipo", HR y Manager ven el catálogo/asignaciones de su
   // grupo, pero no el agregado de gasto total — se oculta la tarjeta entera
   // (no solo el número) para no dejar la etiqueta sin nada al lado. TEM y
@@ -560,6 +552,39 @@ function esBeneficioBlogpost(nombreBeneficio){
 // es compartir las credenciales de una licencia. Por eso la fecha dice cuándo
 // se compartieron, y volver a compartirlas (porque cambió la contraseña) es
 // una renovación del mismo acceso, no un segundo beneficio activo.
+// Los campos Persona/Beneficio de una asignación son linked records: llegan
+// como array de un elemento, salvo cuando loadBeneficios ya los resolvió a
+// texto. El patrón estaba repetido en media docena de lugares.
+function valorVinculado(campo){
+  return typeof campo==='string'?campo:(Array.isArray(campo)?campo[0]||'':'');
+}
+// Lo que aporta una asignación al gasto: su Monto propio si está cargado, si
+// no el Valor del catálogo.
+function montoDeAsignacion(a,catalogo){
+  if(a.fields.Monto) return Number(a.fields.Monto)||0;
+  const bNombre=valorVinculado(a.fields.Beneficio);
+  const benef=(catalogo||cacheBeneficiosRaw||[]).find(b=>b.fields.Beneficio===bNombre);
+  return Number(benef?.fields?.Valor)||0;
+}
+// Total usado. O'Reilly/Pluralsight se pagan UNA sola vez por persona: volver
+// a compartirle las credenciales (porque cambió la contraseña) deja otra
+// asignación cargada, pero no es otro gasto. Sin esta deduplicación, cada
+// recompartida inflaba el presupuesto usado de esa persona y el total del
+// equipo. Entre las asignaciones del mismo acceso se toma el monto más alto,
+// que es el que tiene el dato cuando las otras quedaron en blanco.
+function sumarMontosAsignados(asignaciones,catalogo){
+  let total=0;
+  const credenciales=new Map();
+  (asignaciones||[]).forEach(a=>{
+    const monto=montoDeAsignacion(a,catalogo);
+    const bNombre=valorVinculado(a.fields.Beneficio);
+    if(!esBeneficioCredenciales(bNombre)){ total+=monto; return; }
+    const clave=`${normalizarNombre(valorVinculado(a.fields.Persona))}|${normalizarBeneficioKey(bNombre)}`;
+    credenciales.set(clave,Math.max(credenciales.get(clave)||0,monto));
+  });
+  credenciales.forEach(m=>{ total+=m; });
+  return total;
+}
 function esBeneficioCredenciales(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
   return k==='oreilly'||k==='pluralsight';
@@ -754,18 +779,7 @@ function renderBenefPersonas(){
       return pNombre.trim()===nombre.trim()&&(a.fields.Estado||'Activo')==='Activo';
     });
 
-    // Sumar valor: usa Monto del asignado si existe, sino Valor del catálogo
-    let usado=0;
-    asignados.forEach(a=>{
-      if(a.fields.Monto){
-        usado+=Number(a.fields.Monto)||0;
-      } else {
-        // Beneficio ya resuelto a nombre en loadBeneficios
-        const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
-        const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===bNombre);
-        if(benef?.fields.Valor) usado+=Number(benef.fields.Valor)||0;
-      }
-    });
+    const usado=sumarMontosAsignados(asignados);
 
     const pct=tope>0?Math.min(100,Math.round((usado/tope)*100)):0;
     const barColor=pct>=90?'var(--critical)':pct>=70?'var(--warning)':'var(--blue)';

@@ -144,7 +144,10 @@ async function verBenefPersona(nombre, grupo, nivel){
       // (Udemy), ese es el dato que distingue una de otra.
       const curso=(r.fields.Curso||'').trim();
       const titulo=dentroDeGrupo?(curso||bNombre):bNombre;
-      const valor=montoBenefAsignado(r.fields,benef,bNombre);
+      // En credenciales el costo es uno solo aunque haya varias asignaciones:
+      // repetirlo en cada fila del grupo hacía leer un gasto por cada vez que
+      // se recompartieron. Va una sola vez, en el encabezado.
+      const valor=dentroDeGrupo&&esBeneficioCredenciales(bNombre)?'':montoBenefAsignado(r.fields,benef,bNombre);
       const estado=r.fields.Estado||'Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
       const motivoBaja=r.fields['Motivo de baja'];
@@ -180,18 +183,12 @@ async function verBenefPersona(nombre, grupo, nivel){
     html+=`<div class="bp-detalle-rows">${agruparBenefAsignados(filasBenef).map(g=>{
       if(g.items.length===1) return filaBenefHtml(g.items[0]);
       const cat=estiloCategoria(g.benef?.fields.Categoria);
-      // En credenciales no se suman los montos: las dos asignaciones son el
-      // mismo acceso recompartido, así que un total sería contar dos veces la
-      // misma licencia.
-      const total=esBeneficioCredenciales(g.nombre)?0:g.items.reduce((s,f)=>{
-        const m=f.r.fields.Monto||g.benef?.fields?.Valor||0;
-        return s+Number(m);
-      },0);
+
       return`<details class="bp-grupo">
         <summary class="bp-grupo-sum">
           <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
           <div class="bp-grupo-mid">
-            <div class="bp-detalle-row-title">${g.nombre}${total?`<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} en total</span>`:''}</div>
+            <div class="bp-detalle-row-title">${g.nombre}${montoGrupoBenef(g)}</div>
             <div class="bp-detalle-row-sub">${resumenGrupoBenef(g)}</div>
           </div>
           <span class="bp-grupo-count">${g.items.length}</span>
@@ -421,6 +418,19 @@ function periodoBenefAsignado(fields,nombreBeneficio){
 // accesos activos distintos: "2 asignaciones · 2 activas" para una sola
 // persona con un solo acceso. Lo que interesa ahí es desde cuándo lo tiene y
 // cuántas veces hubo que recompartírselas.
+// Monto del encabezado de un grupo. Para lo que se compra por unidad (varios
+// cursos de Udemy) el total suma; para credenciales es un pago único, así que
+// se muestra el monto del acceso, no la suma de las veces que se recompartió.
+function montoGrupoBenef(g){
+  const items=g.items||[];
+  const montoDe=f=>Number(f.r.fields.Monto||g.benef?.fields?.Valor||0);
+  if(esBeneficioCredenciales(g.nombre)){
+    const monto=items.reduce((max,f)=>Math.max(max,montoDe(f)),0);
+    return monto?`<span class="bp-detalle-row-amount">$${monto.toLocaleString('es-AR')}</span>`:'';
+  }
+  const total=items.reduce((s,f)=>s+montoDe(f),0);
+  return total?`<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} en total</span>`:'';
+}
 function resumenGrupoBenef(g){
   const items=g.items||[];
   if(esBeneficioCredenciales(g.nombre)){

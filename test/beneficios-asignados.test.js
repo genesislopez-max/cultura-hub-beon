@@ -331,3 +331,102 @@ test('agruparBenefAsignados: una asignación sin fecha no rompe el orden', ()=>{
 test('agruparBenefAsignados: sin asignaciones devuelve lista vacía', ()=>{
   assert.equal(ctx.agruparBenefAsignados([]).length,0);
 });
+
+// ─── Beneficios que no corren en el tiempo ────────────────────────────────────
+// "Activo desde" no describe un curso de Udemy ni unas credenciales de
+// O'Reilly/Pluralsight: el curso se solicitó una vez y las credenciales se
+// compartieron un día. Lo que importa es la fecha de ese hecho.
+test('Udemy dice "Solicitado el", no "Activo desde"', ()=>{
+  const f={'Fecha activación':'2025-07-11',Estado:'Activo'};
+  assert.equal(ctx.periodoBenefAsignado(f,'Udemy'),'Solicitado el 11 de jul de 2025');
+  assert.doesNotMatch(ctx.periodoBenefAsignado(f,'Udemy'),/Activo desde/);
+});
+
+test('O\'Reilly y Pluralsight dicen "Credenciales compartidas el"', ()=>{
+  const f={'Fecha activación':'2024-07-26',Estado:'Activo'};
+  for(const n of ["O'Reilly",'OReilly','Pluralsight','pluralsight']){
+    assert.equal(ctx.periodoBenefAsignado(f,n),'Credenciales compartidas el 26 de jul de 2024',n);
+  }
+});
+
+test('los beneficios que sí corren en el tiempo siguen diciendo "Activo desde"', ()=>{
+  const f={'Fecha activación':'2025-07-11',Estado:'Activo'};
+  assert.match(ctx.periodoBenefAsignado(f,'Terapia'),/^Activo desde/);
+  assert.match(ctx.periodoBenefAsignado(f,'Clases de Inglés'),/^Activo desde/);
+});
+
+test('al darse de baja, un acceso conserva la fecha en que se compartió', ()=>{
+  const f={'Fecha activación':'2024-07-26','Fecha de baja':'2025-01-31',Estado:'Inactivo'};
+  assert.equal(ctx.periodoBenefAsignado(f,"O'Reilly"),
+    'Credenciales compartidas el 26 de jul de 2024 · Baja: 31 de ene de 2025');
+  // Un blogpost publicado no se "cierra": no lleva baja aunque esté inactivo
+  assert.equal(ctx.periodoBenefAsignado(f,'Blogpost'),'Fecha de publicación: 26 de jul de 2024');
+});
+
+// ─── Credenciales recompartidas ───────────────────────────────────────────────
+// Caso real: una persona con dos asignaciones de O'Reilly (2024 y 2025) se leía
+// como dos accesos activos distintos, cuando es el mismo acceso recompartido
+// porque cambió la contraseña. Lo que importa es desde cuándo lo tiene.
+test('un acceso recompartido no se cuenta como dos beneficios activos', ()=>{
+  const fila=(fecha)=>({r:{id:'r'+fecha,fields:{'Fecha activación':fecha,Estado:'Activo'}},benef:null,nombre:"O'Reilly"});
+  const g=ctx.agruparBenefAsignados([fila('2024-07-26'),fila('2025-07-11')])[0];
+  const resumen=ctx.resumenGrupoBenef(g);
+  assert.match(resumen,/Compartidas el 26 de jul de 2024/); // la PRIMERA vez
+  assert.match(resumen,/recompartidas 1 vez/);
+  assert.doesNotMatch(resumen,/2 activas/);
+});
+
+test('el resumen del grupo no cambia para los beneficios que no son credenciales', ()=>{
+  const fila=(curso)=>({r:{id:curso,fields:{'Fecha activación':'2025-01-01',Estado:'Activo',Curso:curso}},benef:null,nombre:'Udemy'});
+  const g=ctx.agruparBenefAsignados([fila('Docker'),fila('Kubernetes')])[0];
+  assert.equal(ctx.resumenGrupoBenef(g),'2 asignaciones · 2 activas');
+});
+
+// ─── Lo que se cobra una sola vez ─────────────────────────────────────────────
+// O'Reilly y Pluralsight se pagan UNA vez por persona. Volver a compartir las
+// credenciales deja otra asignación cargada, pero no es otro gasto: antes cada
+// recompartida inflaba el presupuesto usado de esa persona y el total del equipo.
+const ctxSuma=loadApp(['constants.js','utils.js','state.js','beneficios.js']);
+const asigDe=(persona,beneficio,monto)=>({fields:{Persona:[persona],Beneficio:[beneficio],...(monto!=null?{Monto:monto}:{})}});
+
+test('un acceso recompartido se cuenta una sola vez', ()=>{
+  const suma=as=>ctxSuma.sumarMontosAsignados(as,[]);
+  assert.equal(suma([asigDe('Nicolas',"O'Reilly",499),asigDe('Nicolas',"O'Reilly",499)]),499);
+  assert.equal(suma([asigDe('Nicolas','Pluralsight',300),asigDe('Nicolas','Pluralsight',300)]),300);
+});
+
+test('el mismo acceso a dos personas distintas sí suma dos veces', ()=>{
+  assert.equal(ctxSuma.sumarMontosAsignados(
+    [asigDe('Nicolas',"O'Reilly",499),asigDe('Ana',"O'Reilly",499)],[]),998);
+});
+
+test('si una de las asignaciones quedó sin monto, se toma la que lo tiene', ()=>{
+  assert.equal(ctxSuma.sumarMontosAsignados(
+    [asigDe('Nicolas',"O'Reilly",499),asigDe('Nicolas',"O'Reilly")],[]),499);
+});
+
+test('los beneficios que no son credenciales siguen sumando cada asignación', ()=>{
+  // Dos cursos de Udemy son dos compras distintas: ahí sí se suman
+  assert.equal(ctxSuma.sumarMontosAsignados(
+    [asigDe('Carlos','Udemy',35),asigDe('Carlos','Udemy',20)],[]),55);
+});
+
+test('sin Monto propio se usa el Valor del catálogo', ()=>{
+  const catalogo=[{fields:{Beneficio:'Terapia',Valor:120}}];
+  assert.equal(ctxSuma.sumarMontosAsignados([asigDe('Ana','Terapia')],catalogo),120);
+});
+
+test('el encabezado de credenciales muestra el costo una sola vez', ()=>{
+  const fila=(fecha,monto)=>({r:{id:'r'+fecha,fields:{'Fecha activación':fecha,Estado:'Activo',Monto:monto}},benef:null,nombre:"O'Reilly"});
+  const g=ctx.agruparBenefAsignados([fila('2024-07-26',499),fila('2025-07-11',499)])[0];
+  const html=ctx.montoGrupoBenef(g);
+  assert.match(html,/\$499/);
+  assert.doesNotMatch(html,/998/);       // no suma las dos veces
+  assert.doesNotMatch(html,/en total/);  // no es un acumulado
+});
+
+test('el encabezado de un beneficio por unidad sí acumula', ()=>{
+  const fila=(curso,monto)=>({r:{id:curso,fields:{'Fecha activación':'2025-01-01',Estado:'Activo',Curso:curso,Monto:monto}},benef:null,nombre:'Udemy'});
+  const g=ctx.agruparBenefAsignados([fila('Docker',35),fila('Terraform',20)])[0];
+  assert.match(ctx.montoGrupoBenef(g),/\$55 en total/);
+});

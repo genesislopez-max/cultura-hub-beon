@@ -75,13 +75,11 @@ async function verBenefPersona(nombre, grupo, nivel){
   spBenefAsigActual=benefAsig;
   const caps=dCap.records||[];
   const awRecs=(dAW.records||[]).sort((a,b)=>(getEdicionAW(b.fields)||'').localeCompare(getEdicionAW(a.fields)||''));
-  // Sumar monto de beneficios asignados con prioridad a campo Monto
-  const usadoBenef=benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').reduce((s,a)=>{
-    if(a.fields.Monto) return s+Number(a.fields.Monto);
-    const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
-    const b=cacheBeneficiosRaw.find(x=>x.fields.Beneficio===bNombre);
-    return s+(b?.fields.Valor?Number(b.fields.Valor):0);
-  },0);
+  // Misma suma que usa la tabla "Por persona" y las métricas: los mensuales se
+  // anualizan y las credenciales se cuentan una sola vez. Estaba repetida acá
+  // con su propio criterio, así que este número podía no coincidir con el de la
+  // tabla de la que se abre esta misma card.
+  const usadoBenef=sumarMontosAsignados(benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo'));
   // Proyecto es un linked record — resolver el ID a nombre acá también,
   // igual que hacen loadOffsites()/loadGetTogether() con su propio caché,
   // para no mostrar el código crudo (recXXXXXXXX) en el resumen.
@@ -429,7 +427,15 @@ function montoGrupoBenef(g){
     return monto?`<span class="bp-detalle-row-amount">$${monto.toLocaleString('es-AR')}</span>`:'';
   }
   const total=items.reduce((s,f)=>s+montoDe(f),0);
-  return total?`<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} en total</span>`:'';
+  if(!total) return '';
+  // El Hardware Bonus se puede gastar en varias compras hasta el tope: lo útil
+  // no es cuánto lleva gastado, sino cuánto le queda. El tope es el Valor del
+  // catálogo (el monto de cada fila es una compra parcial).
+  const tope=Number(g.benef?.fields?.Valor||0);
+  if(esBeneficioOneTime(g.nombre)&&tope){
+    return `<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} de $${tope.toLocaleString('es-AR')}</span>`;
+  }
+  return `<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} en total</span>`;
 }
 function resumenGrupoBenef(g){
   const items=g.items||[];
@@ -455,6 +461,7 @@ function montoBenefAsignado(fields,benefCatalogo,nombreBeneficio){
   const monto=fields.Monto||benefCatalogo?.fields?.Valor;
   if(!monto) return '';
   const cifra=`$${Number(monto).toLocaleString('es-AR')}`;
+  if(esBeneficioMensual(nombreBeneficio)) return `${cifra}/mes`;
   return esBeneficioPorUnidad(nombreBeneficio)?cifra:`${cifra}/año`;
 }
 

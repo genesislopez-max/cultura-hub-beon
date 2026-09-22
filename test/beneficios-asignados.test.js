@@ -162,8 +162,41 @@ test('montoBenefAsignado: los beneficios por unidad van sin "/año"', ()=>{
 
 test('montoBenefAsignado: los beneficios anuales conservan el "/año"', ()=>{
   const fields={Monto:150};
-  for(const b of ['Terapia','Clases de Inglés','Hardware Bonus','Gimnasio']){
+  for(const b of ['Terapia','Clases de Inglés','Gimnasio']){
     assert.equal(ctx.montoBenefAsignado(fields,null,b),'$150/año',`${b} debería llevar /año`);
+  }
+});
+
+// AI Tools son USD 20 por mes: con "/año" se leía el costo anual donde estaba
+// el mensual.
+test('montoBenefAsignado: AI Tools va por mes', ()=>{
+  const fields={Monto:20};
+  assert.equal(ctx.montoBenefAsignado(fields,null,'AI Tools – Claude'),'$20/mes');
+  assert.equal(ctx.montoBenefAsignado(fields,null,'AI Tools'),'$20/mes');
+  assert.equal(ctx.montoBenefAsignado(fields,null,'ai tools - chatgpt'),'$20/mes');
+});
+
+// Hardware Bonus es de única vez con un tope que se puede gastar en varias
+// compras: no es un cupo que se renueve cada año.
+test('montoBenefAsignado: Hardware Bonus no lleva sufijo', ()=>{
+  assert.equal(ctx.montoBenefAsignado({Monto:150},null,'Hardware Bonus'),'$150');
+  assert.equal(ctx.montoBenefAsignado({Monto:150},null,'Hardware'),'$150');
+});
+
+test('el desplegable del Hardware Bonus muestra cuánto se usó del tope', ()=>{
+  const benef={fields:{Valor:500}};
+  const fila=(monto,fecha)=>({r:{id:fecha,fields:{'Fecha activación':fecha,Estado:'Activo',Monto:monto}},benef,nombre:'Hardware Bonus'});
+  const g=ctx.agruparBenefAsignados([fila(300,'2026-01-10'),fila(120,'2026-05-02')])[0];
+  assert.match(ctx.montoGrupoBenef(g),/\$420 de \$500/);
+  assert.doesNotMatch(ctx.montoGrupoBenef(g),/en total/);
+});
+
+test('el comentario libre está disponible en Certifications y Hardware Bonus', ()=>{
+  for(const b of ['Certifications','Hardware Bonus']){
+    assert.equal(ctx.esBeneficioConComentario(b),true,b);
+  }
+  for(const b of ['Terapia','Udemy','Clases de Inglés',"O'Reilly"]){
+    assert.equal(ctx.esBeneficioConComentario(b),false,b);
   }
 });
 
@@ -429,4 +462,33 @@ test('el encabezado de un beneficio por unidad sí acumula', ()=>{
   const fila=(curso,monto)=>({r:{id:curso,fields:{'Fecha activación':'2025-01-01',Estado:'Activo',Curso:curso,Monto:monto}},benef:null,nombre:'Udemy'});
   const g=ctx.agruparBenefAsignados([fila('Docker',35),fila('Terraform',20)])[0];
   assert.match(ctx.montoGrupoBenef(g),/\$55 en total/);
+});
+
+// AI Tools se carga una sola vez con el monto MENSUAL (nadie anota nada cada
+// mes), así que el presupuesto tiene que anualizarlo: sumarlo tal cual contaba
+// USD 20 al año donde el gasto real son 240.
+test('el presupuesto anualiza los beneficios mensuales', ()=>{
+  const suma=as=>ctxSuma.sumarMontosAsignados(as,[]);
+  assert.equal(suma([asigDe('Ana','AI Tools – Claude',20)]),240);
+  assert.equal(suma([asigDe('Ana','AI Tools',20)]),240);
+  // Dos personas con el mismo beneficio mensual suman cada una su año
+  assert.equal(suma([asigDe('Ana','AI Tools',20),asigDe('Beto','AI Tools',20)]),480);
+});
+
+test('los beneficios que no son mensuales no se multiplican', ()=>{
+  const suma=as=>ctxSuma.sumarMontosAsignados(as,[]);
+  assert.equal(suma([asigDe('Ana','Terapia',600)]),600);
+  assert.equal(suma([asigDe('Ana','Hardware Bonus',300)]),300);
+  assert.equal(suma([asigDe('Ana','Udemy',35)]),35);
+});
+
+test('el mensual también se anualiza cuando el monto sale del catálogo', ()=>{
+  const catalogo=[{fields:{Beneficio:'AI Tools – Claude',Valor:20}}];
+  assert.equal(ctxSuma.sumarMontosAsignados([asigDe('Ana','AI Tools – Claude')],catalogo),240);
+});
+
+// La card muestra el monto MENSUAL aunque el presupuesto cuente el anual: es
+// como se habla del beneficio ("son 20 dólares por mes").
+test('la card sigue mostrando el monto mensual, no el anualizado', ()=>{
+  assert.equal(ctx.montoBenefAsignado({Monto:20},null,'AI Tools – Claude'),'$20/mes');
 });

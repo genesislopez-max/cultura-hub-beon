@@ -380,8 +380,9 @@ function badgeEstadoBenef(estado){
 //
 // Pero hay beneficios que NO corren en el tiempo, y para esos "Activo desde"
 // no describe nada: lo que importa es la fecha del hecho puntual que los
-// origina. Un blogpost se publicó, un curso de Udemy se solicitó, y en
-// O'Reilly/Pluralsight se compartieron credenciales.
+// origina. Un blogpost se publicó, un curso de Udemy se solicitó, en
+// O'Reilly/Pluralsight se compartieron credenciales, y cada compra del
+// Hardware Bonus se usó un día contra el tope.
 function periodoBenefAsignado(fields,nombreBeneficio){
   const estado=fields.Estado||'Activo';
   const fechaAct=fields['Fecha activación'];
@@ -392,7 +393,8 @@ function periodoBenefAsignado(fields,nombreBeneficio){
     return fechaAct?`Fecha de publicación: ${fmt(fechaAct)}`:'Sin fecha de publicación';
   }
   const etiquetaPuntual=esBeneficioUdemy(nombreBeneficio)?'Solicitado el'
-    :esBeneficioCredenciales(nombreBeneficio)?'Credenciales compartidas el':'';
+    :esBeneficioCredenciales(nombreBeneficio)?'Credenciales compartidas el'
+    :esBeneficioOneTime(nombreBeneficio)?'Usado el':'';
   if(etiquetaPuntual){
     if(!fechaAct) return 'Sin fecha registrada';
     const base=`${etiquetaPuntual} ${fmt(fechaAct)}`;

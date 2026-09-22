@@ -492,3 +492,17 @@ test('el mensual también se anualiza cuando el monto sale del catálogo', ()=>{
 test('la card sigue mostrando el monto mensual, no el anualizado', ()=>{
   assert.equal(ctx.montoBenefAsignado({Monto:20},null,'AI Tools – Claude'),'$20/mes');
 });
+
+// Hardware Bonus es de única vez: cada fila es una compra que se hizo un día,
+// no un beneficio que esté corriendo desde entonces.
+test('Hardware Bonus dice "Usado el", no "Activo desde"', ()=>{
+  const f={'Fecha activación':'2026-09-22',Estado:'Activo'};
+  assert.equal(ctx.periodoBenefAsignado(f,'Hardware Bonus'),'Usado el 22 de sept de 2026');
+  assert.doesNotMatch(ctx.periodoBenefAsignado(f,'Hardware Bonus'),/Activo desde/);
+});
+
+test('una compra dada de baja conserva la fecha en que se usó', ()=>{
+  const f={'Fecha activación':'2026-01-10','Fecha de baja':'2026-06-30',Estado:'Inactivo'};
+  assert.equal(ctx.periodoBenefAsignado(f,'Hardware Bonus'),
+    'Usado el 10 de ene de 2026 · Baja: 30 de jun de 2026');
+});

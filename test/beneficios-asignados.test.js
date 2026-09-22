@@ -162,8 +162,41 @@ test('montoBenefAsignado: los beneficios por unidad van sin "/año"', ()=>{
 
 test('montoBenefAsignado: los beneficios anuales conservan el "/año"', ()=>{
   const fields={Monto:150};
-  for(const b of ['Terapia','Clases de Inglés','Hardware Bonus','Gimnasio']){
+  for(const b of ['Terapia','Clases de Inglés','Gimnasio']){
     assert.equal(ctx.montoBenefAsignado(fields,null,b),'$150/año',`${b} debería llevar /año`);
+  }
+});
+
+// AI Tools son USD 20 por mes: con "/año" se leía el costo anual donde estaba
+// el mensual.
+test('montoBenefAsignado: AI Tools va por mes', ()=>{
+  const fields={Monto:20};
+  assert.equal(ctx.montoBenefAsignado(fields,null,'AI Tools – Claude'),'$20/mes');
+  assert.equal(ctx.montoBenefAsignado(fields,null,'AI Tools'),'$20/mes');
+  assert.equal(ctx.montoBenefAsignado(fields,null,'ai tools - chatgpt'),'$20/mes');
+});
+
+// Hardware Bonus es de única vez con un tope que se puede gastar en varias
+// compras: no es un cupo que se renueve cada año.
+test('montoBenefAsignado: Hardware Bonus no lleva sufijo', ()=>{
+  assert.equal(ctx.montoBenefAsignado({Monto:150},null,'Hardware Bonus'),'$150');
+  assert.equal(ctx.montoBenefAsignado({Monto:150},null,'Hardware'),'$150');
+});
+
+test('el desplegable del Hardware Bonus muestra cuánto se usó del tope', ()=>{
+  const benef={fields:{Valor:500}};
+  const fila=(monto,fecha)=>({r:{id:fecha,fields:{'Fecha activación':fecha,Estado:'Activo',Monto:monto}},benef,nombre:'Hardware Bonus'});
+  const g=ctx.agruparBenefAsignados([fila(300,'2026-01-10'),fila(120,'2026-05-02')])[0];
+  assert.match(ctx.montoGrupoBenef(g),/\$420 de \$500/);
+  assert.doesNotMatch(ctx.montoGrupoBenef(g),/en total/);
+});
+
+test('el comentario libre está disponible en Certifications y Hardware Bonus', ()=>{
+  for(const b of ['Certifications','Hardware Bonus']){
+    assert.equal(ctx.esBeneficioConComentario(b),true,b);
+  }
+  for(const b of ['Terapia','Udemy','Clases de Inglés',"O'Reilly"]){
+    assert.equal(ctx.esBeneficioConComentario(b),false,b);
   }
 });
 

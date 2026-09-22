@@ -612,14 +612,26 @@ function toggleCamposLink(){
 // campo estructurado como los de Terapia o Udemy, porque cada certificación es
 // un caso distinto. normalizarBeneficioKey saca espacios, tildes y mayúsculas,
 // así que matchea "Certifications", "certifications" o "Certification".
+// AI Tools se cobra POR MES, no por año: son USD 20 mensuales. Mostrarlo con
+// "/año" hacía leer el costo anual donde está el mensual.
+function esBeneficioMensual(nombreBeneficio){
+  return normalizarBeneficioKey(nombreBeneficio).startsWith('aitools');
+}
+// Hardware Bonus es de única vez, con un tope que se puede ir gastando en
+// varias compras hasta agotarlo (una silla hoy, un monitor en dos meses). No es
+// un cupo que se renueve cada año, así que no lleva "/año"; y como las compras
+// suman contra el mismo tope, se agrupan igual que los beneficios por unidad.
+function esBeneficioOneTime(nombreBeneficio){
+  return normalizarBeneficioKey(nombreBeneficio).startsWith('hardware');
+}
 // Beneficios que se pagan por unidad y no por año: el monto es lo que costó
-// ESA cosa concreta —un curso de Udemy, una certificación, una publicación— y
-// no un cupo anual. Mostrarlos con "/año" dice algo que no es cierto, y encima
-// engaña al leer varias asignaciones juntas (tres cursos de Udemy no son tres
-// montos anuales, son tres compras).
+// ESA cosa concreta —un curso de Udemy, una certificación, una publicación, una
+// compra del Hardware Bonus— y no un cupo anual. Mostrarlos con "/año" dice
+// algo que no es cierto, y encima engaña al leer varias asignaciones juntas
+// (tres cursos de Udemy no son tres montos anuales, son tres compras).
 //
-// El resto (Terapia, Clases de Inglés, Hardware Bonus…) sí son anuales y
-// conservan el sufijo. Ver montoBenefAsignado() en js/side-panel.js.
+// El resto (Terapia, Clases de Inglés…) sí son anuales y conservan el sufijo.
+// Ver montoBenefAsignado() en js/side-panel.js.
 function esBeneficioPorUnidad(nombreBeneficio){
   // esBeneficioConQuarterAuto ya agrupa a Udemy, O'Reilly y Pluralsight, y por
   // el mismo motivo: son compras puntuales que se imputan al trimestre en que
@@ -627,16 +639,24 @@ function esBeneficioPorUnidad(nombreBeneficio){
   // nombres que después se desincronizan.
   return esBeneficioConQuarterAuto(nombreBeneficio)
     ||esBeneficioBlogpost(nombreBeneficio)
-    ||esBeneficioCertifications(nombreBeneficio);
+    ||esBeneficioCertifications(nombreBeneficio)
+    ||esBeneficioOneTime(nombreBeneficio);
 }
 function esBeneficioCertifications(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
   return k==='certifications'||k==='certification'||k==='certificaciones';
 }
+// El comentario libre lo necesitan los beneficios donde cada asignación es un
+// caso distinto: qué certificación es, o qué se compró con el Hardware Bonus y
+// cuánto queda del tope. No entra en un campo estructurado como los de Terapia
+// o Udemy.
+function esBeneficioConComentario(nombreBeneficio){
+  return esBeneficioCertifications(nombreBeneficio)||esBeneficioOneTime(nombreBeneficio);
+}
 function toggleCamposComentarios(){
   const nombre=document.getElementById('f-ba-beneficio')?.value||'';
   const fg=document.getElementById('fg-ba-comentarios');
-  if(fg) fg.style.display=esBeneficioCertifications(nombre)?'block':'none';
+  if(fg) fg.style.display=esBeneficioConComentario(nombre)?'block':'none';
 }
 function actualizarMontoBenef(){
   const sel=document.getElementById('f-ba-beneficio');

@@ -141,6 +141,7 @@
     <div class="sb-group" id="sbg-gestion">
       <button class="sb-item" onclick="showSection('ingresos',this)"><i class="ti ti-user-plus"></i>Ingresos <span class="bc" id="bc-ingresos">0</span></button>
       <button class="sb-item" onclick="showSection('egresos',this)"><i class="ti ti-user-minus"></i>Offboarding <span class="bc" id="bc-egresos">0</span></button>
+      <button class="sb-item" onclick="showSection('exbeoners',this)"><i class="ti ti-history"></i>Ex BEONers</button>
       <button class="sb-item" onclick="showSection('reviews',this)"><i class="ti ti-brand-google"></i>Glassdoor</button>
       <button class="sb-item" onclick="showSection('proyectos',this)"><i class="ti ti-folder"></i>Proyectos</button>
       <button class="sb-item" onclick="showSection('tareas',this)"><i class="ti ti-checklist"></i>Tareas <span class="bc" id="bc-tareas">0</span></button>
@@ -837,6 +838,55 @@
         </div>
       </div>
 
+      <!-- EX BEONERS — histórico de quienes ya no están en BEON -->
+      <div class="section-page" id="page-exbeoners">
+        <div class="metrics-3">
+          <div class="metric"><div class="metric-label">Ex BEONers</div><div class="metric-val" id="mx-total">—</div><div class="metric-sub">con histórico cargado</div></div>
+          <div class="metric"><div class="metric-label">Salidas</div><div class="metric-val" id="mx-anio">—</div><div class="metric-sub" id="mx-anio-sub">este año</div></div>
+          <div class="metric"><div class="metric-label">Tiempo promedio</div><div class="metric-val" style="font-size:24px" id="mx-prom">—</div><div class="metric-sub">que estuvieron en BEON</div></div>
+        </div>
+        <div class="table-wrap">
+          <div class="table-head">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span class="table-head-title">Ex BEONers</span>
+              <span class="badge badge-gray" id="badge-exbeoners">—</span>
+            </div>
+            <span style="font-size:11.5px;color:var(--text3)">Clickeá una persona para ver todo su histórico</span>
+          </div>
+          <div class="search-bar">
+            <div class="search-wrap">
+              <i class="ti ti-search search-icon"></i>
+              <input class="search-input" id="exb-search" placeholder="Buscar por nombre, proyecto o rol…" oninput="filtrarExBeoners()">
+            </div>
+            <div style="position:relative">
+              <i class="ti ti-users" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+              <select class="filter-select" id="exb-grupo" onchange="filtrarExBeoners()" style="padding-left:28px">
+                <option value="">Todos los grupos</option>
+                <option value="Engineers">Engineers</option>
+                <option value="Core Team">Core Team</option>
+              </select>
+            </div>
+            <div style="position:relative">
+              <i class="ti ti-calendar" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+              <select class="filter-select" id="exb-anio" onchange="filtrarExBeoners()" style="padding-left:28px">
+                <option value="">Todos los años</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-scroll">
+          <table class="data-table">
+            <thead><tr><th>Persona</th><th>Grupo</th><th>Nivel Loyalty</th><th>Proyecto</th><th>Período en BEON</th><th>Beneficios</th><th></th></tr></thead>
+            <tbody id="tbody-exbeoners"></tbody>
+          </table>
+          </div>
+          <div class="pag-bar" id="pag-bar-exbeoners" style="display:none">
+            <button class="pag-btn" id="pag-prev-exbeoners" onclick="cambiarPaginaExBeoners(-1)">← Anterior</button>
+            <span class="pag-info" id="pag-info-exbeoners"></span>
+            <button class="pag-btn" id="pag-next-exbeoners" onclick="cambiarPaginaExBeoners(1)">Siguiente →</button>
+          </div>
+        </div>
+      </div>
+
       <!-- TAREAS -->
       <div class="section-page" id="page-tareas">
         <div class="metrics-3">
@@ -1041,6 +1091,14 @@
                 <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
                 <select class="filter-select" id="benef-persona-tem" onchange="filtrarBenefPersonas()" style="padding-left:28px">
                   <option value="">Todos los managers</option>
+                </select>
+              </div>
+              <div style="position:relative">
+                <i class="ti ti-user-check" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="benef-persona-estado" onchange="filtrarBenefPersonas()" style="padding-left:28px">
+                  <option value="">En BEON</option>
+                  <option value="ex">Ex BEONers</option>
+                  <option value="todos">Todos (histórico)</option>
                 </select>
               </div>
             </div>
@@ -2057,6 +2115,7 @@
 <script src="js/proyectos.js"></script>
 <script src="js/tareas.js"></script>
 <script src="js/ingresos-egresos.js"></script>
+<script src="js/ex-beoners.js"></script>
 <script src="js/beneficios.js"></script>
 <script src="js/offsites.js"></script>
 <script src="js/ambassador-week.js"></script>

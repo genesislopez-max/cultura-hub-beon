@@ -138,13 +138,13 @@ const AW_RULES={
 const ADD=['ingresos','egresos','engineers','coreteam','reviews','proyectos','tareas','checklist','beneficios','beneficios-asignados','ambassadors','offsites','gettogether','actividades'];
 const ADD_FULL_SECTIONS=['ingresos'];
 const LABELS={ingresos:'Nuevo ingreso',egresos:'Nuevo offboarding',engineers:'Nueva persona',coreteam:'Nueva persona',reviews:'Nuevo reminder',proyectos:'Nuevo proyecto',tareas:'Nueva tarea',checklist:'Nuevo checklist',beneficios:'Nuevo beneficio','beneficios-asignados':'Asignar beneficio',ambassadors:'Registrar asistencia AW',offsites:'Registrar Off Site',gettogether:'Registrar Get Together',actividades:'Registrar actividad'};
-const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Offboarding — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',tareas:'Tareas',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together',actividades:'Asistencia a Actividades',eventoshist:'Eventos'};
+const TITLES={inicio:'Inicio',engineers:'Engineers & Tech',coreteam:'Core Team',cumpleanos:'Cumpleaños',aniversarios:'Aniversarios',ingresos:'Ingresos — Kanban',egresos:'Offboarding — Kanban',reviews:'Glassdoor Reviews',proyectos:'Proyectos',tareas:'Tareas',exbeoners:'Ex BEONers',checklist:'Checklist Ingreso / Egreso',beneficios:'Beneficios',ambassadors:'Ambassador Week',offsites:'Off Sites',gettogether:'Get Together',actividades:'Asistencia a Actividades',eventoshist:'Eventos'};
 // Texto del "eyebrow" arriba del título en el topbar — solo las secciones listadas lo muestran.
-const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:'Comunidad BEON',engineers:'Directorio del equipo',egresos:'Offboarding',reviews:'People Ops',aniversarios:'People Ops',eventoshist:'People Ops'};
+const EYEBROWS={inicio:'Panel del equipo',gettogether:'Comunidad BEON',offsites:'Comunidad BEON',engineers:'Directorio del equipo',egresos:'Offboarding',exbeoners:'Histórico del equipo',reviews:'People Ops',aniversarios:'People Ops',eventoshist:'People Ops'};
 // Grupo del menú lateral (dropdown) al que pertenece cada sección — usado
 // para expandir el grupo automáticamente si showSection() navega a una
 // sección que está dentro de un grupo colapsado.
-const SECCION_GRUPO={inicio:'principal',engineers:'principal',coreteam:'principal',cumpleanos:'eventos',aniversarios:'eventos',ingresos:'gestion',egresos:'gestion',reviews:'gestion',proyectos:'gestion',tareas:'gestion',eventoshist:'gestion',beneficios:'beneficios',ambassadors:'beneficios',offsites:'beneficios',gettogether:'beneficios',actividades:'beneficios'};
+const SECCION_GRUPO={inicio:'principal',engineers:'principal',coreteam:'principal',cumpleanos:'eventos',aniversarios:'eventos',ingresos:'gestion',egresos:'gestion',exbeoners:'gestion',reviews:'gestion',proyectos:'gestion',tareas:'gestion',eventoshist:'gestion',beneficios:'beneficios',ambassadors:'beneficios',offsites:'beneficios',gettogether:'beneficios',actividades:'beneficios'};
 // Secciones con acceso restringido por rol — el bloqueo real ya pasa en el
 // servidor (api/airtable.js); esto es solo para ocultar la navegación del
 // lado del cliente. Una sección que no aparece acá no tiene restricción
@@ -152,6 +152,7 @@ const SECCION_GRUPO={inicio:'principal',engineers:'principal',coreteam:'principa
 const SECCION_ROLES_PERMITIDOS={
   ingresos:new Set(['full','hr']),
   egresos:new Set(['full','hr']),
+  exbeoners:new Set(['full','hr']), // histórico de gente que ya no está: solo People Ops
   reviews:new Set(['full']), // Glassdoor
   cumpleanos:new Set(['full','equipo']),
   aniversarios:new Set(['full','equipo']),

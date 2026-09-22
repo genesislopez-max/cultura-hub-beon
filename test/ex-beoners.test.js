@@ -25,6 +25,17 @@ const PERSONAS=[
   {id:'p5',fields:{Nombre:'Beto Saliendo','Rol en empresa':'Engineer','Fecha de ingreso':'2022-01-01','Fecha de egreso':`${ANIO+1}-06-30`}},
 ];
 
+// El histórico tiene datos de gente que ya no está: lo ven People Ops y los
+// TEMs (que necesitan consultar el paso por BEON de quienes tuvieron a cargo).
+// El resto del equipo no. El bloqueo de los datos está en el servidor; esto
+// controla qué aparece en el menú y a dónde deja navegar showSection().
+test('Ex BEONers: lo ven full, HR y TEM; manager y el resto del equipo no', ()=>{
+  const ctx=ctxEx();
+  const roles=vm.runInContext('SECCION_ROLES_PERMITIDOS',ctx).exbeoners;
+  ['full','hr','tem'].forEach(rol=>assert.equal(roles.has(rol),true,`${rol} debería ver la sección`));
+  ['manager','equipo','bloqueado'].forEach(rol=>assert.equal(roles.has(rol),false,`${rol} no debería ver la sección`));
+});
+
 test('la lista son los que ya terminaron, no los que están saliendo', ()=>{
   const ctx=ctxEx();
   sembrar(ctx,'cachePersonasRaw',PERSONAS);

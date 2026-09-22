@@ -1043,6 +1043,14 @@
                   <option value="">Todos los managers</option>
                 </select>
               </div>
+              <div style="position:relative">
+                <i class="ti ti-user-check" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="benef-persona-estado" onchange="filtrarBenefPersonas()" style="padding-left:28px">
+                  <option value="">En BEON</option>
+                  <option value="ex">Ex BEONers</option>
+                  <option value="todos">Todos (histórico)</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">

@@ -533,12 +533,16 @@ function normalizarBeneficioKey(nombreBeneficio){
     .normalize('NFD').replace(/[̀-ͯ]/g,'')
     .replace(/[^a-z0-9]/g,'');
 }
+// startsWith y no igualdad exacta: en el catálogo el beneficio figura como
+// "Udemy" en unos registros y como "Udemy Courses" en otros (y el histórico de
+// ex BEONers trae las dos formas). Con la comparación exacta, la variante con
+// sufijo se quedaba sin el trato de compra puntual y volvía a mostrar
+// "Activo desde" y "/año".
 function esBeneficioUdemy(nombreBeneficio){
-  return normalizarBeneficioKey(nombreBeneficio)==='udemy';
+  return normalizarBeneficioKey(nombreBeneficio).startsWith('udemy');
 }
 function esBeneficioConQuarterAuto(nombreBeneficio){
-  const k=normalizarBeneficioKey(nombreBeneficio);
-  return k==='udemy'||k==='oreilly'||k==='pluralsight';
+  return esBeneficioUdemy(nombreBeneficio)||esBeneficioCredenciales(nombreBeneficio);
 }
 // Blogpost no es un beneficio anual como el resto: se paga por cada publicación.
 // Por eso el monto va sin "/año", la fecha es la de publicación (y no un
@@ -649,9 +653,15 @@ function esBeneficioPorUnidad(nombreBeneficio){
     ||esBeneficioCertifications(nombreBeneficio)
     ||esBeneficioOneTime(nombreBeneficio);
 }
+// En Airtable este beneficio aparece con varios nombres según quién lo cargó
+// ("Certifications", "Courses/Certifications", "Cursos y Certificaciones"), y
+// el histórico de ex BEONers suma las variantes viejas. Se matchea por la raíz
+// "certific" en vez de una lista cerrada de nombres, más "Courses"/"Cursos"
+// sueltos. La comparación exacta con "courses" deja afuera a "Udemy Courses",
+// que es otro beneficio.
 function esBeneficioCertifications(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
-  return k==='certifications'||k==='certification'||k==='certificaciones';
+  return k.includes('certific')||k==='courses'||k==='cursos';
 }
 // El comentario libre lo necesitan los beneficios donde cada asignación es un
 // caso distinto: qué certificación es, o qué se compró con el Hardware Bonus y
@@ -725,6 +735,38 @@ function cambiarPaginaBenefPersonas(dir){
   document.getElementById('benef-tab-personas')?.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
+// Filtro de permanencia de la tabla "Por persona":
+//   ''      → el equipo de hoy (lo de siempre, y lo que ve quien no toca nada)
+//   'ex'    → solo quienes ya no están en BEON
+//   'todos' → el histórico completo
+// Es solo de visualización: las métricas y el presupuesto del equipo siguen
+// contando únicamente a la gente activa (ver renderBenefMetricas), así que
+// mirar el histórico no mueve ningún número.
+function coincideEstadoBenefPersona(p,estadoFil){
+  if(estadoFil==='todos') return true;
+  return estadoFil==='ex'?yaEgreso(p):!yaEgreso(p);
+}
+
+// Chip "Ex BEONer" con la fecha de fin, para que al ver el histórico se
+// distinga de un vistazo a quién sigue en el equipo. Vacío para quien está
+// activo: en la vista por defecto no aparece nada nuevo.
+function badgeExBeonerHtml(p){
+  if(!yaEgreso(p)) return '';
+  const hasta=p.fields['Fecha de egreso'];
+  return `<span class="badge badge-gray" style="margin-left:6px;font-size:10px" title="Ya no trabaja en BEON">Ex BEONer${hasta?` · hasta ${fmt(hasta)}`:''}</span>`;
+}
+
+// Qué decir cuando no hay filas. "Sin resultados" a secas hacía pensar que la
+// persona no estaba cargada, cuando lo que pasaba es que el filtro de
+// permanencia la dejaba afuera — el caso típico es buscar a alguien que ya no
+// está en BEON con la vista por defecto.
+function textoVacioBenefPersonas(estadoFil,coincideFiltros){
+  if(estadoFil==='todos') return 'Sin resultados';
+  const ocultos=(cachePersonasRaw||[]).filter(p=>!coincideEstadoBenefPersona(p,estadoFil)&&coincideFiltros(p)).length;
+  if(!ocultos) return 'Sin resultados';
+  return `Sin resultados. Hay ${ocultos} ${ocultos===1?'persona que coincide':'personas que coinciden'} en «Todos (histórico)».`;
+}
+
 function renderBenefPersonas(){
   const q=(document.getElementById('benef-persona-search')?.value||'').toLowerCase();
   // HR solo puede ver Core Team acá — se fuerza el filtro sin importar lo
@@ -733,6 +775,12 @@ function renderBenefPersonas(){
   const grupoFil=rolUsuarioActual()==='hr'?'Core Team':(document.getElementById('benef-persona-grupo')?.value||'');
   const loyaltyFil=document.getElementById('benef-persona-loyalty')?.value||'';
   const temFil=document.getElementById('benef-persona-tem')?.value||'';
+  // Quién entra en la lista. Por defecto ('') solo el equipo de hoy, que es
+  // como venía funcionando: las métricas, el presupuesto y esta tabla hablan
+  // del equipo activo. El histórico de quienes ya no están sigue cargado en
+  // Airtable y ahora se puede ver acá, pero hay que pedirlo — así no se mezcla
+  // con el día a día ni infla los números de nadie.
+  const estadoFil=document.getElementById('benef-persona-estado')?.value||'';
 
   // Construir mapa de topes por grupo+nivel desde cachePresupuestoLoyalty
   const topeMap={};
@@ -741,25 +789,30 @@ function renderBenefPersonas(){
     topeMap[`${g}|${n}`]=t;
   });
 
-  const personas=cachePersonasRaw.filter(p=>{
+  // Los filtros de siempre, aparte del de permanencia: así se puede contar a
+  // quién quedó afuera SOLO por ese último y avisarlo cuando la lista queda
+  // vacía — buscar a alguien que ya no está en BEON devolvía "Sin resultados"
+  // a secas, que se lee como "no está cargado" cuando en realidad está.
+  const coincideFiltros=p=>{
     const nombre=(p.fields.Nombre||'').toLowerCase();
     const grupo=getRolGroup(p.fields['Rol en empresa']||'');
     // normalizarNivel y no el valor crudo: con un "Thunder " cargado con un
     // espacio de más, el filtro por nivel nunca matcheaba a esa persona.
     const nivel=normalizarNivel(p.fields['Nivel Loyalty']);
-    const matchQ=!q||nombre.includes(q);
-    const matchG=!grupoFil||grupo===grupoFil;
-    const matchL=!loyaltyFil||nivel===loyaltyFil;
-    const matchTem=!temFil||(p.fields.Manager||'')===temFil;
-    return !yaEgreso(p)&&matchQ&&matchG&&matchL&&matchTem;
-  });
+    return (!q||nombre.includes(q))
+      &&(!grupoFil||grupo===grupoFil)
+      &&(!loyaltyFil||nivel===loyaltyFil)
+      &&(!temFil||(p.fields.Manager||'')===temFil);
+  };
+  const personas=cachePersonasRaw.filter(p=>coincideEstadoBenefPersona(p,estadoFil)&&coincideFiltros(p));
 
-  document.getElementById('badge-benef-personas').textContent=`${personas.length} personas`;
+  document.getElementById('badge-benef-personas').textContent=
+    `${personas.length} ${estadoFil==='ex'?'ex BEONers':'personas'}`;
 
   const bar=document.getElementById('pag-bar-benef-personas');
   const tb=document.getElementById('tbody-benef-personas');
   if(!personas.length){
-    tb.innerHTML='<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
+    tb.innerHTML=`<tr class="empty-row"><td colspan="6">${textoVacioBenefPersonas(estadoFil,coincideFiltros)}</td></tr>`;
     if(bar) bar.style.display='none';
     return;
   }
@@ -818,7 +871,7 @@ function renderBenefPersonas(){
     const activeW=beneficiosAccesibles.length?Math.round(asignados.length/beneficiosAccesibles.length*100):0;
 
     return`<tr class="tr-clickable benef-per-tr" style="${bg}" onclick="verBenefPersona('${nombre.replace(/'/g,"\\'")}','${grupo}','${nivel}')">
-      <td>${avH(nombre)}${nombre}</td>
+      <td>${avH(nombre)}${nombre}${badgeExBeonerHtml(p)}</td>
       <td><span class="badge ${grupoBadge}">${grupo}</span></td>
       <td>${badgeNivelHtml(nivel,'badge benef-per-nivel-badge')}</td>
       <td style="font-size:13px">

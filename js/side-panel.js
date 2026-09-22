@@ -43,14 +43,34 @@ function agruparBenefAsignados(filas){
   return [...grupos.values()];
 }
 
+// Fecha en la que la persona terminó en BEON, a partir del nombre (que es lo
+// único que recibe verBenefPersona). Vacío si sigue en el equipo o si no está
+// en el caché — y con eso toda la card queda igual que antes para quien está
+// activo, que es la mayoría de las veces que se abre.
+function finEnBeonDe(nombre){
+  const p=(cachePersonasRaw||[]).find(x=>normalizarNombre(x.fields.Nombre)===normalizarNombre(nombre));
+  return p&&yaEgreso(p)?(p.fields['Fecha de egreso']||''):'';
+}
+
+// Chip "Ex BEONer · hasta <fecha>" del encabezado de la card.
+function pillExBeonerHtml(nombre){
+  const hasta=finEnBeonDe(nombre);
+  if(!hasta) return '';
+  return `<span class="bp-detalle-pill" title="Ya no trabaja en BEON"><i class="ti ti-user-off"></i>Ex BEONer · hasta ${fmt(hasta)}</span>`;
+}
+
 async function verBenefPersona(nombre, grupo, nivel){
   const overlay=document.getElementById('bp-detalle-overlay');
 
   document.getElementById('bpd-avatar').textContent=ini(nombre);
   document.getElementById('bpd-nombre').textContent=nombre;
+  // La card se abre igual para quien ya no está en BEON (su historial sigue
+  // cargado en Airtable). El chip con la fecha de fin evita leer beneficios
+  // viejos como si fueran los que tiene hoy.
   document.getElementById('bpd-pills').innerHTML=`
     <span class="bp-detalle-pill"><i class="ti ti-users"></i>${grupo}</span>
-    <span class="bp-detalle-pill"><i class="ti ${iconoNivel(nivel)}"></i>${normalizarNivel(nivel)}</span>`;
+    <span class="bp-detalle-pill"><i class="ti ${iconoNivel(nivel)}"></i>${normalizarNivel(nivel)}</span>
+    ${pillExBeonerHtml(nombre)}`;
   document.getElementById('bpd-stats').innerHTML='';
   document.getElementById('bpd-body').innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px;">Cargando...</div>';
   overlay.classList.add('open');
@@ -106,11 +126,16 @@ async function verBenefPersona(nombre, grupo, nivel){
   else if(awVeces<awRegla.asistenciasConVuelo) awCobertura=`${awRegla.asistenciasConVuelo-awVeces} restante${awRegla.asistenciasConVuelo-awVeces!==1?'s':''} con vuelo`;
   else awCobertura='Sin cobertura de vuelo disponible';
 
+  // En el histórico de quien ya no está, "activos" no significa nada: se
+  // cuentan todos los registros y la etiqueta lo dice.
+  const finEnBeon=finEnBeonDe(nombre);
   const activosCount=benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').length;
+  const benefCount=finEnBeon?benefAsig.length:activosCount;
+  const benefLabel=finEnBeon?'En su histórico':'Beneficios';
   const nombreEscJs=nombre.replace(/'/g,"\\'");
 
   document.getElementById('bpd-stats').innerHTML=`
-    <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">${activosCount}</div><div class="bp-detalle-stat-label">Beneficios</div></div>
+    <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">${benefCount}</div><div class="bp-detalle-stat-label">${benefLabel}</div></div>
     <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">$${usadoBenef.toLocaleString('es-AR')}</div><div class="bp-detalle-stat-label">Presupuesto</div></div>
     <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">${osRecs.length}</div><div class="bp-detalle-stat-label">Viajes</div></div>`;
 
@@ -121,7 +146,7 @@ async function verBenefPersona(nombre, grupo, nivel){
     <div class="bp-detalle-section-left">
       <div class="bp-detalle-section-icon" style="background:var(--tinte-eng);color:var(--blue)"><i class="ti ti-gift"></i></div>
       <span class="bp-detalle-section-title">Beneficios asignados</span>
-      <span class="bp-detalle-section-badge" style="background:var(--tinte-eng);color:var(--blue)">${activosCount} activos</span>
+      <span class="bp-detalle-section-badge" style="background:var(--tinte-eng);color:var(--blue)">${benefCount} ${finEnBeon?'en total':'activos'}</span>
     </div>
     <button class="bp-detalle-assign-btn" onclick="abrirAsignarBeneficioPara('${nombreEscJs}')"><i class="ti ti-plus"></i>Asignar</button>
   </div>`;
@@ -149,7 +174,7 @@ async function verBenefPersona(nombre, grupo, nivel){
       const estado=r.fields.Estado||'Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
       const motivoBaja=r.fields['Motivo de baja'];
-      const fechaLabel=periodoBenefAsignado(r.fields,bNombre);
+      const fechaLabel=periodoBenefAsignado(r.fields,bNombre,finEnBeon);
       // El link se muestra en los beneficios que lo usan (Blogpost, Udemy):
       // el punto de tenerlo cargado es poder ir a la publicación desde acá.
       const link=esBeneficioConLink(bNombre)?linkBenefAsignado(r.fields):'';
@@ -167,7 +192,7 @@ async function verBenefPersona(nombre, grupo, nivel){
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
         </div>
-        ${badgeEstadoBenef(estado)}
+        ${badgeEstadoBenefHistorico(estado,finEnBeon)}
         <div class="bp-detalle-actions">
           <button class="bp-detalle-action-btn" onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar"><i class="ti ti-pencil"></i></button>
           <button class="bp-detalle-action-btn danger" onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar"><i class="ti ti-trash"></i></button>
@@ -187,7 +212,7 @@ async function verBenefPersona(nombre, grupo, nivel){
           <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
           <div class="bp-grupo-mid">
             <div class="bp-detalle-row-title">${g.nombre}${montoGrupoBenef(g)}</div>
-            <div class="bp-detalle-row-sub">${resumenGrupoBenef(g)}</div>
+            <div class="bp-detalle-row-sub">${resumenGrupoBenef(g,finEnBeon)}</div>
           </div>
           <span class="bp-grupo-count">${g.items.length}</span>
           <i class="ti ti-chevron-down bp-detalle-chev"></i>
@@ -372,6 +397,17 @@ function badgeEstadoBenef(estado){
   const clase=e==='Activo'?'badge-green':e==='En pausa'?'badge-amber':'badge-gray';
   return `<span class="badge ${clase}">${e}</span>`;
 }
+// El histórico de quienes ya no están en BEON casi nunca tiene la baja cargada
+// (el beneficio terminó cuando terminó la relación, no hubo un trámite aparte),
+// así que los registros siguen diciendo "Activo". Un badge verde en la card de
+// alguien que se fue hace dos años afirma algo falso: ahí el estado real es
+// "cerró cuando se fue".
+function badgeEstadoBenefHistorico(estado,finEnBeon){
+  if(finEnBeon&&(estado||'Activo')==='Activo'){
+    return '<span class="badge badge-gray" title="Terminó cuando la persona dejó BEON">Cerrado</span>';
+  }
+  return badgeEstadoBenef(estado);
+}
 
 // Texto del período de un beneficio asignado, según su estado. Los tres casos
 // dicen cosas distintas: Activo abre un período sin cerrar, En pausa tiene
@@ -381,9 +417,16 @@ function badgeEstadoBenef(estado){
 // Pero hay beneficios que NO corren en el tiempo, y para esos "Activo desde"
 // no describe nada: lo que importa es la fecha del hecho puntual que los
 // origina. Un blogpost se publicó, un curso de Udemy se solicitó, en
-// O'Reilly/Pluralsight se compartieron credenciales, y cada compra del
-// Hardware Bonus se usó un día contra el tope.
-function periodoBenefAsignado(fields,nombreBeneficio){
+// O'Reilly/Pluralsight se compartieron credenciales, una certificación se
+// solicitó para rendirla, y cada compra del Hardware Bonus se usó un día
+// contra el tope.
+//
+// finEnBeon (la fecha en la que la persona dejó BEON, vacía si sigue en el
+// equipo) cierra los períodos abiertos del histórico: un beneficio anual que
+// quedó en "Activo" porque nadie le cargó la baja no sigue corriendo si la
+// persona se fue en 2024. Los beneficios puntuales no lo necesitan: la fecha
+// del hecho no cambia.
+function periodoBenefAsignado(fields,nombreBeneficio,finEnBeon){
   const estado=fields.Estado||'Activo';
   const fechaAct=fields['Fecha activación'];
   const fechaBaja=fields['Fecha de baja'];
@@ -393,6 +436,7 @@ function periodoBenefAsignado(fields,nombreBeneficio){
     return fechaAct?`Fecha de publicación: ${fmt(fechaAct)}`:'Sin fecha de publicación';
   }
   const etiquetaPuntual=esBeneficioUdemy(nombreBeneficio)?'Solicitado el'
+    :esBeneficioCertifications(nombreBeneficio)?'Solicitado el'
     :esBeneficioCredenciales(nombreBeneficio)?'Credenciales compartidas el'
     :esBeneficioOneTime(nombreBeneficio)?'Usado el':'';
   if(etiquetaPuntual){
@@ -403,6 +447,13 @@ function periodoBenefAsignado(fields,nombreBeneficio){
     return estado!=='Activo'&&fechaBaja?`${base} · Baja: ${fmt(fechaBaja)}`:base;
   }
   if(estado==='Activo'){
+    // Si la persona ya no está, el período se cerró con su salida aunque el
+    // registro nunca se haya dado de baja.
+    if(finEnBeon){
+      return fechaAct
+        ?`De ${fmt(fechaAct)} hasta su salida (${fmt(finEnBeon)})`
+        :`Hasta su salida (${fmt(finEnBeon)})`;
+    }
     return fechaAct?`Activo desde ${fmt(fechaAct)}`:'Sin fecha registrada';
   }
   if(estado==='En pausa'){
@@ -439,8 +490,13 @@ function montoGrupoBenef(g){
   }
   return `<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} en total</span>`;
 }
-function resumenGrupoBenef(g){
+function resumenGrupoBenef(g,finEnBeon){
   const items=g.items||[];
+  // En el histórico de quien ya no está, contar "activas" repite el problema
+  // del badge verde: ninguna sigue corriendo.
+  if(finEnBeon&&!esBeneficioCredenciales(g.nombre)){
+    return `${items.length} registros en su histórico`;
+  }
   if(esBeneficioCredenciales(g.nombre)){
     const fechas=items.map(f=>f.r.fields['Fecha activación']).filter(Boolean).sort();
     const partes=[fechas.length?`Compartidas el ${fmt(fechas[0])}`:'Sin fecha registrada'];

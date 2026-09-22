@@ -558,13 +558,20 @@ function esBeneficioBlogpost(nombreBeneficio){
 function valorVinculado(campo){
   return typeof campo==='string'?campo:(Array.isArray(campo)?campo[0]||'':'');
 }
-// Lo que aporta una asignación al gasto: su Monto propio si está cargado, si
-// no el Valor del catálogo.
+// Lo que aporta una asignación al gasto ANUAL: su Monto propio si está cargado,
+// si no el Valor del catálogo.
+//
+// Los mensuales (AI Tools) van por 12: el monto cargado es lo que sale por mes
+// —se carga una sola vez, nadie anota nada cada mes— así que sumarlo tal cual
+// contaba USD 20 al año donde el gasto real son 240. La card sigue mostrando el
+// monto mensual, que es como se habla del beneficio; acá se anualiza solo para
+// el presupuesto.
 function montoDeAsignacion(a,catalogo){
-  if(a.fields.Monto) return Number(a.fields.Monto)||0;
   const bNombre=valorVinculado(a.fields.Beneficio);
-  const benef=(catalogo||cacheBeneficiosRaw||[]).find(b=>b.fields.Beneficio===bNombre);
-  return Number(benef?.fields?.Valor)||0;
+  const propio=a.fields.Monto
+    ?Number(a.fields.Monto)||0
+    :Number((catalogo||cacheBeneficiosRaw||[]).find(b=>b.fields.Beneficio===bNombre)?.fields?.Valor)||0;
+  return esBeneficioMensual(bNombre)?propio*12:propio;
 }
 // Total usado. O'Reilly/Pluralsight se pagan UNA sola vez por persona: volver
 // a compartirle las credenciales (porque cambió la contraseña) deja otra

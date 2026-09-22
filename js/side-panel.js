@@ -75,13 +75,11 @@ async function verBenefPersona(nombre, grupo, nivel){
   spBenefAsigActual=benefAsig;
   const caps=dCap.records||[];
   const awRecs=(dAW.records||[]).sort((a,b)=>(getEdicionAW(b.fields)||'').localeCompare(getEdicionAW(a.fields)||''));
-  // Sumar monto de beneficios asignados con prioridad a campo Monto
-  const usadoBenef=benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').reduce((s,a)=>{
-    if(a.fields.Monto) return s+Number(a.fields.Monto);
-    const bNombre=typeof a.fields.Beneficio==='string'?a.fields.Beneficio:(Array.isArray(a.fields.Beneficio)?a.fields.Beneficio[0]:'');
-    const b=cacheBeneficiosRaw.find(x=>x.fields.Beneficio===bNombre);
-    return s+(b?.fields.Valor?Number(b.fields.Valor):0);
-  },0);
+  // Misma suma que usa la tabla "Por persona" y las métricas: los mensuales se
+  // anualizan y las credenciales se cuentan una sola vez. Estaba repetida acá
+  // con su propio criterio, así que este número podía no coincidir con el de la
+  // tabla de la que se abre esta misma card.
+  const usadoBenef=sumarMontosAsignados(benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo'));
   // Proyecto es un linked record — resolver el ID a nombre acá también,
   // igual que hacen loadOffsites()/loadGetTogether() con su propio caché,
   // para no mostrar el código crudo (recXXXXXXXX) en el resumen.

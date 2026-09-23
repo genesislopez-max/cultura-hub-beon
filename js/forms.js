@@ -371,7 +371,11 @@ const FORMS={
       if(esBeneficioUdemy(nombreBeneficio)&&v('f-ba-curso-nombre')) fields.Curso=v('f-ba-curso-nombre');
       // El Link lo comparten Udemy (curso) y Blogpost (publicación).
       if(esBeneficioConLink(nombreBeneficio)&&v('f-ba-link')) fields.Link=v('f-ba-link');
-      if(esBeneficioCertifications(nombreBeneficio)&&v('f-ba-comentarios')){
+      // esBeneficioConComentario y no esBeneficioCertifications: el campo se
+      // MUESTRA para todos los que lo tienen (ver toggleCamposComentarios),
+      // así que con la condición más angosta el comentario de un Hardware
+      // Bonus se escribía, se veía en el form y se perdía al guardar.
+      if(esBeneficioConComentario(nombreBeneficio)&&v('f-ba-comentarios')){
         fields.Comentarios=v('f-ba-comentarios');
       }
       if(esBeneficioConQuarterAuto(nombreBeneficio)&&fecha) fields.Quarter=quarterLabel(fecha);

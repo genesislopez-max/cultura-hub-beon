@@ -227,3 +227,52 @@ test('AI Tools admite comentario, igual que Certifications y Hardware Bonus', ()
   assert.equal(ctx.esBeneficioConComentario('Terapia'),false);
   assert.equal(ctx.esBeneficioConComentario('Udemy'),false);
 });
+
+// ─── Unificar dos beneficios del catálogo ─────────────────────────────────────
+// Cinco tarjetas de AI Tools son cinco registros en Airtable. Borrarlos a mano
+// deja sin vínculo a las asignaciones que les apuntaban, así que lo que importa
+// es mover primero lo que cuelga de cada uno.
+test('las asignaciones se buscan por ID y no por nombre', ()=>{
+  const ctx=ctxBenef();
+  const records=[
+    {id:'a1',fields:{Beneficio:['bClaude']}},
+    {id:'a2',fields:{Beneficio:['bAI']}},
+    {id:'a3',fields:{Beneficio:'bClaude'}},   // sin array, por si llega suelto
+    {id:'a4',fields:{}},                       // sin beneficio vinculado
+  ];
+  assert.equal(ctx.asignacionesDeBeneficio(records,'bClaude').map(r=>r.id).join('|'),'a1|a3');
+  assert.equal(ctx.asignacionesDeBeneficio(records,'bAI').map(r=>r.id).join('|'),'a2');
+  assert.equal(ctx.asignacionesDeBeneficio(records,'bNadie').length,0);
+  assert.equal(ctx.asignacionesDeBeneficio(null,'bAI').length,0);
+});
+
+// El caso que motivó todo esto: dos registros llamados "AI Tools". Si la lista
+// mostrara solo el nombre, no habría forma de saber a cuál se unifica.
+test('la opción distingue registros con el mismo nombre', ()=>{
+  const ctx=ctxBenef();
+  assert.equal(ctx.opcionUnificarLabel({fields:{Beneficio:'AI Tools',Grupo:'Engineers',Valor:20}}),'AI Tools · Engineers · $20');
+  assert.equal(ctx.opcionUnificarLabel({fields:{Beneficio:'AI Tools',Grupo:'Ambos'}}),'AI Tools · Ambos');
+  assert.match(ctx.opcionUnificarLabel({fields:{Beneficio:'Viejo',Estado:'Inactivo'}}),/Inactivo/);
+});
+
+// "AI Tools – Claude" dice qué herramienta usaba; "AI Tools" no. Ese dato se
+// perdería al repuntar, así que baja al comentario.
+test('al repuntar, el nombre viejo se guarda en el comentario', ()=>{
+  const ctx=ctxBenef();
+  const f=ctx.camposUnificarAsignacion({fields:{}},'bAI','AI Tools – Claude','AI Tools');
+  assert.equal(f.Beneficio.join('|'),'bAI');
+  assert.equal(f.Comentarios,'AI Tools – Claude');
+});
+
+test('un comentario ya cargado no se pisa', ()=>{
+  const ctx=ctxBenef();
+  const f=ctx.camposUnificarAsignacion({fields:{Comentarios:'Lo pidió por Slack'}},'bAI','AI Tools – Claude','AI Tools');
+  assert.equal(f.Comentarios,undefined);
+  assert.equal(f.Beneficio.join('|'),'bAI');
+});
+
+test('si el nombre no cambia, no hay nada que preservar', ()=>{
+  const ctx=ctxBenef();
+  const f=ctx.camposUnificarAsignacion({fields:{}},'bAI','AI Tools','AI Tools');
+  assert.equal(f.Comentarios,undefined);
+});

@@ -152,7 +152,10 @@ const SECCION_GRUPO={inicio:'principal',engineers:'principal',coreteam:'principa
 const SECCION_ROLES_PERMITIDOS={
   ingresos:new Set(['full','hr']),
   egresos:new Set(['full','hr']),
-  exbeoners:new Set(['full','hr']), // histórico de gente que ya no está: solo People Ops
+  // Histórico de gente que ya no está. People Ops y los TEMs, que necesitan
+  // consultar el paso por BEON de quienes tuvieron a cargo. El resto del
+  // equipo no lo ve.
+  exbeoners:new Set(['full','hr','tem']),
   reviews:new Set(['full']), // Glassdoor
   cumpleanos:new Set(['full','equipo']),
   aniversarios:new Set(['full','equipo']),

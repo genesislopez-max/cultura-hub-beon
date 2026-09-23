@@ -291,7 +291,7 @@ function renderBenefCatalogo(){
     const f=r.fields;
     const g=f.Grupo||'Ambos';
     const nivel=f['Nivel Loyalty']||'';
-    const valor=f.Valor?`$${Number(f.Valor).toLocaleString('es-AR')}/mes`:'';
+    const valor=montoCatalogoBenef(f);
     const activo=(f.Estado||'Activo')==='Activo';
     const est=estiloCategoria(f.Categoría);
     const statusBg=activo?'var(--chip-green-bg)':'var(--chip-amber-bg)';
@@ -596,6 +596,23 @@ function sumarMontosAsignados(asignaciones,catalogo){
   credenciales.forEach(m=>{ total+=m; });
   return total;
 }
+// Valor de una tarjeta del catálogo. La tarjeta escribía "/mes" para todos, así
+// que Terapia ($600 al año) se leía como $600 por mes y el Hardware Bonus
+// ($500 de tope por única vez) como un gasto mensual — el mismo problema que ya
+// se había arreglado en la card de cada persona, pero del lado del catálogo.
+// Cada beneficio dice en qué unidad está su Valor:
+//   AI Tools → por mes · Hardware Bonus → tope de única vez
+//   por unidad (Udemy, Certifications, credenciales) → lo que sale cada uno
+//   el resto (Terapia, Clases de Inglés…) → cupo anual
+function montoCatalogoBenef(f){
+  const valor=Number(f?.Valor||0);
+  if(!valor) return '';
+  const nombre=f.Beneficio||'';
+  const cifra=`$${valor.toLocaleString('es-AR')}`;
+  if(esBeneficioMensual(nombre)) return `${cifra}/mes`;
+  if(esBeneficioOneTime(nombre)) return `${cifra} de tope`;
+  return esBeneficioPorUnidad(nombre)?`${cifra} c/u`:`${cifra}/año`;
+}
 function esBeneficioCredenciales(nombreBeneficio){
   const k=normalizarBeneficioKey(nombreBeneficio);
   return k==='oreilly'||k==='pluralsight';
@@ -664,11 +681,14 @@ function esBeneficioCertifications(nombreBeneficio){
   return k.includes('certific')||k==='courses'||k==='cursos';
 }
 // El comentario libre lo necesitan los beneficios donde cada asignación es un
-// caso distinto: qué certificación es, o qué se compró con el Hardware Bonus y
-// cuánto queda del tope. No entra en un campo estructurado como los de Terapia
-// o Udemy.
+// caso distinto: qué certificación es, qué se compró con el Hardware Bonus y
+// cuánto queda del tope, o qué herramienta usa cada uno ahora que AI Tools es
+// una sola card del catálogo y no una por herramienta. No entra en un campo
+// estructurado como los de Terapia o Udemy.
 function esBeneficioConComentario(nombreBeneficio){
-  return esBeneficioCertifications(nombreBeneficio)||esBeneficioOneTime(nombreBeneficio);
+  return esBeneficioCertifications(nombreBeneficio)
+    ||esBeneficioOneTime(nombreBeneficio)
+    ||esBeneficioMensual(nombreBeneficio);
 }
 function toggleCamposComentarios(){
   const nombre=document.getElementById('f-ba-beneficio')?.value||'';

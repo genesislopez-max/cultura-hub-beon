@@ -199,3 +199,31 @@ test('lo que se paga por unidad no lleva "/año"', ()=>{
   assert.equal(ctx.montoBenefAsignado({Monto:40},null,'Udemy Courses'),'$40');
   assert.equal(ctx.montoBenefAsignado({Monto:600},null,'Terapia'),'$600/año');
 });
+
+// ─── El catálogo ──────────────────────────────────────────────────────────────
+// La tarjeta del catálogo escribía "/mes" para todos: Terapia ($600 al año) se
+// leía como $600 por mes, y el Hardware Bonus ($500 de tope por única vez)
+// como un gasto mensual.
+test('cada tarjeta del catálogo dice en qué unidad está su valor', ()=>{
+  const ctx=ctxBenef();
+  assert.equal(ctx.montoCatalogoBenef({Beneficio:'AI Tools',Valor:20}),'$20/mes');
+  assert.equal(ctx.montoCatalogoBenef({Beneficio:'Terapia',Valor:600}),'$600/año');
+  assert.equal(ctx.montoCatalogoBenef({Beneficio:'Hardware Bonus',Valor:500}),'$500 de tope');
+  assert.equal(ctx.montoCatalogoBenef({Beneficio:'Udemy Courses',Valor:50}),'$50 c/u');
+  assert.equal(ctx.montoCatalogoBenef({Beneficio:'Courses/Certifications',Valor:400}),'$400 c/u');
+  // Sin valor cargado no se inventa nada.
+  assert.equal(ctx.montoCatalogoBenef({Beneficio:'Terapia'}),'');
+  assert.equal(ctx.montoCatalogoBenef({Beneficio:'Terapia',Valor:0}),'');
+});
+
+// Con una sola card de AI Tools en el catálogo, cuál herramienta usa cada uno
+// deja de estar en el nombre del beneficio: el lugar para eso es el comentario.
+test('AI Tools admite comentario, igual que Certifications y Hardware Bonus', ()=>{
+  const ctx=ctxBenef();
+  assert.equal(ctx.esBeneficioConComentario('AI Tools'),true);
+  assert.equal(ctx.esBeneficioConComentario('AI Tools – Claude'),true);
+  assert.equal(ctx.esBeneficioConComentario('Hardware Bonus'),true);
+  assert.equal(ctx.esBeneficioConComentario('Courses/Certifications'),true);
+  assert.equal(ctx.esBeneficioConComentario('Terapia'),false);
+  assert.equal(ctx.esBeneficioConComentario('Udemy'),false);
+});

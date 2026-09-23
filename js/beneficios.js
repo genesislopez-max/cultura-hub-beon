@@ -420,6 +420,141 @@ function contenidoBenefDetalle(r,grupoFiltro,temFiltro){
 // a una persona — para eso está editarBenefAsignado en side-panel.js). Mismos
 // campos que "Nuevo beneficio" (FORMS['beneficios']) más el Estado, que ahí
 // se fuerza a "Activo" al crear y acá sí se puede pasar a "Inactivo".
+// ─── UNIFICAR DOS BENEFICIOS DEL CATÁLOGO ─────────────────────────────────────
+// El catálogo es un espejo de la tabla Beneficios: si hay cinco tarjetas de AI
+// Tools es porque hay cinco registros. Borrarlos a mano en Airtable deja sin
+// vínculo a las asignaciones que les apuntaban (en el Hub pasan a verse como
+// "—" y dejan de contar como mensuales), así que el borrado no es el problema:
+// el problema es mover primero lo que cuelga de ellos.
+//
+// Esto hace las dos cosas en orden: repunta cada asignación al beneficio que
+// queda y recién entonces elimina el registro. Si alguna no se puede mover, no
+// borra nada.
+//
+// Solo para el rol full, y no por prolijidad: HR lee "Beneficios Asignados"
+// filtrado a Core Team (ver api/airtable.js), así que al unificar un beneficio
+// de Engineers vería cero asignaciones que mover y borraría el registro
+// dejándolas huérfanas. Full ve las dos.
+function puedeUnificarBeneficios(){ return rolUsuarioActual()==='full'; }
+
+// Dos registros se pueden llamar igual — es justamente el caso que motivó
+// esto. El nombre solo no alcanza para elegir a cuál unificar, así que la
+// opción agrega grupo y valor para distinguirlos.
+function opcionUnificarLabel(b){
+  const f=b.fields||{};
+  const partes=[f.Grupo||'Ambos'];
+  if(f.Valor) partes.push(`$${Number(f.Valor).toLocaleString('es-AR')}`);
+  if((f.Estado||'Activo')!=='Activo') partes.push('Inactivo');
+  return `${f.Beneficio||'—'} · ${partes.join(' · ')}`;
+}
+
+function bloqueUnificarHtml(r){
+  if(!puedeUnificarBeneficios()) return '';
+  const otros=(cacheBeneficiosRaw||[]).filter(b=>b.id!==r.id)
+    .sort((a,b)=>(a.fields.Beneficio||'').localeCompare(b.fields.Beneficio||''));
+  if(!otros.length) return '';
+  return `
+<div style="border-top:1px solid var(--border);margin-top:16px;padding-top:14px">
+  <label class="field-label">Unificar con otro beneficio</label>
+  <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">
+    Mueve las asignaciones de este beneficio al que elijas y después elimina esta tarjeta del catálogo. Sirve para dejar una sola card cuando quedaron variantes del mismo beneficio.
+  </div>
+  <select class="field-input" id="f-eb-unificar-destino">
+    <option value="">Elegí el beneficio que queda…</option>
+    ${otros.map(b=>`<option value="${b.id}">${opcionUnificarLabel(b)}</option>`).join('')}
+  </select>
+  <button type="button" onclick="unificarBeneficio('${r.id}')" style="margin-top:8px;width:100%;padding:8px;border-radius:9px;border:1px solid var(--critical);background:none;color:var(--critical);font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:600;cursor:pointer">
+    <i class="ti ti-arrow-merge"></i> Unificar y eliminar esta tarjeta
+  </button>
+</div>`;
+}
+
+// Las asignaciones que cuelgan de un beneficio, por ID y no por nombre:
+// cacheBenefAsignados ya resolvió el campo Beneficio a texto, y con dos
+// registros que se llaman igual el nombre no distingue cuál es cuál.
+function asignacionesDeBeneficio(records,benefId){
+  return (records||[]).filter(r=>{
+    const campo=r.fields?.Beneficio;
+    const ids=Array.isArray(campo)?campo:(campo?[campo]:[]);
+    return ids.includes(benefId);
+  });
+}
+
+// Qué se le escribe a una asignación que cambia de beneficio. Si el nombre
+// viejo decía algo que el nuevo no dice —"AI Tools – Claude" contra "AI
+// Tools"— ese dato se pierde al repuntar, así que se guarda en Comentarios.
+// Un comentario ya cargado no se pisa: lo escribió alguien a propósito.
+function camposUnificarAsignacion(asignacion,destinoId,nombreOrigen,nombreDestino){
+  const fields={Beneficio:[destinoId]};
+  const comentario=(asignacion.fields?.Comentarios||'').trim();
+  if(!comentario&&nombreOrigen&&nombreOrigen!==nombreDestino) fields.Comentarios=nombreOrigen;
+  return fields;
+}
+
+async function unificarBeneficio(id){
+  if(!puedeUnificarBeneficios()){ toast('Solo People Ops puede unificar beneficios',true); return; }
+  const destinoId=document.getElementById('f-eb-unificar-destino')?.value||'';
+  if(!destinoId){ toast('Elegí con qué beneficio unificar',true); return; }
+  if(destinoId===id){ toast('Elegí un beneficio distinto',true); return; }
+  const origen=(cacheBeneficiosRaw||[]).find(b=>b.id===id);
+  const destino=(cacheBeneficiosRaw||[]).find(b=>b.id===destinoId);
+  if(!origen||!destino){ toast('No se encontró el beneficio',true); return; }
+  const nombreOrigen=(origen.fields.Beneficio||'').trim();
+  const nombreDestino=(destino.fields.Beneficio||'').trim();
+
+  let asignaciones=[];
+  try{
+    // Crudo de Airtable y no del cache: acá el campo Beneficio llega como
+    // array de IDs, que es lo único que distingue dos registros homónimos.
+    const d=await atGet('Beneficios Asignados');
+    asignaciones=asignacionesDeBeneficio(d.records,id);
+  }catch(e){
+    toast('No se pudieron leer las asignaciones: '+e.message,true);
+    return;
+  }
+
+  // "asignación" pierde la tilde en plural: sumarle "es" da "asignaciónes".
+  const n=asignaciones.length;
+  const detalle=n
+    ? `${n} ${n===1?'asignación pasa':'asignaciones pasan'} a "${nombreDestino}"`
+    : 'No tiene asignaciones cargadas';
+  const nota=asignaciones.length&&nombreOrigen!==nombreDestino
+    ? ` Las que no tengan comentario van a guardar "${nombreOrigen}" ahí, para no perder el dato.`
+    : '';
+  showConfirm(
+    'Unificar beneficio',
+    `${detalle}, y después "${nombreOrigen}" se elimina del catálogo.${nota} No se puede deshacer.`,
+    async()=>{
+      const fallidas=[];
+      for(const a of asignaciones){
+        try{
+          await atPatch(`Beneficios Asignados/${a.id}`,camposUnificarAsignacion(a,destinoId,nombreOrigen,nombreDestino));
+        }catch(e){
+          fallidas.push(a.id);
+        }
+      }
+      // Si quedó alguna sin mover, no se borra nada: borrar acá dejaría esas
+      // asignaciones colgando de un registro que ya no existe, que es
+      // exactamente lo que este flujo evita.
+      if(fallidas.length){
+        toast(`Se movieron ${asignaciones.length-fallidas.length} de ${asignaciones.length}. No se eliminó nada — reintentá.`,true);
+        await loadBeneficios();
+        return;
+      }
+      try{
+        await atDelete('Beneficios',id);
+      }catch(e){
+        toast('Las asignaciones se movieron, pero no se pudo eliminar la tarjeta: '+e.message,true);
+        await loadBeneficios();
+        return;
+      }
+      closeModal();
+      toast(`"${nombreOrigen}" unificado con "${nombreDestino}" ✓`);
+      await loadBeneficios();
+    }
+  );
+}
+
 function editarBeneficio(id){
   const r=cacheBeneficiosRaw.find(b=>b.id===id);
   if(!r) return;
@@ -457,7 +592,8 @@ function editarBeneficio(id){
     <option value="Activo"${(f.Estado||'Activo')==='Activo'?' selected':''}>Activo</option>
     <option value="Inactivo"${f.Estado==='Inactivo'?' selected':''}>Inactivo</option>
   </select>
-</div>`,
+</div>
+${bloqueUnificarHtml(r)}`,
     save:async()=>{
       const v=id2=>document.getElementById(id2)?.value||'';
       if(!v('f-eb-nombre')){toast('El nombre es obligatorio',true);return false;}

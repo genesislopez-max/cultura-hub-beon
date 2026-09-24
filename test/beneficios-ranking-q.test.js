@@ -234,3 +234,18 @@ test('si son todos del mismo grupo no se desglosa nada', ()=>{
   assert.equal(ctx.desgloseGrupoTexto({}),'');
   assert.equal(ctx.desgloseGrupoTexto(null),'');
 });
+
+// ─── Los dos porcentajes ──────────────────────────────────────────────────────
+// "1 persona · 4%" se leía como "4% de la gente", cuando ese 4% es la porción
+// de las ALTAS del trimestre (1 de 25). El de gente es otro: 1 de 21 = 5%.
+test('la cobertura se calcula sobre las personas del Q, no sobre las altas', ()=>{
+  assert.equal(ctx.coberturaBenefQ(6,21),29);
+  assert.equal(ctx.coberturaBenefQ(1,21),5);
+  assert.equal(ctx.coberturaBenefQ(21,21),100);
+});
+
+test('sin personas no se muestra un porcentaje inventado', ()=>{
+  assert.equal(ctx.coberturaBenefQ(0,21),0);
+  assert.equal(ctx.coberturaBenefQ(3,0),0);
+  assert.equal(ctx.coberturaBenefQ(),0);
+});

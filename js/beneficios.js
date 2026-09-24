@@ -154,15 +154,17 @@ function renderBenefMetricasQ(){
     return;
   }
   const totalAltas=altasQ.length;
+  const totalPersonas=personasUnicasQ(altasQ);
   cont.innerHTML=`${avisoCargasQ(altasQ)}
-  <table class="data-table"><thead><tr><th>Beneficio</th><th>Altas en el Q</th><th>Personas</th><th>% del total</th></tr></thead><tbody>
+  <table class="data-table"><thead><tr><th>Beneficio</th><th>Altas en el Q</th><th title="Entre paréntesis, qué parte de la gente con alta en el Q recibió este beneficio">Personas</th><th title="Qué parte de las altas del trimestre es este beneficio">% de las altas</th></tr></thead><tbody>
     ${ranking.map(({nombre,altas,personas,retroactivas,porGrupo})=>{
       const pct=totalAltas?Math.round(altas/totalAltas*100):0;
       // Con un grupo elegido, desglosar sería repetir el mismo número.
       const desglose=grupoFil?'':desgloseGrupoTexto(porGrupo);
+      const cobertura=coberturaBenefQ(personas,totalPersonas);
       return`<tr><td>${nombre}</td>
       <td style="font-weight:600">${altas}${retroactivas?`<span style="font-weight:400;font-size:11px;color:var(--text3)" title="Se cargaron más de ${DIAS_CARGA_RETROACTIVA} días después de la fecha que declaran"> · ${retroactivas} retro</span>`:''}</td>
-      <td style="font-weight:600">${personas}${desglose?`<div style="font-weight:400;font-size:11px;color:var(--text3)">${desglose}</div>`:''}</td>
+      <td style="font-weight:600">${personas}${cobertura?`<span style="font-weight:400;font-size:11px;color:var(--text3)" title="De las ${totalPersonas} personas con alta en el Q"> · ${cobertura}%</span>`:''}${desglose?`<div style="font-weight:400;font-size:11px;color:var(--text3)">${desglose}</div>`:''}</td>
       <td>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="flex:1;max-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
@@ -240,6 +242,19 @@ function rankingBenefQ(altasQ){
 
 // La tarjeta "Beneficio más usado" se resuelve por personas distintas: es la
 // única de las dos cifras que compara peras con peras.
+// Las dos cifras del ranking son porcentajes de cosas distintas y se estaban
+// leyendo como la misma: "1 persona · 4%" hacía pensar que ese 4% era de gente,
+// cuando el 4% es la porción de las ALTAS del trimestre (1 de 25). El de gente
+// es otro: 1 de 21 personas con alta en el Q = 5%.
+//
+// La columna dice ahora "% de las altas" (suma 100%) y la cobertura va al lado
+// de las personas: qué parte de la gente con alta en el Q recibió ese
+// beneficio. Esta NO suma 100%, porque una persona puede recibir varios.
+function coberturaBenefQ(personas,totalPersonas){
+  if(!personas||!totalPersonas) return 0;
+  return Math.round(personas/totalPersonas*100);
+}
+
 function beneficioMasUsadoQ(ranking){
   if(!(ranking||[]).length) return null;
   return [...ranking].sort((a,b)=>b.personas-a.personas||b.altas-a.altas||a.nombre.localeCompare(b.nombre))[0];

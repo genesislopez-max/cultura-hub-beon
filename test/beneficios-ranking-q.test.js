@@ -165,3 +165,72 @@ test('sin createdTime no se inventa una tanda', ()=>{
   assert.equal(ctx.mayorCargaEnBloqueQ(sinDato),null);
   assert.equal(ctx.avisoCargasQ(sinDato),'');
 });
+
+// ─── División por grupo ───────────────────────────────────────────────────────
+// El grupo sale de la persona que recibió el beneficio. El campo Grupo del
+// catálogo dice a quién le CORRESPONDE —y "Ambos" no distingue nada—, así que
+// no sirve para medir quién lo usó.
+const vm2=require('node:vm');
+function sembrarPersonas(personas){
+  ctx.__fixture=personas;
+  vm2.runInContext('cachePersonasRaw=__fixture',ctx);
+}
+const PERSONAS_GRUPO=[
+  {id:'p1',fields:{Nombre:'Ana Eng','Rol en empresa':'Engineer'}},
+  {id:'p2',fields:{Nombre:'Beto Eng','Rol en empresa':'Engineer'}},
+  {id:'p3',fields:{Nombre:'Caro Core','Rol en empresa':'Manager'}},
+  {id:'p4',fields:{Nombre:'Dani Core','Rol en empresa':'Core Team'}},
+];
+
+test('grupoDeAsignacion sale del rol de la persona', ()=>{
+  sembrarPersonas(PERSONAS_GRUPO);
+  assert.equal(ctx.grupoDeAsignacion({fields:{Persona:['Ana Eng']}}),'Engineers');
+  assert.equal(ctx.grupoDeAsignacion({fields:{Persona:'Caro Core'}}),'Core Team');
+  assert.equal(ctx.grupoDeAsignacion({fields:{Persona:[' dani core ']}}),'Core Team');
+});
+
+// getRolGroup manda a Engineers todo rol que no reconoce, así que una persona
+// que no está en el caché caería ahí en silencio. Preferible no clasificarla.
+test('una persona que no está en el caché no se clasifica', ()=>{
+  sembrarPersonas(PERSONAS_GRUPO);
+  assert.equal(ctx.grupoDeAsignacion({fields:{Persona:['Quien Sea']}}),'');
+  assert.equal(ctx.grupoDeAsignacion({fields:{}}),'');
+  assert.equal(ctx.grupoDeAsignacion(null),'');
+});
+
+test('el ranking cuenta las personas de cada grupo', ()=>{
+  sembrarPersonas(PERSONAS_GRUPO);
+  const r=ctx.rankingBenefQ([
+    asig('Ana Eng','Terapia',{i:1}),
+    asig('Beto Eng','Terapia',{i:2}),
+    asig('Caro Core','Terapia',{i:3}),
+    asig('Quien Sea','Terapia',{i:4}),
+  ]);
+  assert.equal(r[0].personas,4);
+  assert.equal(r[0].porGrupo.Engineers,2);
+  assert.equal(r[0].porGrupo['Core Team'],1);
+  assert.equal(ctx.desgloseGrupoTexto(r[0].porGrupo),'2 Eng · 1 Core');
+});
+
+// Cuatro blogposts de la misma persona son una persona, no cuatro del grupo.
+test('el desglose cuenta personas, no filas', ()=>{
+  sembrarPersonas(PERSONAS_GRUPO);
+  const r=ctx.rankingBenefQ([
+    asig('Ana Eng','Blogposts',{i:1}),
+    asig('Ana Eng','Blogposts',{i:2}),
+    asig('Ana Eng','Blogposts',{i:3}),
+    asig('Caro Core','Blogposts',{i:4}),
+  ]);
+  assert.equal(r[0].altas,4);
+  assert.equal(r[0].personas,2);
+  assert.equal(r[0].porGrupo.Engineers,1);
+  assert.equal(ctx.desgloseGrupoTexto(r[0].porGrupo),'1 Eng · 1 Core');
+});
+
+test('si son todos del mismo grupo no se desglosa nada', ()=>{
+  sembrarPersonas(PERSONAS_GRUPO);
+  const r=ctx.rankingBenefQ([asig('Ana Eng','Terapia',{i:1}),asig('Beto Eng','Terapia',{i:2})]);
+  assert.equal(ctx.desgloseGrupoTexto(r[0].porGrupo),''); // el "2" de arriba ya lo dice
+  assert.equal(ctx.desgloseGrupoTexto({}),'');
+  assert.equal(ctx.desgloseGrupoTexto(null),'');
+});

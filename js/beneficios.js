@@ -120,15 +120,21 @@ function renderBenefMetricasQ(){
   const inicio=new Date(anio,mesInicio,1);
   const fin=new Date(anio,mesInicio+3,0); // último día del 3er mes del trimestre
 
-  const conFecha=cacheBenefAsignados.filter(r=>r.fields['Fecha activación']);
-  document.getElementById('bq-sinfecha').textContent=cacheBenefAsignados.length-conFecha.length;
+  // El grupo sale de la persona que recibió el beneficio, no del campo Grupo
+  // del catálogo: ese dice a quién le CORRESPONDE el beneficio (y "Ambos" no
+  // dice nada), mientras que acá se está midiendo quién lo usó.
+  const grupoFil=document.getElementById('benefq-grupo')?.value||'';
+  const delGrupo=r=>!grupoFil||grupoDeAsignacion(r)===grupoFil;
+
+  const conFecha=cacheBenefAsignados.filter(r=>r.fields['Fecha activación']&&delGrupo(r));
+  document.getElementById('bq-sinfecha').textContent=cacheBenefAsignados.filter(r=>!r.fields['Fecha activación']&&delGrupo(r)).length;
 
   const altasQ=conFecha.filter(r=>{
     const f=new Date(r.fields['Fecha activación']+'T12:00:00');
     return f>=inicio&&f<=fin;
   });
   document.getElementById('bq-altas').textContent=altasQ.length;
-  document.getElementById('bq-altas-sub').textContent=`Q${q} ${anio}`;
+  document.getElementById('bq-altas-sub').textContent=`Q${q} ${anio}${grupoFil?` · ${grupoFil}`:''}`;
 
   document.getElementById('bq-personas').textContent=personasUnicasQ(altasQ);
 
@@ -150,11 +156,13 @@ function renderBenefMetricasQ(){
   const totalAltas=altasQ.length;
   cont.innerHTML=`${avisoCargasQ(altasQ)}
   <table class="data-table"><thead><tr><th>Beneficio</th><th>Altas en el Q</th><th>Personas</th><th>% del total</th></tr></thead><tbody>
-    ${ranking.map(({nombre,altas,personas,retroactivas})=>{
+    ${ranking.map(({nombre,altas,personas,retroactivas,porGrupo})=>{
       const pct=totalAltas?Math.round(altas/totalAltas*100):0;
+      // Con un grupo elegido, desglosar sería repetir el mismo número.
+      const desglose=grupoFil?'':desgloseGrupoTexto(porGrupo);
       return`<tr><td>${nombre}</td>
       <td style="font-weight:600">${altas}${retroactivas?`<span style="font-weight:400;font-size:11px;color:var(--text3)" title="Se cargaron más de ${DIAS_CARGA_RETROACTIVA} días después de la fecha que declaran"> · ${retroactivas} retro</span>`:''}</td>
-      <td style="font-weight:600">${personas}</td>
+      <td style="font-weight:600">${personas}${desglose?`<div style="font-weight:400;font-size:11px;color:var(--text3)">${desglose}</div>`:''}</td>
       <td>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="flex:1;max-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
@@ -182,20 +190,51 @@ function personasUnicasQ(altasQ){
   return personas.size;
 }
 
+// A qué grupo pertenece una asignación: el de la PERSONA que la recibió. El
+// campo Grupo del catálogo dice a quién le corresponde el beneficio —y "Ambos"
+// no distingue nada—, así que no sirve para medir quién lo usó.
+// Devuelve '' si la persona no está en el caché: mejor no clasificarla que
+// meterla en el grupo equivocado (getRolGroup manda todo lo que no reconoce a
+// Engineers, y un nombre que no matchea caería ahí en silencio).
+function grupoDeAsignacion(r){
+  const nombre=normalizarNombre(valorVinculado(r?.fields?.Persona));
+  if(!nombre) return '';
+  const persona=(cachePersonasRaw||[]).find(p=>normalizarNombre(p.fields.Nombre)===nombre);
+  return persona?getRolGroup(persona.fields['Rol en empresa']||''):'';
+}
+
+// "3 Eng · 1 Core" debajo de las personas, para ver la división sin tener que
+// cambiar el selector y comparar de memoria. Vacío si todas son del mismo
+// grupo: ahí el número de arriba ya lo dice.
+function desgloseGrupoTexto(porGrupo){
+  const eng=porGrupo?.Engineers||0;
+  const core=porGrupo?.['Core Team']||0;
+  if(!eng||!core) return '';
+  return `${eng} Eng · ${core} Core`;
+}
+
 function rankingBenefQ(altasQ){
   const porBenef=new Map();
   (altasQ||[]).forEach(r=>{
     const nombre=valorVinculado(r.fields?.Beneficio);
     if(!nombre) return;
-    if(!porBenef.has(nombre)) porBenef.set(nombre,{nombre,altas:0,personas:new Set(),retroactivas:0});
+    if(!porBenef.has(nombre)){
+      porBenef.set(nombre,{nombre,altas:0,personas:new Set(),retroactivas:0,porGrupo:{}});
+    }
     const entrada=porBenef.get(nombre);
     entrada.altas++;
     const persona=normalizarNombre(valorVinculado(r.fields?.Persona));
-    if(persona) entrada.personas.add(persona);
+    if(persona&&!entrada.personas.has(persona)){
+      entrada.personas.add(persona);
+      // Se cuenta una vez por persona, no por fila: si no, cuatro blogposts de
+      // la misma persona darían "4 Eng" al lado de "1 persona".
+      const grupo=grupoDeAsignacion(r);
+      if(grupo) entrada.porGrupo[grupo]=(entrada.porGrupo[grupo]||0)+1;
+    }
     if(esAltaRetroactiva(r)) entrada.retroactivas++;
   });
   return [...porBenef.values()]
-    .map(e=>({nombre:e.nombre,altas:e.altas,personas:e.personas.size,retroactivas:e.retroactivas}))
+    .map(e=>({nombre:e.nombre,altas:e.altas,personas:e.personas.size,retroactivas:e.retroactivas,porGrupo:e.porGrupo}))
     .sort((a,b)=>b.altas-a.altas||b.personas-a.personas||a.nombre.localeCompare(b.nombre));
 }
 

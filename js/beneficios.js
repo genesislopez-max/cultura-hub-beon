@@ -130,19 +130,16 @@ function renderBenefMetricasQ(){
   document.getElementById('bq-altas').textContent=altasQ.length;
   document.getElementById('bq-altas-sub').textContent=`Q${q} ${anio}`;
 
-  const personasUnicas=new Set(altasQ.map(r=>typeof r.fields.Persona==='string'?r.fields.Persona:(Array.isArray(r.fields.Persona)?r.fields.Persona[0]:'')).filter(Boolean));
-  document.getElementById('bq-personas').textContent=personasUnicas.size;
+  document.getElementById('bq-personas').textContent=personasUnicasQ(altasQ);
 
-  const conteo={};
-  altasQ.forEach(r=>{
-    const bNombre=typeof r.fields.Beneficio==='string'?r.fields.Beneficio:(Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:'');
-    if(!bNombre) return;
-    conteo[bNombre]=(conteo[bNombre]||0)+1;
-  });
-  const ranking=Object.entries(conteo).sort((a,b)=>b[1]-a[1]);
-  const top=ranking[0];
-  document.getElementById('bq-top').textContent=top?top[0]:'—';
-  document.getElementById('bq-top-sub').textContent=top?`${top[1]} alta${top[1]!==1?'s':''} en el Q`:'Sin altas en este período';
+  const ranking=rankingBenefQ(altasQ);
+  // "Más usado" por personas distintas y no por cantidad de filas: una fila no
+  // significa lo mismo en cada beneficio (ver rankingBenefQ).
+  const top=beneficioMasUsadoQ(ranking);
+  document.getElementById('bq-top').textContent=top?top.nombre:'—';
+  document.getElementById('bq-top-sub').textContent=top
+    ?`${top.personas} persona${top.personas!==1?'s':''} · ${top.altas} alta${top.altas!==1?'s':''}`
+    :'Sin altas en este período';
 
   const cont=document.getElementById('benefq-ranking-container');
   if(!cont) return;
@@ -151,10 +148,14 @@ function renderBenefMetricasQ(){
     return;
   }
   const totalAltas=altasQ.length;
-  cont.innerHTML=`<table class="data-table"><thead><tr><th>Beneficio</th><th>Altas en el Q</th><th>% del total</th></tr></thead><tbody>
-    ${ranking.map(([bNombre,cant])=>{
-      const pct=totalAltas?Math.round(cant/totalAltas*100):0;
-      return`<tr><td>${bNombre}</td><td style="font-weight:600">${cant}</td><td>
+  cont.innerHTML=`${avisoCargasQ(altasQ)}
+  <table class="data-table"><thead><tr><th>Beneficio</th><th>Altas en el Q</th><th>Personas</th><th>% del total</th></tr></thead><tbody>
+    ${ranking.map(({nombre,altas,personas,retroactivas})=>{
+      const pct=totalAltas?Math.round(altas/totalAltas*100):0;
+      return`<tr><td>${nombre}</td>
+      <td style="font-weight:600">${altas}${retroactivas?`<span style="font-weight:400;font-size:11px;color:var(--text3)" title="Se cargaron más de ${DIAS_CARGA_RETROACTIVA} días después de la fecha que declaran"> · ${retroactivas} retro</span>`:''}</td>
+      <td style="font-weight:600">${personas}</td>
+      <td>
         <div style="display:flex;align-items:center;gap:8px;">
           <div style="flex:1;max-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
           <span style="font-size:12px;color:var(--text2)">${pct}%</span>
@@ -162,6 +163,130 @@ function renderBenefMetricasQ(){
       </td></tr>`;
     }).join('')}
   </tbody></table>`;
+}
+
+// ─── Cómo leer el ranking del trimestre ───────────────────────────────────────
+// Una fila de Beneficios Asignados no significa lo mismo en cada beneficio:
+// Blogposts genera una por publicación (una persona con 4 posts son 4 altas) y
+// Udemy una por curso, mientras que Terapia o Clases de Inglés generan UNA sola
+// por persona que dura todo el año. Contando filas, los beneficios que se
+// registran por unidad encabezan el ranking por cómo se cargan y no por cuánta
+// gente los usa. Por eso cada fila muestra también las personas distintas, que
+// sí se puede comparar entre beneficios.
+function personasUnicasQ(altasQ){
+  const personas=new Set();
+  (altasQ||[]).forEach(r=>{
+    const nombre=normalizarNombre(valorVinculado(r.fields?.Persona));
+    if(nombre) personas.add(nombre);
+  });
+  return personas.size;
+}
+
+function rankingBenefQ(altasQ){
+  const porBenef=new Map();
+  (altasQ||[]).forEach(r=>{
+    const nombre=valorVinculado(r.fields?.Beneficio);
+    if(!nombre) return;
+    if(!porBenef.has(nombre)) porBenef.set(nombre,{nombre,altas:0,personas:new Set(),retroactivas:0});
+    const entrada=porBenef.get(nombre);
+    entrada.altas++;
+    const persona=normalizarNombre(valorVinculado(r.fields?.Persona));
+    if(persona) entrada.personas.add(persona);
+    if(esAltaRetroactiva(r)) entrada.retroactivas++;
+  });
+  return [...porBenef.values()]
+    .map(e=>({nombre:e.nombre,altas:e.altas,personas:e.personas.size,retroactivas:e.retroactivas}))
+    .sort((a,b)=>b.altas-a.altas||b.personas-a.personas||a.nombre.localeCompare(b.nombre));
+}
+
+// La tarjeta "Beneficio más usado" se resuelve por personas distintas: es la
+// única de las dos cifras que compara peras con peras.
+function beneficioMasUsadoQ(ranking){
+  if(!(ranking||[]).length) return null;
+  return [...ranking].sort((a,b)=>b.personas-a.personas||b.altas-a.altas||a.nombre.localeCompare(b.nombre))[0];
+}
+
+// ─── Altas cargadas retroactivamente ──────────────────────────────────────────
+// El trimestre se calcula con la Fecha activación, que es la fecha del hecho.
+// Pero subir histórico crea hoy registros que declaran fechas de antes, y si
+// esa fecha cae en el trimestre que se está mirando, se mezclan con las altas
+// reales del período sin ninguna marca.
+//
+// Airtable devuelve en cada registro cuándo se creó (createdTime) y el Hub lo
+// venía ignorando. La distancia entre esa fecha y la que declara el registro
+// separa una cosa de la otra: cargar un beneficio el día que se da deja días de
+// diferencia; subir el histórico de dos años deja meses.
+//
+// No dice que el dato esté mal —un blogpost de julio cargado en septiembre es
+// correcto y también sale marcado— dice que el registro no se cargó en el
+// momento, que es justo lo que hay que saber antes de leer el ranking como uso
+// del trimestre.
+const DIAS_CARGA_RETROACTIVA=30;
+
+function diasEntreActivacionYCarga(r){
+  const activacion=r?.fields?.['Fecha activación'];
+  const creado=r?.createdTime;
+  if(!activacion||!creado) return null;
+  const msActivacion=new Date(activacion+'T12:00:00').getTime();
+  const msCreado=new Date(creado).getTime();
+  if(isNaN(msActivacion)||isNaN(msCreado)) return null;
+  const dias=Math.round((msCreado-msActivacion)/86400000);
+  // La fecha de activación se ancla al mediodía, así que una carga hecha esa
+  // misma mañana da una diferencia negativa chiquita que redondea a -0. Son
+  // cero días, no "menos cero".
+  return dias===0?0:dias;
+}
+
+function esAltaRetroactiva(r,dias=DIAS_CARGA_RETROACTIVA){
+  const distancia=diasEntreActivacionYCarga(r);
+  return distancia!=null&&distancia>dias;
+}
+
+// La distancia entre las dos fechas no alcanza sola: si la carga de histórico
+// puso como Fecha activación el día en que se subió, el registro declara una
+// fecha de este trimestre Y se creó ese mismo día, así que no se marca como
+// retroactivo aunque el hecho sea viejo. Lo que delata esa carga es otra cosa:
+// un montón de altas creadas todas el mismo día.
+//
+// Se pide un mínimo absoluto y además que sea una porción grande del trimestre,
+// para no avisar por un martes en que People Ops cargó cinco beneficios.
+const MIN_ALTAS_MISMO_DIA=5;
+const PCT_ALTAS_MISMO_DIA=0.3;
+
+function diaDeCarga(r){ return (r?.createdTime||'').slice(0,10); }
+
+function mayorCargaEnBloqueQ(altasQ,minimo=MIN_ALTAS_MISMO_DIA,porcion=PCT_ALTAS_MISMO_DIA){
+  const total=(altasQ||[]).length;
+  if(!total) return null;
+  const porDia=new Map();
+  (altasQ||[]).forEach(r=>{
+    const dia=diaDeCarga(r);
+    if(dia) porDia.set(dia,(porDia.get(dia)||0)+1);
+  });
+  let mayor=null;
+  porDia.forEach((cantidad,dia)=>{
+    if(cantidad<minimo||cantidad<total*porcion) return;
+    if(!mayor||cantidad>mayor.cantidad) mayor={dia,cantidad};
+  });
+  return mayor;
+}
+
+function avisoCargasQ(altasQ){
+  const total=(altasQ||[]).length;
+  const retro=(altasQ||[]).filter(r=>esAltaRetroactiva(r)).length;
+  const bloque=mayorCargaEnBloqueQ(altasQ);
+  if(!retro&&!bloque) return '';
+  const frases=[];
+  if(retro){
+    frases.push(`<b>${retro} de ${total} altas</b> se cargaron retroactivamente: el registro se creó más de ${DIAS_CARGA_RETROACTIVA} días después de la fecha que declara.`);
+  }
+  if(bloque){
+    frases.push(`<b>${bloque.cantidad} de ${total}</b> se cargaron todas el mismo día (${fmt(bloque.dia)}).`);
+  }
+  return `<div class="benefq-aviso-cargas" style="display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;padding:10px 12px;border-radius:10px;background:var(--chip-amber-bg);color:var(--chip-amber-text);font-size:12px;line-height:1.5">
+    <i class="ti ti-history" style="font-size:15px;flex-shrink:0;margin-top:1px"></i>
+    <span>${frases.join(' ')} Suele pasar al subir histórico, y hace que el ranking no se lea como el uso real del período.</span>
+  </div>`;
 }
 
 function renderBenefMetricas(){

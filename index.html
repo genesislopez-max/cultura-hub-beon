@@ -1118,7 +1118,23 @@
 
         <!-- MÉTRICAS -->
         <div id="benef-tab-metricas" style="display:none">
+          <!-- Foto de hoy: quién tiene cada beneficio activo. Distinto del
+               bloque de abajo, que mide el movimiento de un trimestre. -->
           <div class="table-wrap" style="border-radius:0 0 13px 13px;border-top:none;margin-bottom:1rem">
+            <div class="table-head" style="flex-wrap:wrap;gap:8px;">
+              <span class="table-head-title">Uso actual del catálogo</span>
+              <div style="display:flex;gap:8px;margin-left:auto;">
+                <select class="filter-select" id="benefuso-grupo" onchange="renderBenefUsoActual()">
+                  <option value="">Engineers + Core Team</option>
+                  <option value="Engineers">Solo Engineers</option>
+                  <option value="Core Team">Solo Core Team</option>
+                </select>
+              </div>
+            </div>
+            <div id="benefuso-container" class="table-scroll"></div>
+          </div>
+
+          <div class="table-wrap" style="border-radius:13px;margin-bottom:1rem">
             <div class="table-head" style="flex-wrap:wrap;gap:8px;">
               <span class="table-head-title">Métricas del trimestre</span>
               <div style="display:flex;gap:8px;margin-left:auto;">

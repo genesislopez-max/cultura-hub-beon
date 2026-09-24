@@ -88,6 +88,7 @@ function switchBenefTab(tab, btn){
       document.getElementById('benefq-trimestre').value=String(Math.floor(hoy.getMonth()/3)+1);
       benefMetricasInicializado=true;
     }
+    renderBenefUsoActual();
     renderBenefMetricasQ();
     return;
   }
@@ -111,6 +112,103 @@ function poblarAnioBenefQ(){
   });
   const actual=sel.value;
   sel.innerHTML=[...anios].sort((a,b)=>b-a).map(a=>`<option value="${a}"${String(a)===actual?' selected':''}>${a}</option>`).join('');
+}
+
+// ─── USO ACTUAL DEL CATÁLOGO ──────────────────────────────────────────────────
+// "Qué porcentaje de la gente está usando X" es una pregunta distinta de las
+// del trimestre: no mide movimiento de un período sino el estado de hoy, o sea
+// cuántas personas tienen ese beneficio ACTIVO ahora mismo.
+//
+// El denominador no es todo el equipo: un beneficio de Core Team medido contra
+// los 40 del equipo daría un porcentaje bajo que no dice nada. Se cuenta sobre
+// las personas a las que les corresponde — su grupo y su nivel Loyalty, el
+// mismo criterio con el que el Hub lista los beneficios accesibles de cada uno.
+function personasActivasParaMetricas(grupoFil){
+  return (cachePersonasRaw||[]).filter(p=>
+    !yaEgreso(p)&&(!grupoFil||getRolGroup(p.fields['Rol en empresa']||'')===grupoFil));
+}
+
+function beneficioAplicaAPersona(b,p){
+  const grupoBenef=b?.fields?.Grupo||'Ambos';
+  const grupoOk=grupoBenef==='Ambos'||grupoBenef===getRolGroup(p?.fields?.['Rol en empresa']||'');
+  return grupoOk&&tieneAccesoBeneficio(normalizarNivel(p?.fields?.['Nivel Loyalty']),b?.fields?.['Nivel Loyalty']||'Todos');
+}
+
+function usoActualBeneficios(grupoFil){
+  const equipo=personasActivasParaMetricas(grupoFil);
+  const porNombre=new Map(equipo.map(p=>[normalizarNombre(p.fields.Nombre),p]));
+  const asignacionesActivas=(cacheBenefAsignados||[]).filter(a=>(a.fields.Estado||'Activo')==='Activo');
+
+  return (cacheBeneficiosRaw||[])
+    .filter(b=>(b.fields.Estado||'Activo')==='Activo')
+    .map(b=>{
+      const nombre=b.fields.Beneficio||'';
+      // Solo gente del equipo de hoy: quien ya se fue sigue teniendo su
+      // asignación cargada y no puede contar como que lo está usando.
+      const usando=new Set();
+      asignacionesActivas.forEach(a=>{
+        if(valorVinculado(a.fields.Beneficio)!==nombre) return;
+        const persona=normalizarNombre(valorVinculado(a.fields.Persona));
+        if(persona&&porNombre.has(persona)) usando.add(persona);
+      });
+      const elegibles=new Set(equipo.filter(p=>beneficioAplicaAPersona(b,p)).map(p=>normalizarNombre(p.fields.Nombre)));
+      // Quien ya lo tiene cuenta como elegible aunque su nivel no llegue: se dan
+      // excepciones, y sin esto el porcentaje podía pasar de 100.
+      usando.forEach(n=>elegibles.add(n));
+
+      const porGrupo={};
+      usando.forEach(n=>{
+        const grupo=getRolGroup(porNombre.get(n)?.fields?.['Rol en empresa']||'');
+        if(grupo) porGrupo[grupo]=(porGrupo[grupo]||0)+1;
+      });
+
+      return {
+        nombre,
+        usando:usando.size,
+        elegibles:elegibles.size,
+        pct:elegibles.size?Math.round(usando.size/elegibles.size*100):0,
+        porGrupo,
+      };
+    })
+    // Los que no le corresponden a nadie del grupo elegido van al final: su 0%
+    // no es "nadie lo usa", es "acá no aplica", y arriba ensucian la lectura.
+    .sort((a,b)=>(b.elegibles?1:0)-(a.elegibles?1:0)||b.pct-a.pct||b.usando-a.usando||a.nombre.localeCompare(b.nombre));
+}
+
+function renderBenefUsoActual(){
+  const cont=document.getElementById('benefuso-container');
+  if(!cont) return;
+  const grupoFil=document.getElementById('benefuso-grupo')?.value||'';
+  const filas=usoActualBeneficios(grupoFil);
+  if(!filas.length){
+    cont.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3);font-size:13px;">No hay beneficios activos en el catálogo.</div>';
+    return;
+  }
+  cont.innerHTML=`<div style="padding:10px 18px 0;font-size:11.5px;color:var(--text3);line-height:1.5">
+      Quiénes lo tienen activo hoy, sobre las personas del equipo a las que les corresponde (su grupo y su nivel Loyalty). No es del trimestre: es la foto de este momento.
+    </div>
+    <table class="data-table"><thead><tr><th>Beneficio</th><th>Personas usándolo</th><th>% de quienes pueden tenerlo</th></tr></thead><tbody>
+    ${filas.map(({nombre,usando,elegibles,pct,porGrupo})=>{
+      const desglose=grupoFil?'':desgloseGrupoTexto(porGrupo);
+      const color=pct>=60?'var(--green)':pct>=25?'var(--blue)':'var(--text3)';
+      // Sin nadie a quien le corresponda, un 0% se leería como "nadie lo usa"
+      // cuando lo que pasa es que ese beneficio no es para este grupo.
+      if(!elegibles){
+        return`<tr><td>${nombre}</td>
+        <td style="color:var(--text3)">—</td>
+        <td><span style="font-size:12px;color:var(--text3)">No le corresponde a este grupo</span></td></tr>`;
+      }
+      return`<tr><td>${nombre}</td>
+      <td style="font-weight:600">${usando}<span style="font-weight:400;font-size:11px;color:var(--text3)"> de ${elegibles}</span>
+        ${desglose?`<div style="font-weight:400;font-size:11px;color:var(--text3)">${desglose}</div>`:''}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;max-width:140px;height:6px;background:var(--border);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${color};border-radius:3px"></div></div>
+          <span style="font-size:12px;color:var(--text2)">${pct}%</span>
+        </div>
+      </td></tr>`;
+    }).join('')}
+  </tbody></table>`;
 }
 
 function renderBenefMetricasQ(){

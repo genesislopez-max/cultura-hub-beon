@@ -306,6 +306,26 @@ function yaEgreso(r){
   return new Date(fe+'T00:00:00')<=hoy;
 }
 
+// Alguien con Fecha de ingreso futura todavía no es parte del equipo: ya está
+// cargado y aparece en el Kanban de Ingresos (en Pre-ingreso, que es donde
+// tiene que estar), pero contarlo en Engineers & Tech infla el tamaño del
+// equipo días o semanas antes de que la persona empiece.
+// Un registro sin fecha de ingreso cuenta como que ya está: son cargas viejas
+// a las que nunca se les completó el campo, y esconderlas sería peor.
+function todaviaNoIngreso(r){
+  const fi=r?.fields?.['Fecha de ingreso'];
+  if(!fi) return false;
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  return new Date(fi+'T00:00:00')>hoy;
+}
+
+// "Está en el equipo hoy": ya empezó y no se fue (o se fue y volvió). Es el
+// criterio del directorio, de los contadores y de los "N en el equipo" de
+// Beneficios, para que todos esos números digan lo mismo.
+function estaEnElEquipo(r){
+  return !todaviaNoIngreso(r)&&!yaEgreso(r);
+}
+
 // Distinto de yaEgreso(): alcanza con que el offboarding esté REGISTRADO,
 // aunque el último día todavía no haya llegado. Registrar un offboarding
 // escribe "Fecha de egreso" con el último día (ver forms.js), que casi siempre
@@ -326,7 +346,9 @@ async function loadPersonas(){
   cachePersonasRaw=recs;
   cachePersonasPorRol={TEM:[],Manager:[],Lead:[]};
 
-  const activos=recs.filter(r=>!yaEgreso(r));
+  // Ya empezaron y no se fueron: quien ingresa la semana que viene todavía
+  // no suma al equipo (ver estaEnElEquipo).
+  const activos=recs.filter(estaEnElEquipo);
   const engineers=[], coreTeam=[];
 
   activos.forEach(r=>{

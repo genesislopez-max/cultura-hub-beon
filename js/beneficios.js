@@ -125,7 +125,7 @@ function poblarAnioBenefQ(){
 // mismo criterio con el que el Hub lista los beneficios accesibles de cada uno.
 function personasActivasParaMetricas(grupoFil){
   return (cachePersonasRaw||[]).filter(p=>
-    !yaEgreso(p)&&(!grupoFil||getRolGroup(p.fields['Rol en empresa']||'')===grupoFil));
+    estaEnElEquipo(p)&&(!grupoFil||getRolGroup(p.fields['Rol en empresa']||'')===grupoFil));
 }
 
 function beneficioAplicaAPersona(b,p){
@@ -463,7 +463,7 @@ function renderBenefMetricas(){
 
   // Personas con/sin beneficios — solo sobre el equipo activo hoy, igual
   // criterio (yaEgreso) que el resto de las vistas de Beneficios.
-  const nombresActivos=new Set(cachePersonasRaw.filter(p=>!yaEgreso(p)).map(p=>(p.fields.Nombre||'').trim()));
+  const nombresActivos=new Set(cachePersonasRaw.filter(estaEnElEquipo).map(p=>(p.fields.Nombre||'').trim()));
   const personasConBenef=new Set(cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo').map(a=>{
     const nombre=Array.isArray(a.fields.Persona)?a.fields.Persona[0]:a.fields.Persona;
     return (nombre||'').trim();
@@ -1177,7 +1177,7 @@ function cambiarPaginaBenefPersonas(dir){
 // mirar el histórico no mueve ningún número.
 function coincideEstadoBenefPersona(p,estadoFil){
   if(estadoFil==='todos') return true;
-  return estadoFil==='ex'?yaEgreso(p):!yaEgreso(p);
+  return estadoFil==='ex'?yaEgreso(p):estaEnElEquipo(p);
 }
 
 // Chip "Ex BEONer" con la fecha de fin, para que al ver el histórico se

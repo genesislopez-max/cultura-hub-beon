@@ -128,3 +128,72 @@ test('las cargas históricas de quien volvió tampoco entran al tablero', ()=>{
   const historicos=gente.filter(p=>p.fields['Fecha de egreso']&&!ctx.reingresoVigente(p));
   assert.equal(historicos.map(p=>p.fields.Nombre).join('|'),'Se Fue');
 });
+
+// ─── El equipo se cuenta desde el día que entra ───────────────────────────────
+// Alguien que ingresa la semana que viene ya está cargado (y tiene que estar en
+// el Kanban de Ingresos, en Pre-ingreso), pero contarlo en Engineers & Tech
+// infla el tamaño del equipo antes de que la persona empiece.
+test('quien todavía no empezó no cuenta en el equipo', ()=>{
+  const ctx=ctxRe();
+  const futuro=persona({'Fecha de ingreso':MANANA});
+  assert.equal(ctx.todaviaNoIngreso(futuro),true);
+  assert.equal(ctx.estaEnElEquipo(futuro),false);
+  assert.equal(ctx.yaEgreso(futuro),false); // no se fue: simplemente no llegó
+});
+
+test('quien ya empezó y no se fue cuenta', ()=>{
+  const ctx=ctxRe();
+  assert.equal(ctx.estaEnElEquipo(persona({'Fecha de ingreso':ANTEAYER})),true);
+});
+
+test('un registro sin fecha de ingreso cuenta como que ya está', ()=>{
+  const ctx=ctxRe();
+  // Cargas viejas a las que nunca se les completó el campo: esconderlas del
+  // directorio sería peor que contarlas.
+  assert.equal(ctx.todaviaNoIngreso(persona({})),false);
+  assert.equal(ctx.estaEnElEquipo(persona({})),true);
+});
+
+test('quien se fue no cuenta, aunque haya ingresado hace años', ()=>{
+  const ctx=ctxRe();
+  assert.equal(ctx.estaEnElEquipo(persona({'Fecha de ingreso':ANTEAYER,'Fecha de egreso':AYER})),false);
+});
+
+test('quien volvió sí cuenta', ()=>{
+  const ctx=ctxRe();
+  const p=persona({'Fecha de ingreso':ANTEAYER,'Fecha de egreso':AYER,'Fecha de reingreso':`${ANIO}-01-15`});
+  assert.equal(ctx.estaEnElEquipo(p),true);
+});
+
+// ─── "Quién estaba el día X" ──────────────────────────────────────────────────
+// Lo usan Off Sites y Asistencia a Actividades. Sin contemplar el reingreso,
+// alguien que volvió figuraba como no activo para cualquier fecha posterior a
+// su egreso, incluido hoy.
+test('personaActivaEnFecha contempla el reingreso', ()=>{
+  const ctx=ctxRe();
+  const p=persona({'Fecha de ingreso':'2019-03-01','Fecha de egreso':'2025-06-30','Fecha de reingreso':'2026-01-15'});
+  assert.equal(ctx.personaActivaEnFecha(p,'2024-05-01'),true);  // primera etapa
+  assert.equal(ctx.personaActivaEnFecha(p,'2025-09-01'),false); // afuera
+  assert.equal(ctx.personaActivaEnFecha(p,'2026-03-01'),true);  // ya volvió
+  assert.equal(ctx.personaActivaEnFecha(p,'2018-01-01'),false); // antes de entrar
+});
+
+test('personaActivaEnFecha sin reingreso se comporta igual que antes', ()=>{
+  const ctx=ctxRe();
+  const p=persona({'Fecha de ingreso':'2019-03-01','Fecha de egreso':'2025-06-30'});
+  assert.equal(ctx.personaActivaEnFecha(p,'2024-05-01'),true);
+  assert.equal(ctx.personaActivaEnFecha(p,'2025-09-01'),false);
+});
+
+// ─── El perfil del checklist ──────────────────────────────────────────────────
+// Lo usan los dos lugares que crean tarjetas de ingreso: la sincro automática
+// y el reingreso.
+test('perfilChecklistDeRol traduce el rol al perfil del checklist', ()=>{
+  const ctx=ctxRe();
+  assert.equal(ctx.perfilChecklistDeRol('Engineer'),'Engineer');
+  assert.equal(ctx.perfilChecklistDeRol('Core Team'),'Core Team');
+  assert.equal(ctx.perfilChecklistDeRol('Manager'),'Core Team');
+  assert.equal(ctx.perfilChecklistDeRol('Lead'),'Core Team');
+  assert.equal(ctx.perfilChecklistDeRol('TEM'),'Otro');
+  assert.equal(ctx.perfilChecklistDeRol(''),'Otro');
+});

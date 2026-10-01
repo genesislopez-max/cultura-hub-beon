@@ -23,8 +23,15 @@ function personaActivaEnFecha(persona,fechaStr){
   const fecha=new Date(fechaStr+'T12:00:00');
   const ingreso=f['Fecha de ingreso']?new Date(f['Fecha de ingreso']+'T00:00:00'):null;
   const egreso=f['Fecha de egreso']?new Date(f['Fecha de egreso']+'T00:00:00'):null;
+  const reingreso=f['Fecha de reingreso']?new Date(f['Fecha de reingreso']+'T00:00:00'):null;
   if(ingreso&&fecha<ingreso) return false;
-  if(egreso&&fecha>=egreso) return false;
+  if(egreso&&fecha>=egreso){
+    // Se fue — salvo que haya vuelto después y la fecha que se está mirando sea
+    // posterior al reingreso. Sin esto, alguien que reingresó figuraba como no
+    // activo en todo lo que pregunta "quién estaba el día X".
+    const volvio=reingreso&&reingreso>egreso&&fecha>=reingreso;
+    if(!volvio) return false;
+  }
   return true;
 }
 function daysTo(ds){

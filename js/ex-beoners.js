@@ -213,7 +213,8 @@ function abrirReingreso(id,nombre){
 <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;line-height:1.6;color:var(--text2)">
   <div style="font-weight:700;color:var(--text);margin-bottom:6px">Qué se mantiene</div>
   Ingresó el <b>${fmt(f['Fecha de ingreso'])}</b> y se fue el <b>${fmt(f['Fecha de egreso'])}</b>. Esas dos fechas no se tocan: quedan en su ficha como su paso anterior por BEON.<br>
-  Conserva sus beneficios, su nivel <b>${normalizarNivel(f['Nivel Loyalty'])}</b> y su antigüedad desde el ingreso original.
+  Conserva sus beneficios, su nivel <b>${normalizarNivel(f['Nivel Loyalty'])}</b> y su antigüedad desde el ingreso original.<br>
+  Se le crea una tarjeta nueva en el Kanban de <b>Ingresos</b>: el onboarding hay que hacerlo de nuevo.
 </div>`,
     save:async()=>{
       const fecha=document.getElementById('f-rei-fecha')?.value||'';
@@ -223,6 +224,22 @@ function abrirReingreso(id,nombre){
         return false;
       }
       await atPatch(`Personas/${id}`,{'Fecha de reingreso':fecha});
+      // Vuelve a entrar a la empresa: accesos, listas, cuentas y presentación
+      // hay que rehacerlos igual que con cualquier ingreso. La tarjeta vieja
+      // (si hizo el onboarding por el Hub la primera vez) no se toca: queda en
+      // Onboarding completo como el registro de aquella vez.
+      try{
+        await atPost('Checklist',{
+          Persona:nombre,
+          Tipo:'Ingreso',
+          Rol:perfilChecklistDeRol(f['Rol en empresa']||''),
+          Fecha:fecha,
+          EstadoKanban:'Pre-ingreso',
+        });
+      }catch(e){
+        // El reingreso ya quedó guardado; esto es lo que se puede reintentar.
+        toast('El reingreso se guardó, pero no se pudo crear la tarjeta de onboarding: '+e.message,true);
+      }
       sendSlack(`🔄 *Reingreso a BEON*\n*${nombre}* vuelve al equipo el ${fmt(fecha)} — mantiene sus beneficios y su nivel ${normalizarNivel(f['Nivel Loyalty'])} 🎉`);
       return true;
     },

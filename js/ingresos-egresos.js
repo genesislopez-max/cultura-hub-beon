@@ -379,6 +379,15 @@ async function guardarDatosDenormalizados(checklistId,campos,nombre){
   }
 }
 
+// Qué perfil de checklist le toca a un rol. El checklist de ingreso tiene
+// ítems distintos para Engineer y para Core Team (ver ITEMS_INGRESO_MAP), y
+// esta traducción la necesitan los dos lugares que crean tarjetas: la sincro
+// automática de Personas y el reingreso de un ex BEONer.
+function perfilChecklistDeRol(rol){
+  if(rol==='Engineer') return 'Engineer';
+  return (rol==='Core Team'||rol==='Manager'||rol==='Lead')?'Core Team':'Otro';
+}
+
 async function sincronizarPersonasEnKanban(personasRecs){
   const checklistRecs=await atGet('Checklist','&filterByFormula={Tipo}="Ingreso"').then(d=>d.records||[]).catch(()=>[]);
   const checklistPorNombre=new Map(checklistRecs.map(r=>[(r.fields.Persona||'').trim().toLowerCase(),r]));
@@ -413,7 +422,7 @@ async function sincronizarPersonasEnKanban(personasRecs){
     // No tiene checklist todavía → creamos primero lo esencial, así la tarjeta
     // y el aviso de Slack no dependen de que Proyecto/Mail/País existan como
     // columnas en Airtable (eso se intenta aparte, es "nice to have").
-    const perfilChecklist=rol==='Engineer'?'Engineer':rol==='Core Team'||rol==='Manager'||rol==='Lead'?'Core Team':'Otro';
+    const perfilChecklist=perfilChecklistDeRol(rol);
     const camposBase={
       Persona:nombre,
       Tipo:'Ingreso',

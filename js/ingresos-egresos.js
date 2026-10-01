@@ -530,9 +530,22 @@ async function loadKanbanIngresos(){
   if(ingresosDelMes.length>5) moreEl.innerHTML=`Ver los ${ingresosDelMes.length} <i class="ti ti-arrow-right"></i>`;
 }
 
+// ¿Esta persona se fue y volvió? Se busca en el caché de Personas, que es
+// donde viven las fechas; si no está (nombre que no matchea, caché todavía sin
+// cargar), se asume que no volvió y la tarjeta se muestra como siempre.
+function volvioABeon(nombrePersona){
+  const nombre=normalizarNombre(nombrePersona);
+  if(!nombre) return false;
+  const p=(cachePersonasRaw||[]).find(x=>normalizarNombre(x.fields.Nombre)===nombre);
+  return !!p&&reingresoVigente(p);
+}
+
 async function loadKanbanEgresos(){
   const d=await atGet('Checklist','&filterByFormula={Tipo}="Egreso"').catch(()=>({records:[]}));
-  const recs=d.records||[];
+  // La tarjeta de quien después volvió a BEON no se borra —el offboarding
+  // ocurrió y queda registrado— pero sale del tablero: dejarla ahí mostraría
+  // en Offboarding a alguien que está trabajando hoy.
+  const recs=(d.records||[]).filter(r=>!volvioABeon(r.fields.Persona));
 
   recs.forEach(r=>{
     const items=getItems('Egreso','—');
@@ -582,7 +595,11 @@ async function loadKanbanEgresos(){
   // aviso puede ser meses anterior a la salida). Si la persona no está en
   // Personas se cae al aviso, que es lo único que queda.
   const nombresConChecklist=new Set(recs.map(r=>(r.fields.Persona||'').trim().toLowerCase()));
-  const historicos=cachePersonasRaw.filter(p=>p.fields['Fecha de egreso']&&!nombresConChecklist.has((p.fields.Nombre||'').trim().toLowerCase()));
+  // Quien volvió a BEON sale del tablero por los dos caminos: el de arriba
+  // filtra las tarjetas de Checklist, y este las "cargas históricas" (gente con
+  // Fecha de egreso y sin tarjeta). Sin esto, alguien que reingresó seguía
+  // figurando en Offboarding completo mientras trabajaba.
+  const historicos=cachePersonasRaw.filter(p=>p.fields['Fecha de egreso']&&!reingresoVigente(p)&&!nombresConChecklist.has((p.fields.Nombre||'').trim().toLowerCase()));
   const completos=[
     ...(porColumna['Offboarding completo']||[]).map(r=>({fecha:ultimoDiaDeEgreso(r),render:()=>renderEgresoCard(r)})),
     ...historicos.map(p=>({fecha:p.fields['Fecha de egreso']||'',render:()=>renderEgresoHistoricoCard(p)})),
@@ -619,6 +636,9 @@ async function loadKanbanEgresos(){
   const estadias=cachePersonasRaw.map(p=>{
     const fi=p.fields['Fecha de ingreso'],fe=p.fields['Fecha de egreso'];
     if(!fi||!fe)return null;
+    // Mismo criterio que el tablero: quien volvió no es un offboarding, así que
+    // tampoco entra en el promedio de estadía de esta pantalla.
+    if(reingresoVigente(p))return null;
     const m=(new Date(fe+'T12:00:00')-new Date(fi+'T12:00:00'))/(1000*60*60*24*30.44);
     return m>0?m:null;
   }).filter(Boolean);

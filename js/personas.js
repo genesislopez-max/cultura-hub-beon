@@ -151,7 +151,7 @@ function verFichaPersona(id){
     row('Fecha de ingreso',fmt(f['Fecha de ingreso']))+
     row('Antigüedad',calcAntiguedad(f['Fecha de ingreso']))+
     row('Fecha de cumpleaños',fmt(f['Fecha de cumpleaños']))+
-    (f['Fecha de egreso']?row('Fecha de egreso',fmt(f['Fecha de egreso'])):'')+
+    (f['Fecha de egreso']?row(reingresoVigente({fields:f})?'Paso anterior por BEON':'Fecha de egreso',periodosEnBeonTexto(f)):'')+
     row('Comentarios',f.Comentarios)+
     `<div id="pf-extra" class="pf-extra" data-persona="${(f.Nombre||'').replace(/"/g,'&quot;')}"><div class="pf-extra-cargando">Cargando el resto de la info…</div></div>`;
 
@@ -253,15 +253,55 @@ async function renderResumenPersona(nombre){
   }).join('');
 }
 
+// Qué decir en la ficha de alguien que tiene una fecha de egreso cargada. Si
+// volvió, la fecha sola mentiría ("Fecha de egreso: 30/06/2025" en la ficha de
+// alguien que está trabajando hoy): se muestran los dos hitos.
+function periodosEnBeonTexto(f){
+  const egreso=f?.['Fecha de egreso'];
+  if(!egreso) return '';
+  const reingreso=f?.['Fecha de reingreso'];
+  if(!reingresoVigente({fields:f})) {
+    // Reingreso ya acordado pero que todavía no empezó: se avisa igual, es el
+    // dato más importante de esa ficha.
+    return reingreso&&reingreso>egreso
+      ? `${fmt(egreso)} · vuelve el ${fmt(reingreso)}`
+      : fmt(egreso);
+  }
+  return `Hasta ${fmt(egreso)} · reingresó el ${fmt(reingreso)}`;
+}
+
 function closeFichaPersona(){
   document.getElementById('pf-overlay').style.display='none';
 }
 
-// Ya cumplió su último día de trabajo (Fecha de egreso vencida) — deja de
-// contar como activo en Personas, aunque el registro se mantiene en Airtable.
+// Alguien se puede ir y volver, y cuando vuelve no empieza de cero: conserva
+// sus beneficios, su nivel Loyalty y su antigüedad, porque todo cuelga de este
+// mismo registro.
+//
+// Para eso NO se borra la "Fecha de egreso": que haya trabajado antes en BEON
+// es parte de su historia y se sigue viendo en su ficha. Lo que decide si está
+// activa hoy es si hay una "Fecha de reingreso" posterior a ese egreso y ya
+// cumplida. Un reingreso a futuro (ya acordado pero que todavía no empezó) no
+// la reactiva: hasta ese día sigue afuera.
+//
+// Si más adelante se le registra un nuevo offboarding, la Fecha de egreso pasa
+// a ser posterior al reingreso y la persona vuelve a contar como egresada sola,
+// sin tocar nada más.
+function reingresoVigente(r){
+  const egreso=r?.fields?.['Fecha de egreso'];
+  const reingreso=r?.fields?.['Fecha de reingreso'];
+  if(!egreso||!reingreso||reingreso<=egreso) return false;
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  return new Date(reingreso+'T00:00:00')<=hoy;
+}
+
+// Ya cumplió su último día de trabajo (Fecha de egreso vencida) y no volvió —
+// deja de contar como activo en Personas, aunque el registro se mantiene en
+// Airtable.
 function yaEgreso(r){
   const fe=r.fields['Fecha de egreso'];
   if(!fe) return false;
+  if(reingresoVigente(r)) return false;
   const hoy=new Date();hoy.setHours(0,0,0,0);
   return new Date(fe+'T00:00:00')<=hoy;
 }
@@ -277,7 +317,7 @@ function yaEgreso(r){
 // a alguien que está en pleno offboarding es exactamente lo que hay que evitar.
 // Esas dos usan este criterio.
 function egresoRegistrado(r){
-  return !!r.fields['Fecha de egreso'];
+  return !!r.fields['Fecha de egreso']&&!reingresoVigente(r);
 }
 
 async function loadPersonas(){

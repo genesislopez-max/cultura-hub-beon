@@ -118,7 +118,8 @@ function renderExBeoners(){
       <td style="font-size:13px">${fmt(f['Fecha de ingreso'])} → ${fmt(f['Fecha de egreso'])}
         <div style="color:var(--text3);font-size:11px">${tiempoEnBeon(f)} en BEON</div></td>
       <td style="font-size:13px">${nBenef==null?'—':`${nBenef} ${nBenef===1?'registro':'registros'}`}</td>
-      <td><button class="benef-per-ver-btn" onclick="event.stopPropagation();verBenefPersona('${nombreEsc}','${grupo}','${nivel}')">Ver histórico<i class="ti ti-arrow-right"></i></button></td>
+      <td><button class="benef-per-ver-btn" onclick="event.stopPropagation();verBenefPersona('${nombreEsc}','${grupo}','${nivel}')">Ver histórico<i class="ti ti-arrow-right"></i></button>
+        ${puedeEscribir()?`<button class="benef-per-ver-btn" style="margin-left:6px" onclick="event.stopPropagation();abrirReingreso('${p.id}','${nombreEsc}')" title="Volvió a BEON: conserva beneficios, nivel y antigüedad"><i class="ti ti-rotate"></i>Reingreso</button>`:''}</td>
     </tr>`;
   }).join('');
 }
@@ -184,4 +185,46 @@ async function loadExBeoners(){
   poblarAnioExBeoners();
   renderMetricasExBeoners();
   renderExBeoners();
+}
+
+// ─── REINGRESO ────────────────────────────────────────────────────────────────
+// Cuando alguien vuelve a BEON no empieza de cero: conserva sus beneficios, su
+// nivel Loyalty y su antigüedad, porque todo cuelga del mismo registro de
+// Personas. El reingreso no es crear una persona nueva —eso partiría el
+// historial en dos fichas— ni borrar la fecha de egreso: se escribe una "Fecha
+// de reingreso" y el Hub pasa a tratarla como activa (ver reingresoVigente en
+// js/personas.js). Así queda registrado que ya había trabajado acá, con sus
+// fechas, en vez de desaparecer el paso anterior.
+function abrirReingreso(id,nombre){
+  const persona=(cachePersonasRaw||[]).find(p=>p.id===id);
+  if(!persona) { toast('No se encontró a la persona',true); return; }
+  const f=persona.fields;
+  const hoy=new Date();
+  const hoyStr=`${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}-${String(hoy.getDate()).padStart(2,'0')}`;
+  _openFormModal({
+    title:`Reingreso — ${nombre}`,
+    html:()=>`
+<div class="field-group"><label class="field-label">Fecha de reingreso *</label>
+  <input class="field-input" id="f-rei-fecha" type="date" value="${hoyStr}">
+  <div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">
+    Desde ese día vuelve a contar como parte del equipo. Si es a futuro, hasta entonces sigue figurando como ex BEONer.
+  </div>
+</div>
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:12px;line-height:1.6;color:var(--text2)">
+  <div style="font-weight:700;color:var(--text);margin-bottom:6px">Qué se mantiene</div>
+  Ingresó el <b>${fmt(f['Fecha de ingreso'])}</b> y se fue el <b>${fmt(f['Fecha de egreso'])}</b>. Esas dos fechas no se tocan: quedan en su ficha como su paso anterior por BEON.<br>
+  Conserva sus beneficios, su nivel <b>${normalizarNivel(f['Nivel Loyalty'])}</b> y su antigüedad desde el ingreso original.
+</div>`,
+    save:async()=>{
+      const fecha=document.getElementById('f-rei-fecha')?.value||'';
+      if(!fecha){ toast('La fecha de reingreso es obligatoria',true); return false; }
+      if(fecha<=(f['Fecha de egreso']||'')){
+        toast('El reingreso tiene que ser posterior al egreso',true);
+        return false;
+      }
+      await atPatch(`Personas/${id}`,{'Fecha de reingreso':fecha});
+      sendSlack(`🔄 *Reingreso a BEON*\n*${nombre}* vuelve al equipo el ${fmt(fecha)} — mantiene sus beneficios y su nivel ${normalizarNivel(f['Nivel Loyalty'])} 🎉`);
+      return true;
+    },
+  });
 }

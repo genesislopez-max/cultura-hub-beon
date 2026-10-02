@@ -799,8 +799,41 @@ function buildRolesTecnicosHTML(v){
   const chip=t=>`<label class="roltec-chip"><input type="checkbox" value="${t.replace(/"/g,'&quot;')}"${actuales.includes(t)?' checked':''}>${t}</label>`;
   return`<div id="f-per-roltec" data-roltec="1">
     <div class="roltec-chips">${opciones.map(chip).join('')||'<span style="font-size:12px;color:var(--text3)">Todavía no hay roles técnicos cargados — escribí el primero abajo.</span>'}</div>
-    <input class="field-input" id="f-per-roltec-nuevo" placeholder="Agregar otro (ej: MERN, iOS, QA) y Enter" style="margin-top:8px" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarRolTecnico();}">
+    <input class="field-input" id="f-per-roltec-nuevo" placeholder="Buscar o agregar (ej: MERN, iOS, QA)" style="margin-top:8px" oninput="filtrarRolesTecnicos()" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarRolTecnico();}">
+    <div id="f-per-roltec-aviso" style="display:none;font-size:11px;color:var(--text3);padding:4px 0 0"></div>
   </div>`;
+}
+
+// El mismo input busca y agrega: con muchos roles cargados, encontrar el que
+// se quiere tildar a ojo entre todos los chips es incómodo. Tipear filtra; si
+// no queda ninguno, Enter lo crea.
+//
+// Los que ya están tildados no se esconden nunca: perder de vista lo que se
+// eligió mientras se busca el siguiente es peor que mostrar un chip de más.
+function filtrarRolesTecnicos(){
+  const q=(document.getElementById('f-per-roltec-nuevo')?.value||'').trim().toLowerCase();
+  const cont=document.querySelector('#f-per-roltec .roltec-chips');
+  const aviso=document.getElementById('f-per-roltec-aviso');
+  if(!cont) return;
+  // Las coincidencias se cuentan aparte de lo visible: un chip ya tildado se
+  // muestra igual aunque no coincida, y si contara, "no hay ninguno" no
+  // aparecería nunca mientras haya algo elegido.
+  let coincidencias=0, exacto=false;
+  cont.querySelectorAll('.roltec-chip').forEach(chip=>{
+    const check=chip.querySelector('input[type=checkbox]');
+    const valor=(check?.value||'').toLowerCase();
+    if(valor===q) exacto=true;
+    const coincide=!q||valor.includes(q);
+    if(coincide&&q) coincidencias++;
+    chip.style.display=(coincide||check?.checked)?'':'none';
+  });
+  if(!aviso) return;
+  if(q&&!exacto){
+    aviso.style.display='block';
+    aviso.textContent=coincidencias?`Enter para agregar «${q}» como rol nuevo`:`No hay ninguno que coincida — Enter para agregar «${q}»`;
+  } else {
+    aviso.style.display='none';
+  }
 }
 
 // Suma un rol escrito a mano como un chip más, ya tildado. No se guarda nada
@@ -825,6 +858,7 @@ function agregarRolTecnico(){
     cont.appendChild(label);
   }
   input.value='';
+  filtrarRolesTecnicos(); // vuelve a mostrar todos, ya sin el filtro escrito
 }
 
 function leerRolesTecnicosForm(){

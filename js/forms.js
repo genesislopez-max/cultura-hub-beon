@@ -163,6 +163,22 @@ function nombresPersonas(filtro){
 function opcionesPersonas(filtro,seleccionada){
   return`<option value="">Seleccioná una persona…</option>${nombresPersonas(filtro).map(n=>`<option value="${n}"${n===seleccionada?' selected':''}>${n}</option>`).join('')}`;
 }
+// Ambassador Week, Off Sites y Get Together se cargan muchas veces hacia atrás,
+// así que no pueden listar solo al equipo de hoy: un Off Site de 2024 puede ser
+// de alguien que ya no está. Pero mezclarlos en una lista sola hacía que al
+// registrar algo de ahora aparecieran, entre medio, personas que hace rato no
+// están en BEON.
+//
+// Van en dos grupos: primero el equipo, y los que se fueron al final, separados
+// y rotulados. Se sigue pudiendo cargar el histórico, sin que estorben.
+function opcionesPersonasPorEstado(seleccionada){
+  const opt=n=>`<option value="${n}"${n===seleccionada?' selected':''}>${n}</option>`;
+  const enBeon=nombresPersonas(p=>!yaEgreso(p));
+  const exBeoners=nombresPersonas(yaEgreso);
+  return `<option value="">Seleccioná una persona…</option>`
+    +(enBeon.length?`<optgroup label="En BEON">${enBeon.map(opt).join('')}</optgroup>`:'')
+    +(exBeoners.length?`<optgroup label="Ya no están en BEON">${exBeoners.map(opt).join('')}</optgroup>`:'');
+}
 // conOtro: el select se armó con buildSelectConOtro() y lleva su opción final.
 // idProyectos: el form también trae un select de proyectos que rearmar.
 async function montarSelectPersonas(id,filtro,conOtro,idProyectos){
@@ -176,6 +192,7 @@ async function montarSelectPersonas(id,filtro,conOtro,idProyectos){
   if(!selAhora) return;
   selAhora.disabled=false;
   if(conOtro) poblarSelectConOtro(id,nombresPersonas(filtro));
+  else if(filtro==='porEstado') selAhora.innerHTML=opcionesPersonasPorEstado(selAhora.value);
   else selAhora.innerHTML=opcionesPersonas(filtro,selAhora.value);
   if(idProyectos) fillProyectosSelect(idProyectos,document.getElementById(idProyectos)?.value);
 }
@@ -271,16 +288,12 @@ const FORMS={
     }},
 
   ambassadors:{title:'Registrar asistencia AW',
-    onMount:()=>montarSelectPersonas('f-aw-persona'),
+    onMount:()=>montarSelectPersonas('f-aw-persona','porEstado'),
     html:()=>{
-    const personas=nombresPersonas();
     const ediciones=[...new Set(cacheAWRaw.map(r=>r.fields['Edición AW']||'').filter(Boolean))].sort();
     return`
 <div class="field-group"><label class="field-label">Persona *</label>
-  <select class="field-input" id="f-aw-persona" onchange="previewAWPct()">
-    <option value="">Seleccioná una persona…</option>
-    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
-  </select>
+  <select class="field-input" id="f-aw-persona" onchange="previewAWPct()">${opcionesPersonasPorEstado('')}</select>
 </div>
 <div class="field-group"><label class="field-label">Edición AW *</label>
   ${buildSelectConOtro('f-aw-edicion',ediciones,'','Ej: diciembre 2021')}
@@ -420,17 +433,13 @@ const FORMS={
     }},
 
   gettogether:{title:'Registrar Get Together',
-    onMount:()=>montarSelectPersonas('f-gt-persona',null,false,'f-gt-proyecto'),
+    onMount:()=>montarSelectPersonas('f-gt-persona','porEstado',false,'f-gt-proyecto'),
     html:()=>{
-    const personas=nombresPersonas();
     const proyectos=proyectosDelCache();
     const paises=[...new Set(cacheGetTogetherRaw.map(r=>r.fields['País']||'').filter(Boolean))].sort();
     return`
 <div class="field-group"><label class="field-label">BEONer *</label>
-  <select class="field-input" id="f-gt-persona">
-    <option value="">Seleccioná una persona…</option>
-    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
-  </select>
+  <select class="field-input" id="f-gt-persona">${opcionesPersonasPorEstado('')}</select>
 </div>
 <div class="field-group"><label class="field-label">País *</label>
   ${buildSelectConOtro('f-gt-pais',paises,'','Ej: Argentina')}
@@ -673,16 +682,12 @@ ${campoFechaFinProyecto('f-proy','Activo','')}`,
     }},
 
   offsites:{title:'Registrar Off Site',
-    onMount:()=>montarSelectPersonas('f-os-persona',null,false,'f-os-proyecto'),
+    onMount:()=>montarSelectPersonas('f-os-persona','porEstado',false,'f-os-proyecto'),
     html:()=>{
-    const personas=nombresPersonas();
     const proyectos=proyectosDelCache();
     return`
 <div class="field-group"><label class="field-label">Persona *</label>
-  <select class="field-input" id="f-os-persona">
-    <option value="">Seleccioná una persona…</option>
-    ${personas.map(n=>`<option value="${n}">${n}</option>`).join('')}
-  </select>
+  <select class="field-input" id="f-os-persona">${opcionesPersonasPorEstado('')}</select>
 </div>
 <div class="field-group"><label class="field-label">Proyecto</label>
   <select class="field-input" id="f-os-proyecto">

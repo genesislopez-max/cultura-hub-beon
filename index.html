@@ -327,6 +327,13 @@
                 <i class="ti ti-chevron-down et-sel-chevron"></i>
               </div>
               <div class="et-sel-wrap">
+                <i class="ti ti-code et-sel-icon"></i>
+                <select class="et-sel" id="personas-roltec-eng" onchange="filtrarPersonas('eng')">
+                  <option value="">Todos los roles técnicos</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+              <div class="et-sel-wrap">
                 <i class="ti ti-world et-sel-icon"></i>
                 <select class="et-sel" id="personas-pais-eng" onchange="cambiarPaisPersonas('eng')">
                   <option value="">Todos los países</option>
@@ -351,7 +358,7 @@
 
           <!-- Table head -->
           <div class="et-thead">
-            <div>Nombre</div><div>Rol</div><div>Nivel loyalty</div><div>Proyecto</div><div>Antigüedad</div><div>Manager</div><div></div>
+            <div>Nombre</div><div>Rol técnico</div><div>Nivel loyalty</div><div>Proyecto</div><div>Antigüedad</div><div>Manager</div><div></div>
           </div>
 
           <div class="et-rows" id="tbody-personas-eng"></div>
@@ -414,6 +421,13 @@
                 <i class="ti ti-user-star et-sel-icon"></i>
                 <select class="et-sel" id="personas-manager-core" onchange="filtrarPersonas('core')">
                   <option value="">Todos los managers</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+              <div class="et-sel-wrap">
+                <i class="ti ti-code et-sel-icon"></i>
+                <select class="et-sel" id="personas-roltec-core" onchange="filtrarPersonas('core')">
+                  <option value="">Todos los roles técnicos</option>
                 </select>
                 <i class="ti ti-chevron-down et-sel-chevron"></i>
               </div>

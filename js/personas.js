@@ -83,6 +83,26 @@ function nivelBadgeHtmlEng(recordId, nivelActual){
     </div>
   </div>`;
 }
+// Qué hace cada persona técnicamente: MERN, iOS, QA, Data… Es un dato aparte
+// de "Rol en empresa", que dice a qué grupo pertenece (Engineer, TEM, Lead,
+// Core Team…) y define a qué pestaña va y quién puede ser su manager. Mezclar
+// los dos rompería esa clasificación: un engineer MERN dejaría de ser Engineer.
+// Lo llevan sobre todo los Engineers, pero también hay gente de Core Team con
+// un rol técnico, así que el campo es de cualquiera y opcional.
+// Hay gente con más de uno (alguien full stack que además hace QA), así que en
+// Airtable es un Multiple Select y llega como array. Se acepta igual un string
+// suelto: si el campo se hubiera creado como Single Select o como texto, los
+// valores separados por coma se siguen leyendo bien en vez de romper.
+function rolesTecnicos(r){
+  const valor=r?.fields?.['Rol técnico']??r?.fields?.['Rol tecnico'];
+  const lista=Array.isArray(valor)?valor:String(valor||'').split(',');
+  return lista.map(x=>String(x||'').trim()).filter(Boolean);
+}
+function rolTecnicoTexto(r){ return rolesTecnicos(r).join(' · '); }
+function rolesTecnicosCargados(){
+  return [...new Set((cachePersonasRaw||[]).flatMap(rolesTecnicos))].sort((a,b)=>a.localeCompare(b,'es'));
+}
+
 // Fila en grid compartida por Engineers & Tech y Core Team — solo cambia
 // cómo arma cada uno el badge de rol (rolBadgeHtml), el resto de las columnas
 // es idéntico.
@@ -112,13 +132,26 @@ function personaRowHtml(r, rolBadgeHtml){
     <div class="et-open"><button onclick="event.stopPropagation();verFichaPersona('${r.id}')"><i class="ti ti-chevron-right"></i></button></div>
   </div>`;
 }
+// En Engineers & Tech esa columna decía "Engineer" en todas las filas: no
+// distinguía a nadie. Ahí va el rol técnico, y si todavía no está cargado se
+// cae al rol en empresa para no dejar la celda vacía.
 function rowHtmlEng(r){
-  const rol=r.fields['Rol en empresa']||'Engineer';
-  return personaRowHtml(r, rol?`<span class="badge badge-blue"><i class="ti ti-code"></i>${rol}</span>`:'—');
+  const tec=rolesTecnicos(r);
+  if(!tec.length){
+    const rol=r.fields['Rol en empresa']||'Engineer';
+    return personaRowHtml(r, `<span class="badge badge-gray" title="Sin rol técnico cargado"><i class="ti ti-code"></i>${rol}</span>`);
+  }
+  // Uno por badge: con dos o tres roles, un solo chip con todo adentro se
+  // vuelve ilegible y además no se distingue de un rol que se llame así.
+  return personaRowHtml(r, tec.map(t=>`<span class="badge badge-blue" style="margin-right:3px" title="Rol técnico"><i class="ti ti-code"></i>${t}</span>`).join(''));
 }
+// En Core Team el rol en empresa sí distingue (Manager, Lead, TEM…), así que
+// se queda, y el rol técnico se suma al lado cuando la persona tiene uno.
 function rowHtmlCore(r){
   const rol=r.fields['Rol en empresa']||'';
-  return personaRowHtml(r, rol?`<span class="badge ${rolColor[rol]||'badge-gray'}"><i class="ti ti-briefcase"></i>${rol}</span>`:'—');
+  const tec=rolesTecnicos(r);
+  const badgeRol=rol?`<span class="badge ${rolColor[rol]||'badge-gray'}"><i class="ti ti-briefcase"></i>${rol}</span>`:'—';
+  return personaRowHtml(r, badgeRol+tec.map(t=>`<span class="badge badge-blue" style="margin-left:4px" title="Rol técnico"><i class="ti ti-code"></i>${t}</span>`).join(''));
 }
 
 // Ficha completa de la persona — se abre al clickear el nombre en la tabla,
@@ -144,6 +177,7 @@ function verFichaPersona(id){
   document.getElementById('pf-body').innerHTML=
     row('Correo',f.Mail)+
     (area?row('Área',area):'')+
+    (rolTecnicoTexto({fields:f})?row('Rol técnico',rolTecnicoTexto({fields:f})):'')+
     row('Proyecto',f.Proyecto)+
     row('Manager',f.Manager)+
     row('País',f['País'])+
@@ -600,6 +634,7 @@ function filtrarPersonas(grupo){
   const loyalty=document.getElementById(`personas-loyalty-${grupo}`)?.value||'';
   const proyecto=document.getElementById(`personas-proyecto-${grupo}`)?.value||'';
   const manager=document.getElementById(`personas-manager-${grupo}`)?.value||'';
+  const rolTec=document.getElementById(`personas-roltec-${grupo}`)?.value||'';
   const pais=(document.getElementById(`personas-pais-${grupo}`)?.value||'').toLowerCase();
   const ciudadFil=(document.getElementById(`personas-ciudad-${grupo}`)?.value||'').toLowerCase();
 
@@ -612,9 +647,12 @@ function filtrarPersonas(grupo){
     const matchLoyalty=!loyalty||normalizarNivel(f['Nivel Loyalty'])===loyalty;
     const matchProyecto=!proyecto||(f.Proyecto||'')===proyecto;
     const matchManager=!manager||(f.Manager||'')===manager;
+    // "(sin cargar)" es un valor propio del filtro, para encontrar a quién le
+    // falta el dato — que al principio van a ser casi todos.
+    const matchRolTec=!rolTec||(rolTec==='(sin cargar)'?!rolesTecnicos(r).length:rolesTecnicos(r).includes(rolTec));
     const matchPais=!pais||valorUbicacion(f['País']).toLowerCase()===pais;
     const matchCiudad=!ciudadFil||ciudad===ciudadFil;
-    return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager&&matchPais&&matchCiudad;
+    return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager&&matchPais&&matchCiudad&&matchRolTec;
   };
 
   const all=pagState[grupo].all||pagState[grupo].data;
@@ -662,6 +700,7 @@ function poblarFiltrosPersonas(){
       const placeholder=grupo==='eng'?'Todos los TEMs':'Todos los managers';
       selMgr.innerHTML=`<option value="">${placeholder}</option>`+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
     }
+    poblarFiltroRolTecnico(grupo);
     poblarFiltroPais(grupo);
     poblarFiltroCiudad(grupo);
   });
@@ -677,6 +716,22 @@ function opcionesUnicas(valores){
     if(!vistos.has(clave)) vistos.set(clave,v);
   });
   return [...vistos.values()].sort((a,b)=>a.localeCompare(b,'es'));
+}
+
+// Las opciones salen de lo que hay cargado, no de una lista fija: el catálogo
+// de roles técnicos lo define la gente al completar el campo en Airtable.
+// "(sin cargar)" va al final y sirve para la etapa de carga: encontrar a quién
+// le falta el dato.
+function poblarFiltroRolTecnico(grupo){
+  const sel=document.getElementById(`personas-roltec-${grupo}`);
+  if(!sel) return;
+  const actual=sel.value;
+  const datos=pagState[grupo].all||[];
+  const roles=opcionesUnicas(datos.flatMap(rolesTecnicos));
+  const faltan=datos.some(p=>!rolesTecnicos(p).length);
+  sel.innerHTML='<option value="">Todos los roles técnicos</option>'
+    +roles.map(r=>`<option value="${r}"${r===actual?' selected':''}>${r}</option>`).join('')
+    +(faltan?`<option value="(sin cargar)"${actual==='(sin cargar)'?' selected':''}>Sin rol técnico cargado</option>`:'');
 }
 
 function poblarFiltroPais(grupo){

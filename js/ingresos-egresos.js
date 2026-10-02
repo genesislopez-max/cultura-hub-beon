@@ -138,7 +138,12 @@ function renderCard(r,tipo){
   const proyecto=pf.Proyecto||f.Proyecto;
   const mail=pf.Mail||f.Mail;
   const pais=pf['País']||f['País'];
-  const fechaMostrar=tipo==='Ingreso'?(pf['Fecha de ingreso']||f.Fecha):f.Fecha;
+  // La tarjeta de un ingreso muestra la fecha de ingreso que vive en Personas
+  // (más confiable que la copia del Checklist). La de un reingreso no: ahí esa
+  // fecha es la de la PRIMERA vez, y la tarjeta quedaba igual a la del paso
+  // anterior. Para esas vale su propia fecha, que es cuando volvió.
+  const deReingreso=tipo==='Ingreso'&&esTarjetaDeReingreso(r);
+  const fechaMostrar=tipo==='Ingreso'?(deReingreso?f.Fecha:(pf['Fecha de ingreso']||f.Fecha)):f.Fecha;
   const cumple=pf['Fecha de cumpleaños'];
   const div=document.createElement('div');
   div.className='kanban-card';
@@ -153,7 +158,7 @@ function renderCard(r,tipo){
       ${pais?`🌎 ${pais}<br>`:''}
       ${fechaMostrar?`📅 ${fmt(fechaMostrar)}<br>`:''}
       ${cumple?`🎂 ${fmt(cumple)}<br>`:''}
-      <span class="badge ${rbc}" style="margin-top:3px">${rol}</span>
+      <span class="badge ${rbc}" style="margin-top:3px">${rol}</span>${deReingreso?`<span class="badge badge-amber" style="margin-top:3px;margin-left:4px" title="Ya había trabajado en BEON: el onboarding se hace de nuevo">Reingreso</span>`:''}
     </div>
     <div class="kc-progress">
       <div class="kc-bar"><div class="kc-bar-fill" style="width:${pct}%"></div></div>
@@ -391,6 +396,15 @@ function perfilChecklistDeRol(rol){
 async function sincronizarPersonasEnKanban(personasRecs){
   const checklistRecs=await atGet('Checklist','&filterByFormula={Tipo}="Ingreso"').then(d=>d.records||[]).catch(()=>[]);
   const checklistPorNombre=new Map(checklistRecs.map(r=>[(r.fields.Persona||'').trim().toLowerCase(),r]));
+  // Una persona puede tener más de una tarjeta de ingreso: la de cuando entró
+  // y la de cuando volvió. El mapa de arriba se queda con una sola, así que
+  // para saber si le falta la de ESTA vuelta hacen falta todas.
+  const tarjetasPorNombre=new Map();
+  checklistRecs.forEach(r=>{
+    const clave=(r.fields.Persona||'').trim().toLowerCase();
+    if(!tarjetasPorNombre.has(clave)) tarjetasPorNombre.set(clave,[]);
+    tarjetasPorNombre.get(clave).push(r);
+  });
   for(const p of personasRecs){
     const nombre=(p.fields.Nombre||'').trim();
     if(!nombre) continue;
@@ -399,6 +413,35 @@ async function sincronizarPersonasEnKanban(personasRecs){
     if(p.fields.Proyecto) denormalizados.Proyecto=p.fields.Proyecto;
     if(p.fields.Mail) denormalizados.Mail=p.fields.Mail;
     if(p.fields['País']) denormalizados['País']=p.fields['País'];
+
+    // Reingresó y todavía no tiene la tarjeta de esta vuelta. Va ANTES de las
+    // dos ramas de abajo porque las dos lo dejaban afuera: "ya tiene tarjeta"
+    // da por buena la del paso anterior, y el corte por Fecha de egreso aplica
+    // a quien volvió, porque esa fecha se conserva a propósito. Sin esto,
+    // alguien que reingresó no aparecía nunca en el Kanban de Ingresos.
+    const reingreso=reingresoVigente(p)?(p.fields['Fecha de reingreso']||''):'';
+    if(reingreso){
+      const deEstaVuelta=(tarjetasPorNombre.get(nombre.toLowerCase())||[])
+        .some(r=>(r.fields.Fecha||'')>=reingreso);
+      if(!deEstaVuelta){
+        try{
+          const nuevo=await atPost('Checklist',{
+            Persona:nombre,
+            Tipo:'Ingreso',
+            Rol:perfilChecklistDeRol(rol),
+            Fecha:reingreso,
+            EstadoKanban:'Pre-ingreso',
+          });
+          // Sin aviso a Slack: el reingreso ya se anunció cuando se registró, y
+          // acá se está completando lo que faltaba, no dando una noticia nueva.
+          const idNuevo=nuevo?.records?.[0]?.id;
+          if(idNuevo) await guardarDatosDenormalizados(idNuevo,denormalizados,nombre);
+        }catch(e){
+          console.error(`Error creando el checklist de reingreso de "${nombre}":`,e);
+        }
+      }
+      continue;
+    }
 
     const existente=checklistPorNombre.get(nombre.toLowerCase());
     if(existente){
@@ -445,6 +488,19 @@ async function sincronizarPersonasEnKanban(personasRecs){
   }
 }
 
+// ¿Esta tarjeta de ingreso es la de un reingreso? Es la que arranca en la fecha
+// en que la persona volvió (o después). No hay un campo que lo marque: se
+// deduce de Personas, que es donde viven las fechas.
+function esTarjetaDeReingreso(r){
+  const fecha=r?.fields?.Fecha||'';
+  if(!fecha) return false;
+  const nombre=normalizarNombre(r?.fields?.Persona);
+  if(!nombre) return false;
+  const p=(cachePersonasRaw||[]).find(x=>normalizarNombre(x.fields.Nombre)===nombre);
+  if(!p||!reingresoVigente(p)) return false;
+  return fecha>=(p.fields['Fecha de reingreso']||'');
+}
+
 async function loadKanbanIngresos(){
   const d=await atGet('Checklist','&filterByFormula={Tipo}="Ingreso"').catch(()=>({records:[]}));
   const recs=d.records||[];
@@ -461,8 +517,18 @@ async function loadKanbanIngresos(){
   for(const r of recs){
     const fecha=r.fields.Fecha||'';
     const dias=fecha?Math.floor((new Date()-new Date(fecha+'T12:00:00'))/86400000):-1;
-    const esViejoPorTiempo=dias>=15;
-    const etapaCalc=calcularEtapa('Ingreso',r.fields.Rol||'Otro',clState[r.id],fecha);
+    // Una tarjeta de reingreso no se autocompleta aunque la fecha sea vieja: el
+    // sentido de crearla es que el onboarding se haga de nuevo, y darlo por
+    // hecho por antigüedad lo tacha entero sin que nadie lo haya tocado. La de
+    // un ingreso normal sí: ahí la fecha vieja significa que la carga llegó
+    // tarde, no que queden pasos pendientes.
+    const deReingreso=esTarjetaDeReingreso(r);
+    const esViejoPorTiempo=dias>=15&&!deReingreso;
+    // calcularEtapa() tiene su PROPIA regla de antigüedad (14 días desde la
+    // fecha de ingreso ⇒ "Onboarding completo"), así que saltear la de arriba
+    // no alcanzaba: la tarjeta terminaba completa por este otro camino. Sin
+    // fecha, la etapa sale de los ítems tildados, que es lo que corresponde.
+    const etapaCalc=calcularEtapa('Ingreso',r.fields.Rol||'Otro',clState[r.id],deReingreso?'':fecha);
 
     if(esViejoPorTiempo && r.fields.EstadoKanban!=='Onboarding completo'){
       // Marcar todos los ítems como completados

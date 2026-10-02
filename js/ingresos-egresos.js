@@ -150,6 +150,8 @@ function renderCard(r,tipo){
   div.dataset.nombre=nombre.toLowerCase();
   div.dataset.proyecto=(proyecto||'').toLowerCase();
   div.dataset.manager=(pf.Manager||'').toLowerCase();
+  // Cuántos pasos le faltan, para el filtro "Con pasos pendientes".
+  div.dataset.pendientes=String(total-comp);
   div.innerHTML=`
     <div class="kc-name">${avH(nombre)}${nombre}</div>
     <div class="kc-meta">
@@ -231,6 +233,8 @@ function renderEgresoCard(r){
   div.dataset.nombre=nombre.toLowerCase();
   div.dataset.proyecto=(proyecto||'').toLowerCase();
   div.dataset.manager=(pf.Manager||'').toLowerCase();
+  // Cuántos pasos le faltan, para el filtro "Con pasos pendientes".
+  div.dataset.pendientes=String(total-comp);
   div.innerHTML=`
     <div class="eg-card-top">
       ${avH(nombre)}
@@ -311,9 +315,10 @@ function renderEgresoHistoricoCard(p){
 // Filtro por nombre/proyecto sobre las tarjetas ya renderizadas — no hace
 // falta volver a pedir los datos ni re-renderizar el board, solo mostrar/
 // ocultar cards vía sus data-attributes.
-function filtrarKanbanChecklist(boardId,inputId,temSelectId){
+function filtrarKanbanChecklist(boardId,inputId,temSelectId,pendientesSelectId){
   const q=(document.getElementById(inputId)?.value||'').trim().toLowerCase();
   const tem=(temSelectId?document.getElementById(temSelectId)?.value:'')||'';
+  const soloPendientes=(pendientesSelectId?document.getElementById(pendientesSelectId)?.value:'')||'';
   const board=document.getElementById(boardId);
   if(!board) return;
   // Ingresos usa .kanban-card, Egresos usa .eg-card (rediseño "Egresos
@@ -321,10 +326,21 @@ function filtrarKanbanChecklist(boardId,inputId,temSelectId){
   board.querySelectorAll('.kanban-card, .eg-card').forEach(card=>{
     const matchQ=!q||(card.dataset.nombre||'').includes(q)||(card.dataset.proyecto||'').includes(q);
     const matchTem=!tem||(card.dataset.manager||'')===tem.toLowerCase();
-    card.style.display=matchQ&&matchTem?'':'none';
+    // data-pendientes lo escribe renderCard con cuántos pasos faltan. Se
+    // compara contra '0' y no se parsea: una tarjeta sin el dato (por ejemplo
+    // las de Egreso, que no usan este filtro) no debe desaparecer.
+    const matchPend=!soloPendientes||(card.dataset.pendientes||'0')!=='0';
+    card.style.display=matchQ&&matchTem&&matchPend?'':'none';
+  });
+  // El contador de cada columna tiene que seguir al filtro: si no, decía "4"
+  // arriba de una columna con una sola tarjeta a la vista.
+  board.querySelectorAll('[data-col]').forEach(col=>{
+    const visibles=[...col.querySelectorAll('.kanban-card, .eg-card')].filter(c=>c.style.display!=='none').length;
+    const cnt=col.querySelector('.kanban-col-count, .eg-col-count');
+    if(cnt) cnt.textContent=visibles;
   });
 }
-function filtrarIngresos(){ filtrarKanbanChecklist('kb-ingresos','ingresos-search','ingresos-tem'); }
+function filtrarIngresos(){ filtrarKanbanChecklist('kb-ingresos','ingresos-search','ingresos-tem','ingresos-pendientes'); }
 function filtrarEgresos(){ filtrarKanbanChecklist('kb-egresos','egresos-search','egresos-tem'); }
 
 function confirmarEliminar(checklistId, nombre){
@@ -513,33 +529,22 @@ async function loadKanbanIngresos(){
     recMeta[r.id]={tipo:'Ingreso',rol:r.fields.Rol||'Otro',fecha:r.fields.Fecha||'',etapa:r.fields.EstadoKanban||'Pre-ingreso'};
   });
 
-  // Avance automático por tiempo
+  // Avance automático: una tarjeta pasa a "Onboarding completo" cuando sus
+  // pasos están completos, y solo por eso.
+  //
+  // Antes también pasaba sola a los 15 días del ingreso, y no se limitaba a
+  // mover la tarjeta: marcaba los 14 ítems como hechos y lo guardaba en
+  // Airtable. Un onboarding a medias terminaba archivado como completo y sin
+  // forma de saber qué había quedado pendiente, que es justo lo que hay que
+  // poder ver. La regla de los 14 días que tiene calcularEtapa() hacía lo mismo
+  // por otro camino, así que acá la etapa se calcula sin pasarle fecha: sale de
+  // los ítems tildados.
+  //
+  // Solo avanza, nunca retrocede: si alguien arrastró la tarjeta a mano a una
+  // columna más adelantada, se respeta.
   for(const r of recs){
-    const fecha=r.fields.Fecha||'';
-    const dias=fecha?Math.floor((new Date()-new Date(fecha+'T12:00:00'))/86400000):-1;
-    // Una tarjeta de reingreso no se autocompleta aunque la fecha sea vieja: el
-    // sentido de crearla es que el onboarding se haga de nuevo, y darlo por
-    // hecho por antigüedad lo tacha entero sin que nadie lo haya tocado. La de
-    // un ingreso normal sí: ahí la fecha vieja significa que la carga llegó
-    // tarde, no que queden pasos pendientes.
-    const deReingreso=esTarjetaDeReingreso(r);
-    const esViejoPorTiempo=dias>=15&&!deReingreso;
-    // calcularEtapa() tiene su PROPIA regla de antigüedad (14 días desde la
-    // fecha de ingreso ⇒ "Onboarding completo"), así que saltear la de arriba
-    // no alcanzaba: la tarjeta terminaba completa por este otro camino. Sin
-    // fecha, la etapa sale de los ítems tildados, que es lo que corresponde.
-    const etapaCalc=calcularEtapa('Ingreso',r.fields.Rol||'Otro',clState[r.id],deReingreso?'':fecha);
-
-    if(esViejoPorTiempo && r.fields.EstadoKanban!=='Onboarding completo'){
-      // Marcar todos los ítems como completados
-      const totalItems=clState[r.id].length;
-      clState[r.id]=Array(totalItems).fill(true);
-      const patch={EstadoKanban:'Onboarding completo',ItemsCompletados:JSON.stringify(clState[r.id])};
-      await atPatch(`Checklist/${r.id}`,patch).catch(()=>{});
-      r.fields.EstadoKanban='Onboarding completo';
-      r.fields.ItemsCompletados=patch.ItemsCompletados;
-      if(recMeta[r.id]) recMeta[r.id].etapa='Onboarding completo';
-    } else if(!esViejoPorTiempo && etapaCalc==='Onboarding completo' && r.fields.EstadoKanban!=='Onboarding completo'){
+    const etapaCalc=calcularEtapa('Ingreso',r.fields.Rol||'Otro',clState[r.id],'');
+    if(etapaCalc==='Onboarding completo' && r.fields.EstadoKanban!=='Onboarding completo'){
       await atPatch(`Checklist/${r.id}`,{EstadoKanban:etapaCalc}).catch(()=>{});
       r.fields.EstadoKanban=etapaCalc;
       if(recMeta[r.id]) recMeta[r.id].etapa=etapaCalc;
@@ -587,6 +592,9 @@ async function loadKanbanIngresos(){
   });
   setupDragDrop('kb-ingresos');
   poblarSelectorTEM('ingresos-tem');
+  // El tablero se rearma entero: si había un filtro puesto, se vuelve a
+  // aplicar para no mostrar de golpe todas las tarjetas otra vez.
+  filtrarIngresos();
 
   // Card inicio — ingresos del mes
   const now=new Date();

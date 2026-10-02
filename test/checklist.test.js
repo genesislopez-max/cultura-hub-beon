@@ -152,3 +152,29 @@ test('getActiveIndexes: en Egreso no incluye las posiciones de los ítems dados 
   for(const idx of idxsInactivos) assert.ok(!activos.includes(idx));
   assert.equal(activos.length,items.length-idxsInactivos.length);
 });
+
+// ─── La etapa sale de los pasos, no del calendario ────────────────────────────
+// El Kanban de Ingresos daba por completo un onboarding a los 15 días del
+// ingreso, y no solo movía la tarjeta: marcaba los ítems como hechos. Un
+// onboarding a medias quedaba archivado como completo y sin forma de saber qué
+// faltaba. Ahora calcula la etapa sin pasarle fecha, que es este caso.
+test('sin fecha, la etapa sale de los ítems tildados', ()=>{
+  const items=ctx.getItemsMap('Ingreso','Engineer');
+  const activos=ctx.getActiveIndexes('Ingreso','Engineer');
+  const ninguno=items.map(()=>false);
+  const todos=items.map(()=>true);
+  assert.equal(ctx.calcularEtapa('Ingreso','Engineer',ninguno,''),'Pre-ingreso');
+  assert.equal(ctx.calcularEtapa('Ingreso','Engineer',todos,''),'Onboarding completo');
+  // Con uno solo sin tildar no está completo, por viejo que sea el ingreso.
+  const casiTodos=items.map((_,i)=>i!==activos[activos.length-1]);
+  assert.notEqual(ctx.calcularEtapa('Ingreso','Engineer',casiTodos,''),'Onboarding completo');
+});
+
+test('con fecha vieja sigue existiendo el atajo, para quien lo use', ()=>{
+  // La regla de los 14 días no se borró: se dejó de usar en el Kanban de
+  // Ingresos. Este test la fija para que un cambio futuro no la mueva sin
+  // darse cuenta de que el Kanban depende de NO pasarle fecha.
+  const items=ctx.getItemsMap('Ingreso','Engineer');
+  const ninguno=items.map(()=>false);
+  assert.equal(ctx.calcularEtapa('Ingreso','Engineer',ninguno,'2020-01-01'),'Onboarding completo');
+});

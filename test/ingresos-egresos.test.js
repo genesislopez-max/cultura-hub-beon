@@ -4,7 +4,10 @@ const assert=require('node:assert/strict');
 const {loadApp}=require('../test-helpers/load-app');
 
 // state.js aporta clState/recMeta/cachePersonasRaw, que deleteIngreso limpia.
-const ctx=loadApp(['constants.js','state.js','utils.js','api.js','ingresos-egresos.js']);
+// personas.js aporta reingresoVigente(), que sincronizarPersonasEnKanban usa
+// para saber si a la persona le falta la tarjeta de su vuelta. En el navegador
+// los dos archivos conviven; acá hay que cargarlo igual.
+const ctx=loadApp(['constants.js','state.js','utils.js','api.js','personas.js','ingresos-egresos.js']);
 
 function mockAirtable(ctx,{checklistRecs=[]}={}){
   const posts=[];

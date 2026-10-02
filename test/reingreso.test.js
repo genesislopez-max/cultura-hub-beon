@@ -197,3 +197,42 @@ test('perfilChecklistDeRol traduce el rol al perfil del checklist', ()=>{
   assert.equal(ctx.perfilChecklistDeRol('TEM'),'Otro');
   assert.equal(ctx.perfilChecklistDeRol(''),'Otro');
 });
+
+// ─── La tarjeta de ingreso de quien volvió ────────────────────────────────────
+// Dos ramas de sincronizarPersonasEnKanban dejaban afuera a quien reingresó:
+// "ya tiene tarjeta" daba por buena la del paso anterior, y el corte por Fecha
+// de egreso aplica a quien volvió, porque esa fecha se conserva a propósito.
+// Resultado: la tarjeta no aparecía nunca.
+test('se reconoce la tarjeta de esta vuelta y no la del paso anterior', ()=>{
+  const ctx=ctxRe();
+  sembrar(ctx,'cachePersonasRaw',[
+    {id:'p1',fields:{Nombre:'Vuelve Pérez','Fecha de ingreso':'2019-03-01','Fecha de egreso':'2025-06-30','Fecha de reingreso':'2026-01-15'}},
+  ]);
+  const vieja={fields:{Persona:'Vuelve Pérez',Tipo:'Ingreso',Fecha:'2019-03-01'}};
+  const nueva={fields:{Persona:'Vuelve Pérez',Tipo:'Ingreso',Fecha:'2026-01-15'}};
+  assert.equal(ctx.esTarjetaDeReingreso(vieja),false);
+  assert.equal(ctx.esTarjetaDeReingreso(nueva),true);
+});
+
+test('la tarjeta de alguien que nunca se fue no es de reingreso', ()=>{
+  const ctx=ctxRe();
+  sembrar(ctx,'cachePersonasRaw',[{id:'p2',fields:{Nombre:'Sigue Acá','Fecha de ingreso':'2019-03-01'}}]);
+  assert.equal(ctx.esTarjetaDeReingreso({fields:{Persona:'Sigue Acá',Fecha:'2019-03-01'}}),false);
+  assert.equal(ctx.esTarjetaDeReingreso({fields:{Persona:'Quien Sea',Fecha:'2026-01-15'}}),false);
+  assert.equal(ctx.esTarjetaDeReingreso({fields:{}}),false);
+  assert.equal(ctx.esTarjetaDeReingreso(null),false);
+});
+
+// El avance automático marca como completo lo que tiene 15 días o más. Para un
+// reingreso cargado con fecha pasada eso tacha los 14 pasos de un saque, que es
+// lo contrario de para qué se crea la tarjeta.
+test('una tarjeta de reingreso vieja no se autocompleta', ()=>{
+  const ctx=ctxRe();
+  sembrar(ctx,'cachePersonasRaw',[
+    {id:'p1',fields:{Nombre:'Volvió Hace Un Mes','Fecha de ingreso':'2019-03-01','Fecha de egreso':'2025-06-30','Fecha de reingreso':`${ANIO}-01-15`}},
+  ]);
+  const tarjeta={fields:{Persona:'Volvió Hace Un Mes',Tipo:'Ingreso',Fecha:`${ANIO}-01-15`}};
+  const dias=Math.floor((new Date()-new Date(tarjeta.fields.Fecha+'T12:00:00'))/86400000);
+  assert.equal(dias>=15,true); // la fecha ya es vieja
+  assert.equal(dias>=15&&!ctx.esTarjetaDeReingreso(tarjeta),false); // y aun así no se autocompleta
+});

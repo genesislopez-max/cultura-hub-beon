@@ -235,3 +235,23 @@ test('el rol técnico no se confunde con el rol en empresa', ()=>{
   assert.equal(ctx.rolesTecnicos(eng).length,0);
   assert.equal(ctx.getRolGroup(eng.fields['Rol en empresa']),'Engineers');
 });
+
+// ─── El nivel al editar una persona ───────────────────────────────────────────
+// El <select> de nivel se preseleccionaba comparando el valor crudo de Airtable
+// contra la lista: un "Lightning " con un espacio de más no matcheaba ninguna
+// opción, el navegador dejaba marcada la primera (Spark) y guardar escribía
+// Spark encima del nivel real — aunque se hubiera entrado a editar el proyecto.
+test('normalizarNivel reconoce espacios y mayúsculas', ()=>{
+  assert.equal(ctx.normalizarNivel('Lightning '),'Lightning');
+  assert.equal(ctx.normalizarNivel(' thunder'),'Thunder');
+  assert.equal(ctx.normalizarNivel('STORM'),'Storm');
+});
+
+// Un valor que no es ninguno de los cinco (un typo cargado en Airtable) no se
+// puede descartar en silencio: normalizarNivel lo manda a Spark para mostrarlo,
+// pero el form tiene que conservarlo tal cual para no pisarlo al guardar.
+test('normalizarNivel cae en Spark con un valor desconocido', ()=>{
+  assert.equal(ctx.normalizarNivel('Lighting'),'Spark');
+  assert.equal(ctx.normalizarNivel(''),'Spark');
+  assert.equal(ctx.normalizarNivel(null),'Spark');
+});

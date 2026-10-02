@@ -798,10 +798,25 @@ function buildRolesTecnicosHTML(v){
   const opciones=[...new Set([...actuales,...rolesTecnicosCargados()])];
   const chip=t=>`<label class="roltec-chip"><input type="checkbox" value="${t.replace(/"/g,'&quot;')}"${actuales.includes(t)?' checked':''}>${t}</label>`;
   return`<div id="f-per-roltec" data-roltec="1">
-    <div class="roltec-chips">${opciones.map(chip).join('')||'<span style="font-size:12px;color:var(--text3)">Todavía no hay roles técnicos cargados — escribí el primero abajo.</span>'}</div>
+    <div class="roltec-chips">${opciones.map(chip).join('')}<button type="button" class="roltec-otro" onclick="enfocarRolTecnicoNuevo()" title="Cargar un rol que todavía no está en la lista">+ Otro</button></div>
     <input class="field-input" id="f-per-roltec-nuevo" placeholder="Buscar o agregar (ej: MERN, iOS, QA)" style="margin-top:8px" oninput="filtrarRolesTecnicos()" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarRolTecnico();}">
     <div id="f-per-roltec-aviso" style="display:none;font-size:11px;color:var(--text3);padding:4px 0 0"></div>
   </div>`;
+}
+
+// "Otro" no abre nada aparte: lleva al mismo input, que es donde se escribe el
+// rol nuevo. Existe porque sin él la posibilidad no se ve — el input parece
+// solo un buscador, y quien carga no tiene por qué adivinar que ahí mismo puede
+// crear un rol que la empresa todavía no tenía.
+function enfocarRolTecnicoNuevo(){
+  const input=document.getElementById('f-per-roltec-nuevo');
+  const aviso=document.getElementById('f-per-roltec-aviso');
+  if(!input) return;
+  input.focus();
+  if(aviso&&!input.value.trim()){
+    aviso.style.display='block';
+    aviso.textContent='Escribí el rol nuevo y apretá Enter — queda disponible para el resto del equipo.';
+  }
 }
 
 // El mismo input busca y agrega: con muchos roles cargados, encontrar el que

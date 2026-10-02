@@ -76,6 +76,10 @@ function buildPersonaCompletaHTML(v={},mostrarEgreso=false,ocultarNivel=false){
     ${roles.map(r=>opt(r,rolActual)).join('')}
   </select>
 </div>
+<div class="field-group"><label class="field-label">Rol técnico</label>
+  ${buildSelectConOtro('f-per-roltec',rolesTecnicosCargados(),v['Rol técnico']||'','Ej: MERN, iOS, QA')}
+  <div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">Qué hace técnicamente. Distinto del rol en empresa: lo llevan los Engineers y también quien en Core Team tenga un perfil técnico.</div>
+</div>
 ${ocultarNivel?'':`<div class="field-group"><label class="field-label">Nivel Loyalty</label>
   <select class="field-input" id="f-per-nivel">
     ${['Spark','Ray','Lightning','Thunder','Storm'].map(n=>opt(n,v['Nivel Loyalty']||'Spark')).join('')}
@@ -215,6 +219,7 @@ function leerPersonaCompletaForm(esEdicion){
   const setTextoSelectOtro=(campo,id)=>{const val=valorSelectOtro(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]='';};
   setTexto('Mail','f-per-mail');
   setTextoSelectOtro('Proyecto','f-per-proyecto');
+  setTextoSelectOtro('Rol técnico','f-per-roltec');
   setTexto('País','f-per-pais');
   setTexto('Ciudad','f-per-ciudad');
   setTextoSelectOtro('Manager','f-per-manager');

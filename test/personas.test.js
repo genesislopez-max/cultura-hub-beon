@@ -4,8 +4,9 @@ const assert=require('node:assert/strict');
 const {loadApp}=require('../test-helpers/load-app');
 
 // constants.js aporta NIVELES / NIVEL_ICONS, de los que dependen
-// normalizarNivel() y los helpers del badge de nivel.
-const ctx=loadApp(['constants.js','personas.js']);
+// normalizarNivel() y los helpers del badge de nivel; utils.js, getRolGroup(),
+// que es con lo que se contrasta el rol técnico.
+const ctx=loadApp(['constants.js','utils.js','personas.js']);
 
 // Día fijo en 1 para no depender de si el mes actual tiene ese día (evita
 // overflow de mes en fechas cercanas a fin de mes).
@@ -199,4 +200,28 @@ test('PF_SECCIONES: cada sección tiene clave e ícono, y las claves no se repit
     assert.ok(s.clave,`falta clave en ${s.titulo}`);
     assert.match(s.icono,/^ti-/,`ícono raro en ${s.titulo}: ${s.icono}`);
   }
+});
+
+// ─── Rol técnico ──────────────────────────────────────────────────────────────
+// Qué hace cada persona técnicamente (MERN, iOS, QA…). Es un dato aparte de
+// "Rol en empresa", que dice a qué grupo pertenece y define a qué pestaña va y
+// quién puede ser su manager: mezclarlos rompería esa clasificación.
+test('rolTecnico lee el campo y tolera la variante sin tilde', ()=>{
+  assert.equal(ctx.rolTecnico({fields:{'Rol técnico':'MERN'}}),'MERN');
+  assert.equal(ctx.rolTecnico({fields:{'Rol tecnico':'iOS'}}),'iOS');
+  assert.equal(ctx.rolTecnico({fields:{'Rol técnico':'  QA  '}}),'QA');
+  assert.equal(ctx.rolTecnico({fields:{}}),'');
+  assert.equal(ctx.rolTecnico(null),'');
+});
+
+test('el rol técnico no se confunde con el rol en empresa', ()=>{
+  // Un Lead de Core Team puede tener rol técnico: son dos cosas distintas y
+  // conviven en el mismo registro.
+  const lead={fields:{'Rol en empresa':'Lead','Rol técnico':'MERN'}};
+  assert.equal(ctx.rolTecnico(lead),'MERN');
+  assert.equal(ctx.getRolGroup(lead.fields['Rol en empresa']),'Core Team');
+  // Y un Engineer sin el campo cargado sigue siendo Engineer.
+  const eng={fields:{'Rol en empresa':'Engineer'}};
+  assert.equal(ctx.rolTecnico(eng),'');
+  assert.equal(ctx.getRolGroup(eng.fields['Rol en empresa']),'Engineers');
 });

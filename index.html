@@ -620,6 +620,13 @@
               <option value="">Todos los managers</option>
             </select>
           </div>
+          <div style="position:relative">
+            <i class="ti ti-list-check" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+            <select class="filter-select" id="ingresos-pendientes" onchange="filtrarIngresos()" style="padding-left:28px">
+              <option value="">Todos los ingresos</option>
+              <option value="pendientes">Con pasos pendientes</option>
+            </select>
+          </div>
         </div>
         <div class="kanban-board" id="kb-ingresos">
           <div class="kanban-col col-pre-ingreso" data-col="Pre-ingreso">

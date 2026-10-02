@@ -131,3 +131,56 @@ test('todo form que lea los caches declara onMount',()=>{
   assert.deepEqual(sinOnMount,[],
     `estos forms arman listas desde los caches pero no las rearman al llegar los datos: ${sinOnMount.join(', ')}`);
 });
+
+// ─── Las listas de personas de los eventos ────────────────────────────────────
+// Off Sites, Get Together y Ambassador Week se cargan muchas veces hacia atrás,
+// así que no pueden listar solo al equipo de hoy: un Off Site de 2024 puede ser
+// de alguien que ya no está. Pero mezclarlos en una lista sola hacía que al
+// registrar algo de ahora aparecieran, entre medio, personas que hace rato no
+// están en BEON. Van en dos grupos, con el equipo primero.
+test('las personas se agrupan: el equipo primero, los que se fueron al final', ()=>{
+  const ctx=ctxForms();
+  sembrar(ctx,'cachePersonasRaw',[
+    {id:'p1',fields:{Nombre:'Ana Activa','Rol en empresa':'Engineer'}},
+    {id:'p2',fields:{Nombre:'Cesar Se Fue','Rol en empresa':'Engineer','Fecha de egreso':'2024-01-31'}},
+  ]);
+  const html=ctx.opcionesPersonasPorEstado('');
+  assert.match(html,/optgroup label="En BEON"/);
+  assert.match(html,/optgroup label="Ya no están en BEON"/);
+  assert.equal(html.indexOf('En BEON')<html.indexOf('Ya no están'),true);
+  // Los dos siguen disponibles: el histórico se tiene que poder cargar.
+  assert.match(html,/Ana Activa/);
+  assert.match(html,/Cesar Se Fue/);
+  // Y cada uno en su grupo
+  const [, grupoEquipo, grupoEx]=html.split('<optgroup');
+  assert.match(grupoEquipo,/Ana Activa/);
+  assert.doesNotMatch(grupoEquipo,/Cesar Se Fue/);
+  assert.match(grupoEx,/Cesar Se Fue/);
+});
+
+test('quien se fue y volvió va con el equipo', ()=>{
+  const ctx=ctxForms();
+  sembrar(ctx,'cachePersonasRaw',[
+    {id:'p1',fields:{Nombre:'Dana Volvió','Fecha de egreso':'2024-03-15','Fecha de reingreso':'2025-01-10'}},
+  ]);
+  const html=ctx.opcionesPersonasPorEstado('');
+  assert.match(html,/optgroup label="En BEON"/);
+  assert.doesNotMatch(html,/Ya no están en BEON/);
+});
+
+test('sin ex BEONers no se dibuja un grupo vacío', ()=>{
+  const ctx=ctxForms();
+  sembrar(ctx,'cachePersonasRaw',[{id:'p1',fields:{Nombre:'Ana Activa'}}]);
+  const html=ctx.opcionesPersonasPorEstado('');
+  assert.doesNotMatch(html,/Ya no están en BEON/);
+  assert.match(html,/Ana Activa/);
+});
+
+test('la opción elegida queda seleccionada aunque sea de un ex BEONer', ()=>{
+  const ctx=ctxForms();
+  sembrar(ctx,'cachePersonasRaw',[
+    {id:'p1',fields:{Nombre:'Ana Activa'}},
+    {id:'p2',fields:{Nombre:'Cesar Se Fue','Fecha de egreso':'2024-01-31'}},
+  ]);
+  assert.match(ctx.opcionesPersonasPorEstado('Cesar Se Fue'),/<option value="Cesar Se Fue" selected>/);
+});

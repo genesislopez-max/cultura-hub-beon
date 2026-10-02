@@ -54,6 +54,26 @@ function proyectosDelCache(yaCargado){
   return [...new Set([...nombres,yaCargado||''].filter(Boolean))].sort();
 }
 
+// El <select> de nivel se preseleccionaba comparando el valor crudo de Airtable
+// contra la lista: un "Lightning " con un espacio de más, o en minúscula, no
+// matcheaba ninguna opción y el navegador dejaba marcada la primera (Spark).
+// Guardar después escribía Spark encima del nivel real, aunque se hubiera
+// entrado a editar otra cosa — así es como alguien que volvió como Lightning
+// terminó en Spark por cambiarle el proyecto.
+//
+// Se normaliza para preseleccionar, y si el valor guardado no es ninguno de los
+// cinco (un typo en Airtable, por ejemplo) se agrega como opción en vez de
+// descartarlo: queda a la vista y no se pierde al guardar.
+function nivelActualDelForm(v){
+  const crudo=(v?.['Nivel Loyalty']||'').trim();
+  if(!crudo) return '';
+  return NIVELES.some(n=>n.toLowerCase()===crudo.toLowerCase())?normalizarNivel(crudo):crudo;
+}
+function nivelesDelForm(v){
+  const actual=nivelActualDelForm(v);
+  return NIVELES.includes(actual)||!actual?[...NIVELES]:[...NIVELES,actual];
+}
+
 // Form completo de Persona — lo usan "Nueva persona", "Nuevo ingreso" (misma carga,
 // es la forma de no tener que completar nada aparte) y la edición desde la
 // tarjeta del Kanban de Ingresos/Egresos. mostrarEgreso solo se activa al
@@ -82,7 +102,7 @@ function buildPersonaCompletaHTML(v={},mostrarEgreso=false,ocultarNivel=false){
 </div>
 ${ocultarNivel?'':`<div class="field-group"><label class="field-label">Nivel Loyalty</label>
   <select class="field-input" id="f-per-nivel">
-    ${['Spark','Ray','Lightning','Thunder','Storm'].map(n=>opt(n,v['Nivel Loyalty']||'Spark')).join('')}
+    ${nivelesDelForm(v).map(n=>opt(n,nivelActualDelForm(v))).join('')}
   </select>
 </div>`}
 <div class="field-group"><label class="field-label">Proyecto</label>
@@ -214,7 +234,14 @@ function marcarSelectsPersonaCargando(cargando){
 function leerPersonaCompletaForm(esEdicion){
   const v=id=>document.getElementById(id)?.value||'';
   if(!v('f-per-nombre')){toast('El nombre es obligatorio',true);return null;}
-  const fields={Nombre:v('f-per-nombre'),'Rol en empresa':v('f-per-rol')||'Engineer','Nivel Loyalty':v('f-per-nivel')||'Spark'};
+  const fields={Nombre:v('f-per-nombre'),'Rol en empresa':v('f-per-rol')||'Engineer'};
+  // El nivel solo se escribe si el form lo ofreció y hay un valor elegido. En
+  // un alta se arranca en Spark; en una edición, NO se pone un default: si por
+  // lo que sea el select no trae valor, hay que dejar el nivel como está en vez
+  // de pisarlo con el más bajo.
+  const nivelElegido=v('f-per-nivel');
+  if(nivelElegido) fields['Nivel Loyalty']=nivelElegido;
+  else if(!esEdicion) fields['Nivel Loyalty']='Spark';
   const setTexto=(campo,id)=>{const val=v(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]='';};
   const setTextoSelectOtro=(campo,id)=>{const val=valorSelectOtro(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]='';};
   setTexto('Mail','f-per-mail');

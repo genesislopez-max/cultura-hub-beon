@@ -184,3 +184,37 @@ test('la opción elegida queda seleccionada aunque sea de un ex BEONer', ()=>{
   ]);
   assert.match(ctx.opcionesPersonasPorEstado('Cesar Se Fue'),/<option value="Cesar Se Fue" selected>/);
 });
+
+// ─── El nivel Loyalty en el form de persona ───────────────────────────────────
+// Entrar a editar a alguien para cambiarle el proyecto le bajaba el nivel a
+// Spark: el valor guardado ("Lightning " con un espacio) no matcheaba ninguna
+// opción, quedaba marcada la primera y guardar la escribía.
+test('el nivel se preselecciona aunque venga con espacios o en minúscula', ()=>{
+  const ctx=ctxForms();
+  assert.equal(ctx.nivelActualDelForm({'Nivel Loyalty':'Lightning '}),'Lightning');
+  assert.equal(ctx.nivelActualDelForm({'Nivel Loyalty':'thunder'}),'Thunder');
+  assert.equal(ctx.nivelActualDelForm({'Nivel Loyalty':'Ray'}),'Ray');
+});
+
+test('sin nivel cargado no se inventa uno', ()=>{
+  const ctx=ctxForms();
+  assert.equal(ctx.nivelActualDelForm({}),'');
+  assert.equal(ctx.nivelActualDelForm({'Nivel Loyalty':'   '}),'');
+});
+
+// Un typo en Airtable ("Lighting") no está entre los cinco: si se descartara,
+// guardar lo reemplazaría por Spark. Se agrega como opción para que quede a la
+// vista y sobreviva al guardado.
+test('un nivel desconocido se conserva como opción', ()=>{
+  const ctx=ctxForms();
+  assert.equal(ctx.nivelActualDelForm({'Nivel Loyalty':'Lighting'}),'Lighting');
+  const opciones=ctx.nivelesDelForm({'Nivel Loyalty':'Lighting'});
+  assert.equal(opciones.includes('Lighting'),true);
+  assert.equal(opciones.length,6);
+});
+
+test('con un nivel normal no se agregan opciones de más', ()=>{
+  const ctx=ctxForms();
+  assert.equal(ctx.nivelesDelForm({'Nivel Loyalty':'Ray'}).length,5);
+  assert.equal(ctx.nivelesDelForm({}).length,5);
+});

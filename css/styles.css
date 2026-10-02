@@ -1263,3 +1263,11 @@ textarea.field-input{resize:vertical;min-height:80px;}
   .et-row,.et-thead{grid-template-columns:2.8fr 1.1fr 1.25fr 2fr 36px;}
   .et-ten-cell,.et-thead>div:nth-child(5){display:none;}
 }
+
+/* Rol técnico: se marcan varios, así que van como chips tildables en vez de
+   un select. */
+.roltec-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.roltec-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--border);border-radius:999px;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;user-select:none;background:var(--bg2);}
+.roltec-chip:hover{border-color:var(--blue);}
+.roltec-chip input{margin:0;cursor:pointer;}
+.roltec-chip:has(input:checked){background:var(--tinte-eng);border-color:var(--blue);color:var(--text-eng-accent);}

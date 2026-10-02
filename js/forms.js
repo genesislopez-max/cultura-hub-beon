@@ -77,8 +77,8 @@ function buildPersonaCompletaHTML(v={},mostrarEgreso=false,ocultarNivel=false){
   </select>
 </div>
 <div class="field-group"><label class="field-label">Rol técnico</label>
-  ${buildSelectConOtro('f-per-roltec',rolesTecnicosCargados(),v['Rol técnico']||'','Ej: MERN, iOS, QA')}
-  <div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">Qué hace técnicamente. Distinto del rol en empresa: lo llevan los Engineers y también quien en Core Team tenga un perfil técnico.</div>
+  ${buildRolesTecnicosHTML(v)}
+  <div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">Qué hace técnicamente. Se puede marcar más de uno. Distinto del rol en empresa: lo llevan los Engineers y también quien en Core Team tenga un perfil técnico.</div>
 </div>
 ${ocultarNivel?'':`<div class="field-group"><label class="field-label">Nivel Loyalty</label>
   <select class="field-input" id="f-per-nivel">
@@ -219,7 +219,9 @@ function leerPersonaCompletaForm(esEdicion){
   const setTextoSelectOtro=(campo,id)=>{const val=valorSelectOtro(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]='';};
   setTexto('Mail','f-per-mail');
   setTextoSelectOtro('Proyecto','f-per-proyecto');
-  setTextoSelectOtro('Rol técnico','f-per-roltec');
+  // Multiple Select en Airtable: va como array. Vacío ([]) borra lo que
+  // hubiera, que es lo que corresponde si se destildó todo al editar.
+  fields['Rol técnico']=leerRolesTecnicosForm();
   setTexto('País','f-per-pais');
   setTexto('Ciudad','f-per-ciudad');
   setTextoSelectOtro('Manager','f-per-manager');
@@ -782,4 +784,56 @@ function textoFeedbackSlack(categoria,usuario,mensaje){
   const quien=nombre&&mail?`${nombre} · ${mail}`:(nombre||mail||'Alguien del equipo');
   const cita=String(mensaje||'').trim().split('\n').map(l=>`> ${l}`).join('\n');
   return `${FEEDBACK_EMOJI[cat]||'💬'} *Nuevo feedback en el Hub — ${cat}*\n${quien}\n${cita}`;
+}
+
+// ─── ROL TÉCNICO (varios por persona) ─────────────────────────────────────────
+// Hay gente con más de un rol técnico, así que no alcanza un select: se marcan
+// los que correspondan. Las opciones salen de lo ya cargado —el catálogo lo
+// arma el equipo completando el campo, no una lista fija en el código— más un
+// input para sumar uno nuevo sin salir del formulario.
+function buildRolesTecnicosHTML(v){
+  const actuales=rolesTecnicos({fields:v||{}});
+  // Los que ya tiene esta persona van primero aunque no estén en el catálogo
+  // (por ejemplo si se los cargaron a mano en Airtable con otro nombre).
+  const opciones=[...new Set([...actuales,...rolesTecnicosCargados()])];
+  const chip=t=>`<label class="roltec-chip"><input type="checkbox" value="${t.replace(/"/g,'&quot;')}"${actuales.includes(t)?' checked':''}>${t}</label>`;
+  return`<div id="f-per-roltec" data-roltec="1">
+    <div class="roltec-chips">${opciones.map(chip).join('')||'<span style="font-size:12px;color:var(--text3)">Todavía no hay roles técnicos cargados — escribí el primero abajo.</span>'}</div>
+    <input class="field-input" id="f-per-roltec-nuevo" placeholder="Agregar otro (ej: MERN, iOS, QA) y Enter" style="margin-top:8px" onkeydown="if(event.key==='Enter'){event.preventDefault();agregarRolTecnico();}">
+  </div>`;
+}
+
+// Suma un rol escrito a mano como un chip más, ya tildado. No se guarda nada
+// acá: recién se escribe cuando se guarda la persona.
+function agregarRolTecnico(){
+  const input=document.getElementById('f-per-roltec-nuevo');
+  const cont=document.querySelector('#f-per-roltec .roltec-chips');
+  if(!input||!cont) return;
+  const valor=(input.value||'').trim();
+  if(!valor) return;
+  const yaEsta=[...cont.querySelectorAll('input[type=checkbox]')]
+    .find(c=>c.value.toLowerCase()===valor.toLowerCase());
+  if(yaEsta){
+    // Ya existe como opción: en vez de duplicarlo, se tilda.
+    yaEsta.checked=true;
+  } else {
+    const vacio=cont.querySelector('span');
+    if(vacio) vacio.remove();
+    const label=document.createElement('label');
+    label.className='roltec-chip';
+    label.innerHTML=`<input type="checkbox" value="${valor.replace(/"/g,'&quot;')}" checked>${valor}`;
+    cont.appendChild(label);
+  }
+  input.value='';
+}
+
+function leerRolesTecnicosForm(){
+  const cont=document.getElementById('f-per-roltec');
+  if(!cont) return undefined; // el form no tiene el campo: no se toca nada
+  const marcados=[...cont.querySelectorAll('input[type=checkbox]')].filter(c=>c.checked).map(c=>c.value);
+  // Lo que quedó escrito y sin confirmar con Enter también cuenta: nadie
+  // debería perder lo que tipeó por no apretar una tecla.
+  const pendiente=(document.getElementById('f-per-roltec-nuevo')?.value||'').trim();
+  if(pendiente&&!marcados.some(m=>m.toLowerCase()===pendiente.toLowerCase())) marcados.push(pendiente);
+  return marcados;
 }

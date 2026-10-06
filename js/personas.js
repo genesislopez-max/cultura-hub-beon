@@ -99,6 +99,12 @@ function areaDe(r){
   return (r?.fields?.['Área']||r?.fields?.['Area']||'').trim();
 }
 
+// Las áreas ya cargadas, para ofrecerlas en el form sin mantener una lista
+// fija: el catálogo lo define quien completa el campo.
+function areasCargadas(){
+  return [...new Set((cachePersonasRaw||[]).map(areaDe).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es'));
+}
+
 function rolesTecnicos(r){
   const valor=r?.fields?.['Rol técnico']??r?.fields?.['Rol tecnico'];
   const lista=Array.isArray(valor)?valor:String(valor||'').split(',');
@@ -203,6 +209,15 @@ function verFichaPersona(id){
     row('Comentarios',f.Comentarios)+
     `<div id="pf-extra" class="pf-extra" data-persona="${(f.Nombre||'').replace(/"/g,'&quot;')}"><div class="pf-extra-cargando">Cargando el resto de la info…</div></div>`;
 
+  // Hasta ahora la ficha era solo de lectura y la edición vivía únicamente en
+  // las tarjetas de los Kanban: para corregirle el área o el rol técnico a
+  // alguien del directorio había que buscarlo en Ingresos/Egresos. El botón
+  // abre el mismo formulario de siempre.
+  const btnEditar=document.getElementById('pf-editar');
+  if(btnEditar){
+    btnEditar.style.display=puedeEscribir()?'inline-flex':'none';
+    btnEditar.onclick=()=>{ closeFichaPersona(); abrirEdicionPersona(f.Nombre||''); };
+  }
   document.getElementById('pf-overlay').style.display='flex';
   // Los datos personales se pintan ya; el resto llega después. Sin await: que
   // seis consultas a Airtable retrasen la apertura del panel sería peor que

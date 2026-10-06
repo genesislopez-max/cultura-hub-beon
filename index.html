@@ -2033,7 +2033,8 @@
 <!-- MODAL FICHA DE PERSONA -->
 <div class="modal-overlay" id="pf-overlay" onclick="closeFichaPersona()" style="display:none;opacity:1;pointer-events:all">
   <div class="modal" onclick="event.stopPropagation()" style="max-width:480px;width:95vw;padding:0;overflow:hidden">
-    <div style="display:flex;justify-content:flex-end;padding:14px 16px 0;">
+    <div style="display:flex;justify-content:flex-end;gap:8px;align-items:center;padding:14px 16px 0;">
+      <button id="pf-editar" style="display:none;align-items:center;gap:6px;background:none;border:1px solid var(--border);border-radius:9px;padding:5px 12px;font-family:'Plus Jakarta Sans',sans-serif;font-size:12.5px;font-weight:600;color:var(--text2);cursor:pointer;"><i class="ti ti-pencil"></i>Editar</button>
       <button onclick="closeFichaPersona()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;line-height:1;padding:4px;border-radius:6px;"><i class="ti ti-x"></i></button>
     </div>
     <div style="padding:0 24px 24px;">

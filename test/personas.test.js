@@ -267,3 +267,15 @@ test('areaDe acepta la variante sin tilde y recorta espacios', ()=>{
   assert.equal(ctx.areaDe({fields:{}}),'');
   assert.equal(ctx.areaDe(null),'');
 });
+
+test('areasCargadas junta las que ya existen, sin repetir ni vacías', ()=>{
+  const vm=require('node:vm');
+  ctx.__fixture=[
+    {fields:{Nombre:'A','Área':'People'}},
+    {fields:{Nombre:'B',Area:'Finance'}},
+    {fields:{Nombre:'C','Área':'People'}},
+    {fields:{Nombre:'D'}},
+  ];
+  vm.runInContext('cachePersonasRaw=__fixture',ctx);
+  assert.equal(ctx.areasCargadas().join('|'),'Finance|People');
+});

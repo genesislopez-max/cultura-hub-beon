@@ -96,6 +96,10 @@ function buildPersonaCompletaHTML(v={},mostrarEgreso=false,ocultarNivel=false){
     ${roles.map(r=>opt(r,rolActual)).join('')}
   </select>
 </div>
+<div class="field-group"><label class="field-label">Área</label>
+  ${buildSelectConOtro('f-per-area',areasCargadas(),areaDe({fields:v}),'Ej: People, Finance')}
+  <div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">En qué equipo está. Es sobre todo de Core Team; Tareas usa "People" para saber a quién se le puede asignar una.</div>
+</div>
 <div class="field-group"><label class="field-label">Rol técnico</label>
   ${buildRolesTecnicosHTML(v)}
   <div class="field-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0">Qué hace técnicamente. Se puede marcar más de uno. Distinto del rol en empresa: lo llevan los Engineers y también quien en Core Team tenga un perfil técnico.</div>
@@ -246,6 +250,7 @@ function leerPersonaCompletaForm(esEdicion){
   const setTextoSelectOtro=(campo,id)=>{const val=valorSelectOtro(id);if(val) fields[campo]=val; else if(esEdicion) fields[campo]='';};
   setTexto('Mail','f-per-mail');
   setTextoSelectOtro('Proyecto','f-per-proyecto');
+  setTextoSelectOtro('Área','f-per-area');
   // Multiple Select en Airtable: va como array. Vacío ([]) borra lo que
   // hubiera, que es lo que corresponde si se destildó todo al editar.
   fields['Rol técnico']=leerRolesTecnicosForm();

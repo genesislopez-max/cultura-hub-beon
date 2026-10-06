@@ -649,6 +649,9 @@ function filtrarPersonas(grupo){
   const proyecto=document.getElementById(`personas-proyecto-${grupo}`)?.value||'';
   const manager=document.getElementById(`personas-manager-${grupo}`)?.value||'';
   const rolTec=document.getElementById(`personas-roltec-${grupo}`)?.value||'';
+  // El de área existe solo en Core Team: en Engineers el select no está y el
+  // filtro queda en vacío, sin afectar nada.
+  const areaFil=document.getElementById(`personas-area-${grupo}`)?.value||'';
   const pais=(document.getElementById(`personas-pais-${grupo}`)?.value||'').toLowerCase();
   const ciudadFil=(document.getElementById(`personas-ciudad-${grupo}`)?.value||'').toLowerCase();
 
@@ -664,9 +667,10 @@ function filtrarPersonas(grupo){
     // "(sin cargar)" es un valor propio del filtro, para encontrar a quién le
     // falta el dato — que al principio van a ser casi todos.
     const matchRolTec=!rolTec||(rolTec==='(sin cargar)'?!rolesTecnicos(r).length:rolesTecnicos(r).includes(rolTec));
+    const matchArea=!areaFil||(areaFil==='(sin cargar)'?!areaDe(r):areaDe(r)===areaFil);
     const matchPais=!pais||valorUbicacion(f['País']).toLowerCase()===pais;
     const matchCiudad=!ciudadFil||ciudad===ciudadFil;
-    return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager&&matchPais&&matchCiudad&&matchRolTec;
+    return matchQ&&matchRol&&matchLoyalty&&matchProyecto&&matchManager&&matchPais&&matchCiudad&&matchRolTec&&matchArea;
   };
 
   const all=pagState[grupo].all||pagState[grupo].data;
@@ -715,6 +719,7 @@ function poblarFiltrosPersonas(){
       selMgr.innerHTML=`<option value="">${placeholder}</option>`+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
     }
     poblarFiltroRolTecnico(grupo);
+    poblarFiltroArea(grupo);
     poblarFiltroPais(grupo);
     poblarFiltroCiudad(grupo);
   });
@@ -746,6 +751,20 @@ function poblarFiltroRolTecnico(grupo){
   sel.innerHTML='<option value="">Todos los roles técnicos</option>'
     +roles.map(r=>`<option value="${r}"${r===actual?' selected':''}>${r}</option>`).join('')
     +(faltan?`<option value="(sin cargar)"${actual==='(sin cargar)'?' selected':''}>Sin rol técnico cargado</option>`:'');
+}
+
+// Mismo criterio que el de rol técnico: las opciones salen de lo que hay
+// cargado, y "(sin cargar)" sirve para encontrar a quién le falta el dato.
+function poblarFiltroArea(grupo){
+  const sel=document.getElementById(`personas-area-${grupo}`);
+  if(!sel) return;
+  const actual=sel.value;
+  const datos=pagState[grupo].all||[];
+  const areas=opcionesUnicas(datos.map(areaDe));
+  const faltan=datos.some(p=>!areaDe(p));
+  sel.innerHTML='<option value="">Todas las áreas</option>'
+    +areas.map(a=>`<option value="${a}"${a===actual?' selected':''}>${a}</option>`).join('')
+    +(faltan?`<option value="(sin cargar)"${actual==='(sin cargar)'?' selected':''}>Sin área cargada</option>`:'');
 }
 
 function poblarFiltroPais(grupo){

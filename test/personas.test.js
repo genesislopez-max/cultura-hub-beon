@@ -255,3 +255,15 @@ test('normalizarNivel cae en Spark con un valor desconocido', ()=>{
   assert.equal(ctx.normalizarNivel(''),'Spark');
   assert.equal(ctx.normalizarNivel(null),'Spark');
 });
+
+// ─── Área ─────────────────────────────────────────────────────────────────────
+// En qué equipo está la persona (People, Finance…). Lo lee la columna de Core
+// Team, la ficha y Tareas (que busca "People" para saber a quién se le asigna),
+// así que el campo se lee en un solo lugar.
+test('areaDe acepta la variante sin tilde y recorta espacios', ()=>{
+  assert.equal(ctx.areaDe({fields:{'Área':'People'}}),'People');
+  assert.equal(ctx.areaDe({fields:{Area:'Finance'}}),'Finance');
+  assert.equal(ctx.areaDe({fields:{'Área':'  People  '}}),'People');
+  assert.equal(ctx.areaDe({fields:{}}),'');
+  assert.equal(ctx.areaDe(null),'');
+});

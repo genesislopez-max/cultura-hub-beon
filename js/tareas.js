@@ -6,7 +6,9 @@ const COL_SUF_TAREA={'Por hacer':'Por-hacer','En progreso':'En-progreso','Hecho'
 // el Hub todavía), así que si el dropdown aparece vacío hay que revisar que
 // esté completo ahí.
 function personasAreaPeople(){
-  return (cachePersonasRaw||[]).filter(p=>(p.fields['Área']||p.fields['Area']||'').trim()==='People').map(p=>p.fields.Nombre||'').filter(Boolean).sort();
+  // areaDe() (js/personas.js) es el único lugar que sabe leer el campo, con su
+  // variante sin tilde incluida.
+  return (cachePersonasRaw||[]).filter(p=>areaDe(p)==='People').map(p=>p.fields.Nombre||'').filter(Boolean).sort();
 }
 
 async function loadTareas(){

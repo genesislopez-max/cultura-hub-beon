@@ -358,7 +358,7 @@
 
           <!-- Table head -->
           <div class="et-thead">
-            <div>Nombre</div><div>Rol técnico</div><div>Nivel loyalty</div><div>Proyecto</div><div>Antigüedad</div><div>Manager</div><div></div>
+            <div>Nombre</div><div>Rol técnico</div><div>Nivel loyalty</div><div class="et-th-proyecto">Proyecto</div><div class="et-th-antiguedad">Antigüedad</div><div class="et-th-manager">Manager</div><div></div>
           </div>
 
           <div class="et-rows" id="tbody-personas-eng"></div>
@@ -432,6 +432,13 @@
                 <i class="ti ti-chevron-down et-sel-chevron"></i>
               </div>
               <div class="et-sel-wrap">
+                <i class="ti ti-users-group et-sel-icon"></i>
+                <select class="et-sel" id="personas-area-core" onchange="filtrarPersonas('core')">
+                  <option value="">Todas las áreas</option>
+                </select>
+                <i class="ti ti-chevron-down et-sel-chevron"></i>
+              </div>
+              <div class="et-sel-wrap">
                 <i class="ti ti-world et-sel-icon"></i>
                 <select class="et-sel" id="personas-pais-core" onchange="cambiarPaisPersonas('core')">
                   <option value="">Todos los países</option>
@@ -456,7 +463,7 @@
 
           <!-- Table head -->
           <div class="et-thead">
-            <div>Nombre</div><div>Rol</div><div>Nivel loyalty</div><div>Proyecto</div><div>Antigüedad</div><div>Manager</div><div></div>
+            <div>Nombre</div><div>Rol</div><div class="et-th-area">Área</div><div>Nivel loyalty</div><div class="et-th-proyecto">Proyecto</div><div class="et-th-antiguedad">Antigüedad</div><div class="et-th-manager">Manager</div><div></div>
           </div>
 
           <div class="et-rows" id="tbody-personas-core"></div>

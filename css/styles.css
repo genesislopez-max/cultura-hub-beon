@@ -1238,7 +1238,7 @@ textarea.field-input{resize:vertical;min-height:80px;}
      El corte va en 1560px y no más abajo porque una MacBook de 14" reporta
      1512px de ancho, y ahí Proyecto ya se truncaba en todas las filas. */
   .et-row,.et-thead{grid-template-columns:2.6fr 1.1fr 1.25fr 1.9fr 1.3fr 36px;}
-  .et-mgr-cell,.et-thead>div:nth-child(6){display:none;}
+  .et-mgr-cell,.et-th-manager{display:none;}
 }
 
 @media (max-width:1280px){
@@ -1261,7 +1261,20 @@ textarea.field-input{resize:vertical;min-height:80px;}
   .summary-grid{grid-template-columns:repeat(auto-fit,minmax(196px,1fr));}
   /* Antigüedad es lo próximo más prescindible: también está en la ficha. */
   .et-row,.et-thead{grid-template-columns:2.8fr 1.1fr 1.25fr 2fr 36px;}
-  .et-ten-cell,.et-thead>div:nth-child(5){display:none;}
+  .et-ten-cell,.et-th-antiguedad{display:none;}
+}
+
+/* Core Team tiene una columna más que Engineers —Área, el equipo al que
+   pertenece la persona— así que su grilla va aparte en los tres anchos. El
+   resto de las reglas responsive ocultan por clase (.et-th-manager,
+   .et-th-antiguedad) justamente para que esa columna de más no corra los
+   índices y se desalineen encabezado y filas. */
+#page-coreteam .et-thead,#page-coreteam .et-row{grid-template-columns:2.2fr 1.05fr 1.15fr 1.2fr 1.5fr 1.25fr 1.45fr 40px;}
+@media (max-width:1560px){
+  #page-coreteam .et-thead,#page-coreteam .et-row{grid-template-columns:2.4fr 1.05fr 1.2fr 1.2fr 1.75fr 1.25fr 36px;}
+}
+@media (max-width:1280px){
+  #page-coreteam .et-thead,#page-coreteam .et-row{grid-template-columns:2.5fr 1.05fr 1.2fr 1.2fr 1.9fr 36px;}
 }
 
 /* Rol técnico: se marcan varios, así que van como chips tildables en vez de

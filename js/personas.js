@@ -93,6 +93,12 @@ function nivelBadgeHtmlEng(recordId, nivelActual){
 // Airtable es un Multiple Select y llega como array. Se acepta igual un string
 // suelto: si el campo se hubiera creado como Single Select o como texto, los
 // valores separados por coma se siguen leyendo bien en vez de romper.
+// En qué equipo está la persona (People, Finance…). Se acepta la variante sin
+// tilde porque el campo se creó a mano en Airtable y las dos formas existen.
+function areaDe(r){
+  return (r?.fields?.['Área']||r?.fields?.['Area']||'').trim();
+}
+
 function rolesTecnicos(r){
   const valor=r?.fields?.['Rol técnico']??r?.fields?.['Rol tecnico'];
   const lista=Array.isArray(valor)?valor:String(valor||'').split(',');
@@ -106,7 +112,10 @@ function rolesTecnicosCargados(){
 // Fila en grid compartida por Engineers & Tech y Core Team — solo cambia
 // cómo arma cada uno el badge de rol (rolBadgeHtml), el resto de las columnas
 // es idéntico.
-function personaRowHtml(r, rolBadgeHtml){
+// celdaExtra: una columna más, después del badge de rol. Hoy la usa solo Core
+// Team, para el Área (en qué equipo está la persona). Engineers no la manda y
+// su tabla queda igual que antes.
+function personaRowHtml(r, rolBadgeHtml, celdaExtra){
   const f=r.fields;
   const nivel=normalizarNivel(f['Nivel Loyalty']);
   const nombre=f.Nombre||'—', manager=f.Manager||'', proyecto=f.Proyecto||'';
@@ -121,6 +130,7 @@ function personaRowHtml(r, rolBadgeHtml){
       </div>
     </div>
     <div>${rolBadgeHtml}</div>
+    ${celdaExtra||''}
     <div>${nivelBadgeHtmlEng(r.id, nivel)}</div>
     <div class="et-proj-cell">${proyecto
       ?`<span class="et-proj-chip" style="background:${projColorEng(proyecto)}">${projInitialEng(proyecto)}</span><span class="et-proj-name">${proyecto}</span>`
@@ -151,7 +161,11 @@ function rowHtmlCore(r){
   const rol=r.fields['Rol en empresa']||'';
   const tec=rolesTecnicos(r);
   const badgeRol=rol?`<span class="badge ${rolColor[rol]||'badge-gray'}"><i class="ti ti-briefcase"></i>${rol}</span>`:'—';
-  return personaRowHtml(r, badgeRol+tec.map(t=>`<span class="badge badge-blue" style="margin-left:4px" title="Rol técnico"><i class="ti ti-code"></i>${t}</span>`).join(''));
+  const area=areaDe(r);
+  const celdaArea=`<div class="et-area-cell">${area
+    ?`<span class="badge badge-gray"><i class="ti ti-users-group"></i>${area}</span>`
+    :'<span style="color:var(--text3);font-size:12px">—</span>'}</div>`;
+  return personaRowHtml(r, badgeRol+tec.map(t=>`<span class="badge badge-blue" style="margin-left:4px" title="Rol técnico"><i class="ti ti-code"></i>${t}</span>`).join(''), celdaArea);
 }
 
 // Ficha completa de la persona — se abre al clickear el nombre en la tabla,
@@ -163,7 +177,7 @@ function verFichaPersona(id){
   const f=p.fields;
   const rol=f['Rol en empresa']||'';
   const nivel=normalizarNivel(f['Nivel Loyalty']);
-  const area=f['Área']||f['Area']||'';
+  const area=areaDe({fields:f});
 
   document.getElementById('pf-nombre').innerHTML=`${avH(f.Nombre)}<span>${f.Nombre||'—'}</span>`;
   // Tercera variante del badge que había en el Hub: sin ícono y con la clase

@@ -461,6 +461,10 @@ async function loadPersonas(){
     if(lblEng) lblEng.textContent=`${pctEng}% del total del equipo`;
   }
 
+  // En qué página de cada tabla estaba el usuario antes de esta recarga —
+  // se restaura al final, en restaurarVistaPersonas().
+  const pagPrevia={eng:pagState.eng?.page||0,core:pagState.core?.page||0};
+
   // Tabla Engineers & Tech
   document.getElementById('badge-personas-eng').textContent=`${allEng.length} personas`;
   pagState.eng={page:0,data:allEng,all:allEng};
@@ -474,7 +478,26 @@ async function loadPersonas(){
   renderETKpi(coreTeam,'ct-kpi-strip');
 
   poblarFiltrosPersonas();
+  restaurarVistaPersonas(pagPrevia);
   return recs;
+}
+
+// Cada recarga de datos (guardar una edición, cambiarle el nivel a alguien)
+// volvía a dibujar las tablas con el roster entero: la búsqueda y los filtros
+// seguían escritos en pantalla pero ya no se aplicaban, y la lista saltaba a la
+// página 1. Había que volver a buscar a la persona para seguir trabajando.
+// Acá se vuelve a aplicar lo que el usuario tenía puesto y se lo deja en la
+// misma página (o en la última, si al filtrar quedaron menos).
+function restaurarVistaPersonas(pagPrevia){
+  ['eng','core'].forEach(grupo=>{
+    filtrarPersonas(grupo);
+    const paginas=Math.max(1,Math.ceil(pagState[grupo].data.length/PAG_SIZE));
+    const pagina=Math.min(pagPrevia?.[grupo]||0,paginas-1);
+    if(pagina!==pagState[grupo].page){
+      pagState[grupo].page=pagina;
+      renderPagina(grupo);
+    }
+  });
 }
 
 // Descarga el roster completo del equipo activo hoy — botón "Exportar" del
@@ -723,15 +746,22 @@ function poblarFiltrosPersonas(){
     const managers=grupo==='eng'?listaTEMsEngineers():listaTEMs();
     const selProy=document.getElementById(`personas-proyecto-${grupo}`);
     const selMgr=document.getElementById(`personas-manager-${grupo}`);
+    // Se preserva lo elegido: estos selects se vuelven a armar en cada recarga
+    // de datos (ej. después de guardar una edición), y si no, el filtro que
+    // tenías puesto se perdía — mismo criterio que poblarFiltroPais().
     if(selProy){
+      const previo=selProy.value;
       selProy.innerHTML='<option value="">Todos los proyectos</option>'+proyectos.map(p=>`<option value="${p}">${p}</option>`).join('');
+      if(proyectos.includes(previo)) selProy.value=previo;
     }
     if(selMgr){
+      const previo=selMgr.value;
       // "TEM" es específico de Engineers & Tech — Core Team puede reportarle
       // a cualquier líder (Lead, Manager, Supervisor, etc.), así que ahí el
       // copy dice "managers" en vez de "TEMs".
       const placeholder=grupo==='eng'?'Todos los TEMs':'Todos los managers';
       selMgr.innerHTML=`<option value="">${placeholder}</option>`+managers.map(m=>`<option value="${m}">${m}</option>`).join('');
+      if(managers.includes(previo)) selMgr.value=previo;
     }
     poblarFiltroRolTecnico(grupo);
     poblarFiltroArea(grupo);

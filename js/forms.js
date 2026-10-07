@@ -130,14 +130,26 @@ ${mostrarEgreso?`<div class="field-group"><label class="field-label">Fecha de eg
 // (se fue, o cambió de rol) para no degradarlo a "Otro (escribir a mano)".
 const ROLES_MANAGER_ENGINEER=new Set(['TEM']);
 const ROLES_MANAGER_CORE=new Set(['Supervisor','Lead','Manager','Founder','COO']);
-function managersCandidatos(rol){
-  const rolesValidos=rol==='Engineer'?ROLES_MANAGER_ENGINEER:rol==='Core Team'?ROLES_MANAGER_CORE:null;
-  if(!rolesValidos) return [];
-  return nombresPersonas(p=>esPersonaActiva(p)&&rolesValidos.has((p.fields['Rol en empresa']||'').trim()));
+// La lista se elegía comparando el rol EXACTO contra 'Engineer' o 'Core Team',
+// así que para un Lead, un TEM, un Manager o un Supervisor no había ninguna
+// lista: el select de Manager quedaba vacío y a esa gente no se le podía
+// asignar nadie desde el Hub. Ahora decide por GRUPO —el mismo getRolGroup()
+// que usa el resto— y entonces todos los roles de Core Team ven la lista de
+// Core Team.
+//
+// excluir: la persona que se está editando no puede ser su propio manager.
+function managersCandidatos(rol,excluir){
+  const rolesValidos=getRolGroup((rol||'').trim())==='Engineers'?ROLES_MANAGER_ENGINEER:ROLES_MANAGER_CORE;
+  const yo=normalizarNombre(excluir);
+  return nombresPersonas(p=>esPersonaActiva(p)
+    &&rolesValidos.has((p.fields['Rol en empresa']||'').trim())
+    &&(!yo||normalizarNombre(p.fields.Nombre)!==yo));
 }
 function actualizarManagerOptions(){
   if(!document.getElementById('f-per-manager')) return;
-  const candidatos=managersCandidatos(document.getElementById('f-per-rol')?.value);
+  const candidatos=managersCandidatos(
+    document.getElementById('f-per-rol')?.value,
+    document.getElementById('f-per-nombre')?.value);
   const yaCargado=valorSelectOtro('f-per-manager');
   poblarSelectConOtro('f-per-manager',[...new Set([...candidatos,yaCargado].filter(Boolean))].sort());
 }

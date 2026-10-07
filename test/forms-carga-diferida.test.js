@@ -74,8 +74,27 @@ test('no se ofrecen como Manager personas que ya no están en BEON',()=>{
   // Fede TEM ya pasó su último día: sale de la lista aunque su rol sea TEM.
   assert.equal(leer(ctx,'managersCandidatos("Engineer").join("|")'),'Ana TEM|Beto TEM');
   assert.equal(leer(ctx,'managersCandidatos("Core Team").join("|")'),'Caro Lead');
-  // Un rol sin jerarquía definida no sugiere a nadie
-  assert.equal(leer(ctx,'managersCandidatos("TEM").length'),0);
+});
+
+// La lista se elegía comparando el rol EXACTO contra 'Engineer' o 'Core Team',
+// así que un Lead, un TEM, un Manager o un Supervisor se quedaban sin ninguna:
+// el select de Manager salía vacío y a esa gente no se le podía asignar nadie
+// desde el Hub. Ahora decide por grupo.
+test('los roles de Core Team también tienen a quién elegir',()=>{
+  const ctx=ctxForms();
+  sembrar(ctx,'cachePersonasRaw',PERSONAS);
+  ['TEM','Lead','Manager','Supervisor','COO','Founder'].forEach(rol=>{
+    assert.equal(leer(ctx,`managersCandidatos("${rol}").join("|")`),'Caro Lead',`${rol} se quedó sin candidatos`);
+  });
+});
+
+test('nadie puede ser su propio manager',()=>{
+  const ctx=ctxForms();
+  sembrar(ctx,'cachePersonasRaw',PERSONAS);
+  assert.equal(leer(ctx,'managersCandidatos("Engineer","Ana TEM").join("|")'),'Beto TEM');
+  // Mismo criterio de nombre que el resto del Hub
+  assert.equal(leer(ctx,'managersCandidatos("Engineer","  ana tem ").join("|")'),'Beto TEM');
+  assert.equal(leer(ctx,'managersCandidatos("Engineer","").join("|")'),'Ana TEM|Beto TEM');
 });
 
 test('opcionesPersonas arma el placeholder y marca la seleccionada',()=>{

@@ -169,10 +169,10 @@ async function loadExBeoners(){
   // columna de beneficios necesita el cache de Beneficios, que es lazy: si
   // todavía está vacío se pide acá y se marca la sección como cargada, así
   // entrar después a Beneficios no vuelve a pedir las mismas tablas. Se mira
-  // el cache y no solo la marca porque loadAll() dispara todos los loaders en
-  // paralelo: con la marca sola, esta sección pedía Beneficios de nuevo cada
-  // vez que se guardaba algo. Si falla, la sección se muestra igual — lo
-  // importante es la lista, no esa columna.
+  // el cache y no solo la marca porque al guardar algo loadAll() limpia la
+  // marca de las secciones que no están a la vista: con la marca sola, esta
+  // sección pedía Beneficios de nuevo cada vez. Si falla, la sección se
+  // muestra igual — lo importante es la lista, no esa columna.
   if(!(cacheBenefAsignados||[]).length&&!seccionesCargadas.has('beneficios')){
     try{
       seccionesCargadas.add('beneficios');

@@ -30,6 +30,8 @@ function elementStub(){
     textContent:'',
     innerHTML:'',
     value:'',
+    getAttribute(){return null;},
+    setAttribute(){},
     addEventListener(){},
     appendChild(){},
     querySelectorAll(){return [];},
@@ -45,11 +47,16 @@ function documentStub(){
     querySelector(){return null;},
     createElement(){return elementStub();},
     body:elementStub(),
+    documentElement:elementStub(),
   };
 }
 
-function loadApp(files){
-  const sandbox={console};
+// globales: funciones/valores que el archivo bajo prueba usa pero que define
+// OTRO archivo, y que hacen falta ya al cargarlo (ej. nav.js arma su lista de
+// secciones lazy con los loaders de cada sección). Se siembran antes de
+// ejecutar los archivos, para no tener que cargar media app como dependencia.
+function loadApp(files,globales){
+  const sandbox={console,...(globales||{})};
   sandbox.localStorage=localStorageStub();
   sandbox.sessionStorage=localStorageStub();
   sandbox.document=documentStub();

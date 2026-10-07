@@ -700,6 +700,9 @@ async function loadKanbanEgresos(){
   });
   setupDragDrop('kb-egresos');
   poblarSelectorTEM('egresos-tem');
+  // Mismo criterio que el board de Ingresos: se rearma entero, así que hay que
+  // volver a aplicar el filtro o al guardar algo reaparecen todas las tarjetas.
+  filtrarEgresos();
 
   const now=new Date();
   const esteM=recs.filter(r=>{

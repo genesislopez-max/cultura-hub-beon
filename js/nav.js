@@ -245,8 +245,8 @@ async function saveRecord(){
       toast('Guardado ✓');
       // Los forms con sinRecargar:true no alimentan ninguna sección del Hub
       // (Feedback), así que no hay nada que refrescar. Evitarlo no es solo
-      // velocidad: loadAll() recarga las ~14 tablas de la base, varias de
-      // ellas restringidas según el rol, y cualquier fallo ahí pisaba el
+      // velocidad: loadAll() recarga varias tablas de la base, algunas
+      // restringidas según el rol, y cualquier fallo ahí pisaba el
       // "Guardado ✓" con un error — el que mandó el feedback creía que no se
       // había guardado, cuando en realidad sí.
       if(!form.sinRecargar) await loadAll();
@@ -309,23 +309,45 @@ function cargarSeccionLazy(name){
   });
 }
 
-// Recarga todo — se usa después de guardar/eliminar registros, donde no sabemos
-// de antemano qué secciones pueden haberse visto afectadas
+// Refresca el Hub después de guardar/eliminar un registro, donde no sabemos de
+// antemano qué secciones pueden haberse visto afectadas.
+//
+// Antes esto volvía a pedir TODAS las tablas de la base y re-renderizaba las 9
+// secciones lazy, estuvieran o no a la vista: eran ~26 pedidos por cada
+// "Guardar". Tardaba varios segundos, parecía que se recargaba la página y,
+// peor, te movía de donde estabas trabajando.
+//
+// Ahora se recarga lo que se ve —las secciones de Inicio y la sección abierta—
+// y el resto se marca como pendiente: se vuelven a pedir recién cuando entrás,
+// que es el mismo mecanismo que ya usa cargarSeccionLazy() la primera vez. No
+// se muestran datos viejos: una sección que no se recargó tampoco está en
+// pantalla, y al entrar se pide de nuevo.
 async function loadAll(){
   await cargarSeccionesIniciales();
-  const resultados=await Promise.allSettled(SECCIONES_LAZY.map(([id,,loader])=>loader().then(()=>seccionesCargadas.add(id))));
-  const fallidas=resultados
-    .map((r,i)=>({label:SECCIONES_LAZY[i][1],r}))
-    .filter(({r})=>r.status==='rejected');
-  fallidas.forEach(({label,r})=>console.error(`Error cargando "${label}":`,r.reason));
-  if(fallidas.length){
-    toast(`⚠️ No se pudo cargar: ${fallidas.map(f=>f.label).join(', ')}`,true);
+  const abierta=seccionAbierta();
+  SECCIONES_LAZY.forEach(([id])=>{ if(id!==abierta) seccionesCargadas.delete(id); });
+  const actual=SECCIONES_LAZY.find(([id])=>id===abierta);
+  if(actual){
+    const [id,label,loader]=actual;
+    try{
+      await loader();
+      seccionesCargadas.add(id);
+    }catch(e){
+      seccionesCargadas.delete(id); // permite reintentar entrando de nuevo
+      console.error(`Error cargando "${label}":`,e);
+      toast(`⚠️ No se pudo cargar ${label}: ${e.message}`,true);
+    }
   }
   // Eventos se deriva de los caches de "Asistencia a Actividades"/"Get
-  // Together", y acá todos los loaders corrieron en paralelo: loadEventos()
-  // pudo haber leído esos caches antes de que sus propios loaders los
-  // refrescaran. Se rearma al final, ya con los datos nuevos (no pega a la red).
+  // Together". Si la sección abierta es una de ellas, su cache acaba de
+  // cambiar, así que se rearma (no pega a la red).
   if(typeof recombinarEventos==='function') recombinarEventos();
+}
+
+// La sección que el usuario está viendo. showSection() la deja guardada acá
+// mismo para poder restaurarla al recargar la página (ver restaurarSeccionGuardada).
+function seccionAbierta(){
+  return localStorage.getItem('hub_seccion')||'inicio';
 }
 
 // Vuelve a la última sección visitada al recargar la página (Cmd/Ctrl+R) — sin

@@ -237,3 +237,34 @@ test('deleteIngreso: encuentra a la persona aunque el nombre de la tarjeta difie
   await ctx.deleteIngreso('chk1','  alejandro  fabrega ');
   assert.equal(borrados.filter(b=>b.table==='Personas').length,0);
 });
+
+// ─── El cartel de confirmación dice qué va a pasar con ESA persona ────────────
+// Antes enumeraba las dos ramas posibles ("si tiene fecha de egreso o un
+// offboarding cargado…") y quedaba en quien apretaba adivinar en cuál caía,
+// justo cuando la rama equivocada borra un registro que no se recupera desde el
+// Hub. Peor: el texto no mencionaba la antigüedad, así que a alguien que trabaja
+// acá hace años el cartel le decía que iba a borrarle todo.
+test('motivoHistorialEnBeon: explica por qué la persona está protegida', async()=>{
+  mockBorrado(ctx,{});
+  assert.match(
+    await ctx.motivoHistorialEnBeon('Alejandro Fabrega',{fields:{'Fecha de ingreso':hace(900)}}),
+    /Trabaja en BEON desde el/);
+  assert.match(
+    await ctx.motivoHistorialEnBeon('Ya Se Va',{fields:{'Fecha de egreso':'2026-12-01'}}),
+    /fecha de egreso cargada/i);
+
+  mockBorrado(ctx,{checklistEgreso:[{id:'c',fields:{Persona:'Cesar Welchez',Tipo:'Egreso'}}]});
+  assert.match(await ctx.motivoHistorialEnBeon('Cesar Welchez',null),/offboarding cargado/i);
+});
+
+test('motivoHistorialEnBeon: sin ninguna señal devuelve vacío — ahí sí es un alta para cancelar', async()=>{
+  mockBorrado(ctx,{});
+  assert.equal(await ctx.motivoHistorialEnBeon('Alta Erronea',{fields:{'Fecha de ingreso':enDias(10)}}),'');
+});
+
+test('motivoHistorialEnBeon: si la consulta falla lo dice, en vez de dar a entender que se borra todo', async()=>{
+  mockBorrado(ctx,{fallaConsulta:true});
+  const motivo=await ctx.motivoHistorialEnBeon('Dudoso',null);
+  assert.match(motivo,/no se pudo verificar/i);
+  assert.equal(await ctx.tieneHistorialEnBeon('Dudoso',null),true); // ante la duda, no borrar
+});

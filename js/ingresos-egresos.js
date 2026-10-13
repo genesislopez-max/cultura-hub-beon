@@ -33,20 +33,30 @@ function llevaTiempoEnBeon(fields){
 // protección no depende de qué secciones del Hub estén cargadas en ese momento.
 // Si la consulta falla, se asume que SÍ tiene historial: ante la duda, no
 // borrar (recuperar un registro perdido cuesta mucho más que borrarlo después).
-async function tieneHistorialEnBeon(nombre,personaRec){
-  if(personaRec?.fields?.['Fecha de egreso']) return true;
+// Devuelve POR QUÉ se considera que existió, no un sí/no: ese texto va al
+// cartel de confirmación, así dice qué va a pasar con esta persona en vez de un
+// "si tiene historial…" que quien aprieta el botón no puede verificar.
+// '' significa que no hay ninguna señal — ahí sí es un alta para cancelar.
+async function motivoHistorialEnBeon(nombre,personaRec){
+  const f=personaRec?.fields;
+  if(f?.['Fecha de egreso']) return `Tiene fecha de egreso cargada (${fmt(f['Fecha de egreso'])}).`;
   // Hace meses (o años) que trabaja acá y nunca se fue: la tarjeta de ingreso
   // puede sobrar, pero la persona no. Sin esto, borrar una tarjeta que el Hub
   // había creado de más se llevaba puesto su registro de Personas y sus eventos.
-  if(llevaTiempoEnBeon(personaRec?.fields)) return true;
-  const esc=(nombre||'').replace(/"/g,'\\"');
+  if(llevaTiempoEnBeon(f)) return `Trabaja en BEON desde el ${fmt(f['Fecha de ingreso'])}.`;
+  // .trim(): el nombre llega del texto de la tarjeta, y un espacio de más hacía
+  // que la fórmula no matcheara nada y la persona pasara por inexistente.
+  const esc=(nombre||'').trim().replace(/"/g,'\\"');
   try{
     const d=await atGet('Checklist',`&filterByFormula=AND({Tipo}="Egreso",{Persona}="${esc}")`);
-    return (d.records||[]).length>0;
+    return (d.records||[]).length?'Tiene un offboarding cargado en el Kanban de Egresos.':'';
   }catch(e){
     console.error('No se pudo verificar el historial de',nombre,'—',e.message);
-    return true;
+    return 'No se pudo verificar su historial, así que por las dudas no se toca nada más.';
   }
+}
+async function tieneHistorialEnBeon(nombre,personaRec){
+  return !!(await motivoHistorialEnBeon(nombre,personaRec));
 }
 
 // Elimina un ingreso: Checklist + Persona + Eventos relacionados.
@@ -368,10 +378,21 @@ function filtrarKanbanChecklist(boardId,inputId,temSelectId,pendientesSelectId){
 function filtrarIngresos(){ filtrarKanbanChecklist('kb-ingresos','ingresos-search','ingresos-tem','ingresos-pendientes'); }
 function filtrarEgresos(){ filtrarKanbanChecklist('kb-egresos','egresos-search','egresos-tem'); }
 
-function confirmarEliminar(checklistId, nombre){
+// El cartel dice qué va a pasar CON ESTA PERSONA, no las dos ramas posibles.
+// Antes enumeraba las condiciones ("si tiene fecha de egreso o un offboarding
+// cargado…") y quedaba en quien apretaba adivinar en cuál caía — justo cuando
+// la rama equivocada borra un registro que no se recupera desde el Hub.
+// El motivo se resuelve antes de abrir el cartel; para alguien que ya está hace
+// rato en BEON sale del cache, sin esperar nada.
+async function confirmarEliminar(checklistId, nombre){
+  const buscado=normalizarNombre(nombre);
+  const personaRec=(cachePersonasRaw||[]).find(p=>normalizarNombre(p.fields.Nombre)===buscado);
+  const motivo=await motivoHistorialEnBeon(nombre,personaRec);
   showConfirm(
-    `¿Eliminar el ingreso de ${nombre}?`,
-    `Sirve para cancelar un alta cargada por error. Se borra la tarjeta y, si ${nombre} nunca llegó a trabajar en BEON, también su registro de Personas y sus reminders/eventos — eso no se puede deshacer desde el Hub.\n\nSi ya tiene historial (fecha de egreso o un offboarding cargado), se borra solo la tarjeta y su registro queda intacto.`,
+    motivo?`¿Eliminar la tarjeta de ingreso de ${nombre}?`:`¿Eliminar el ingreso de ${nombre}?`,
+    motivo
+      ?`Se borra solo la tarjeta del Kanban. El registro de ${nombre} en Personas, sus beneficios y sus eventos quedan intactos.\n\n${motivo}`
+      :`Sirve para cancelar un alta cargada por error. Se borra la tarjeta y TAMBIÉN el registro de ${nombre} en Personas y sus reminders/eventos — eso no se puede deshacer desde el Hub.\n\nNo tiene ninguna señal de haber trabajado acá: ni fecha de egreso, ni offboarding cargado, ni antigüedad.`,
     ()=>deleteIngreso(checklistId, nombre)
   );
 }

@@ -36,7 +36,9 @@ test('sincronizarPersonasEnKanban: una persona nueva sin Fecha de egreso sí cre
   const slackCalls=[];
   ctx.sendSlack=async text=>slackCalls.push(text);
   await ctx.sincronizarPersonasEnKanban([
-    {id:'p2',fields:{Nombre:'Nuevo Ingreso','Fecha de ingreso':'2026-07-14'}},
+    // Relativa a hoy a propósito: con una fecha fija, el día que quedara a más
+    // de DIAS_ONBOARDING_VIGENTE este caso dejaba de ser "una persona nueva".
+    {id:'p2',fields:{Nombre:'Nuevo Ingreso','Fecha de ingreso':enDias(7)}},
   ]);
   assert.equal(posts.length,1);
   assert.equal(posts[0].table,'Checklist');
@@ -173,4 +175,65 @@ test('deleteIngreso: si no se puede verificar el historial, no borra a la person
 test('tieneHistorialEnBeon: el nombre matchea sin importar mayúsculas ni espacios', async()=>{
   mockBorrado(ctx,{checklistEgreso:[{id:'c',fields:{Persona:'Cesar Welchez',Tipo:'Egreso'}}]});
   assert.equal(await ctx.tieneHistorialEnBeon('  Cesar Welchez  ',null),true);
+});
+
+// ─── No inventarle un ingreso a quien ya está hace años ───────────────────────
+// Bug real: a alguien que trabaja en BEON desde 2024 y nunca se fue le apareció
+// una tarjeta de "Pre-ingreso", con su 🎉 en Slack. La sincro le creaba tarjeta
+// a cualquier persona de Personas que no tuviera una, sin mirar hacía cuánto
+// había entrado — bastaba con que su tarjeta nunca hubiera existido, se hubiera
+// archivado, o que el registro se hubiera vuelto a cargar.
+const hace=dias=>{const d=new Date();d.setDate(d.getDate()-dias);return d.toISOString().slice(0,10);};
+const enDias=dias=>{const d=new Date();d.setDate(d.getDate()+dias);return d.toISOString().slice(0,10);};
+
+test('llevaTiempoEnBeon: distingue a quien está entrando de quien ya está hace rato',()=>{
+  assert.equal(ctx.llevaTiempoEnBeon({'Fecha de ingreso':hace(900)}),true);
+  assert.equal(ctx.llevaTiempoEnBeon({'Fecha de ingreso':hace(61)}),true);
+  assert.equal(ctx.llevaTiempoEnBeon({'Fecha de ingreso':hace(59)}),false);
+  assert.equal(ctx.llevaTiempoEnBeon({'Fecha de ingreso':enDias(10)}),false); // todavía no entró
+  // Sin fecha no se puede saber: es el caso de un alta recién cargada
+  assert.equal(ctx.llevaTiempoEnBeon({}),false);
+  assert.equal(ctx.llevaTiempoEnBeon(undefined),false);
+});
+
+test('sincronizarPersonasEnKanban: no le crea tarjeta a quien hace años trabaja acá', async()=>{
+  const posts=mockAirtable(ctx);
+  const slackCalls=[];
+  ctx.sendSlack=async text=>slackCalls.push(text);
+  await ctx.sincronizarPersonasEnKanban([
+    {id:'p1',fields:{Nombre:'Alejandro Fabrega','Rol en empresa':'Engineer','Fecha de ingreso':hace(900)}},
+  ]);
+  assert.equal(posts.length,0);
+  assert.equal(slackCalls.length,0);
+});
+
+test('sincronizarPersonasEnKanban: a un ingreso de verdad se la sigue creando', async()=>{
+  const posts=mockAirtable(ctx);
+  const slackCalls=[];
+  ctx.sendSlack=async text=>slackCalls.push(text);
+  await ctx.sincronizarPersonasEnKanban([
+    {id:'p1',fields:{Nombre:'Entra En Dos Semanas','Rol en empresa':'Engineer','Fecha de ingreso':enDias(14)}},
+    {id:'p2',fields:{Nombre:'Cargado Tarde','Rol en empresa':'Core Team','Fecha de ingreso':hace(21)}},
+    {id:'p3',fields:{Nombre:'Sin Fecha Todavia','Rol en empresa':'Engineer'}},
+  ]);
+  assert.deepEqual(posts.map(p=>p.fields.Persona),['Entra En Dos Semanas','Cargado Tarde','Sin Fecha Todavia']);
+  assert.equal(slackCalls.length,3);
+});
+
+test('deleteIngreso: a alguien que hace años trabaja acá solo le borra la tarjeta', async()=>{
+  const borrados=mockBorrado(ctx,{
+    personas:[{id:'pVIEJO',fields:{Nombre:'Alejandro Fabrega','Fecha de ingreso':hace(900)}}],
+  });
+  await ctx.deleteIngreso('chk1','Alejandro Fabrega');
+  assert.ok(borrados.some(b=>b.table==='Checklist'&&b.id==='chk1')); // la tarjeta sí
+  assert.equal(borrados.filter(b=>b.table==='Personas').length,0);   // la persona no
+  assert.equal(borrados.filter(b=>b.table==='Eventos').length,0);    // sus eventos tampoco
+});
+
+test('deleteIngreso: encuentra a la persona aunque el nombre de la tarjeta difiera en mayúsculas', async()=>{
+  const borrados=mockBorrado(ctx,{
+    personas:[{id:'pVIEJO',fields:{Nombre:'Alejandro Fabrega','Fecha de ingreso':hace(900)}}],
+  });
+  await ctx.deleteIngreso('chk1','  alejandro  fabrega ');
+  assert.equal(borrados.filter(b=>b.table==='Personas').length,0);
 });

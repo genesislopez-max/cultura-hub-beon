@@ -1,4 +1,21 @@
 
+// A partir de cuántos días desde su ingreso una persona deja de estar
+// "entrando". El checklist de onboarding dura dos semanas (ver calcularEtapa);
+// dos meses es margen de sobra para cargar tarde a alguien que entró hace poco.
+const DIAS_ONBOARDING_VIGENTE=60;
+
+// ¿Hace rato que esta persona trabaja en BEON? Lo usan los dos lados del mismo
+// problema: no inventarle una tarjeta de ingreso a quien ya está hace años, y
+// no borrarle el registro cuando esa tarjeta se elimina.
+// Sin Fecha de ingreso no se puede saber, y se responde que no: ese es el caso
+// de un alta recién cargada a la que todavía no le pusieron la fecha.
+function llevaTiempoEnBeon(fields){
+  const ingreso=fields?.['Fecha de ingreso'];
+  if(!ingreso) return false;
+  const dias=Math.floor((new Date()-new Date(ingreso+'T12:00:00'))/86400000);
+  return dias>DIAS_ONBOARDING_VIGENTE;
+}
+
 // ¿Esta persona llegó a trabajar en BEON de verdad?
 //
 // El borrado de un ingreso está pensado para cancelar un alta cargada por error
@@ -8,9 +25,9 @@
 // offboarding completo (7/7) desapareció de Personas y quedó su tarjeta de
 // Egreso huérfana, sin correo, sin país y sin último día.
 //
-// Dos señales inequívocas de que la persona existió: tiene fecha de egreso
-// cargada, o tiene una tarjeta de Egreso en Checklist. Un alta cancelada no
-// tiene ninguna de las dos.
+// Tres señales inequívocas de que la persona existió: tiene fecha de egreso
+// cargada, tiene una tarjeta de Egreso en Checklist, o hace rato que trabaja
+// acá. Un alta cancelada no tiene ninguna de las tres.
 // Se consulta a Airtable en vez de mirar un cache: el borrado es una acción
 // rara y destructiva, así que una request de más no importa, y así la
 // protección no depende de qué secciones del Hub estén cargadas en ese momento.
@@ -18,6 +35,10 @@
 // borrar (recuperar un registro perdido cuesta mucho más que borrarlo después).
 async function tieneHistorialEnBeon(nombre,personaRec){
   if(personaRec?.fields?.['Fecha de egreso']) return true;
+  // Hace meses (o años) que trabaja acá y nunca se fue: la tarjeta de ingreso
+  // puede sobrar, pero la persona no. Sin esto, borrar una tarjeta que el Hub
+  // había creado de más se llevaba puesto su registro de Personas y sus eventos.
+  if(llevaTiempoEnBeon(personaRec?.fields)) return true;
   const esc=(nombre||'').replace(/"/g,'\\"');
   try{
     const d=await atGet('Checklist',`&filterByFormula=AND({Tipo}="Egreso",{Persona}="${esc}")`);
@@ -32,7 +53,11 @@ async function tieneHistorialEnBeon(nombre,personaRec){
 // Si la persona tiene historial, se borra SOLO la tarjeta: ver
 // tieneHistorialEnBeon() para el porqué.
 async function deleteIngreso(checklistId, nombre){
-  const personaRec=(cachePersonasRaw||[]).find(p=>(p.fields.Nombre||'').trim()===(nombre||'').trim());
+  // Por nombre normalizado: el de la tarjeta y el de Personas son dos textos
+  // sueltos, y si difieren en una mayúscula o un espacio la protección de abajo
+  // no encontraba a la persona y la daba por inexistente.
+  const buscado=normalizarNombre(nombre);
+  const personaRec=(cachePersonasRaw||[]).find(p=>normalizarNombre(p.fields.Nombre)===buscado);
   const conHistorial=await tieneHistorialEnBeon(nombre,personaRec);
 
   // 1. Eliminar de Checklist (la tarjeta de ingreso, siempre)
@@ -477,6 +502,14 @@ async function sincronizarPersonasEnKanban(personasRecs){
     // Slack. Si más adelante se le carga un egreso real por el flujo normal,
     // esta rama ya no aplica porque para entonces sí va a tener checklist.
     if(p.fields['Fecha de egreso']) continue;
+
+    // Alguien que hace meses (o años) está en BEON no está entrando: su
+    // onboarding pasó mucho antes de que existiera el Hub, o su tarjeta se
+    // archivó en su momento. Sin este corte, cualquier persona que apareciera
+    // en Personas sin tarjeta —una carga tardía, un registro rehecho, un
+    // nombre corregido— se convertía en un "Pre-ingreso" y se anunciaba por
+    // Slack como ingreso nuevo. Pasó con alguien que nunca se había ido.
+    if(llevaTiempoEnBeon(p.fields)) continue;
 
     // No tiene checklist todavía → creamos primero lo esencial, así la tarjeta
     // y el aviso de Slack no dependen de que Proyecto/Mail/País existan como

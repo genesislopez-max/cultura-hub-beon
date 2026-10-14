@@ -101,3 +101,66 @@ test('bloqueTemProyectoHtml: con un solo TEM lo deja preseleccionado; con varios
   assert.ok(!/ selected/.test(leer(c,'bloqueTemProyectoHtml("Atlas")')),
     'con dos TEM distintos no puede dar uno por bueno');
 });
+
+// ─── Renombrar un proyecto ────────────────────────────────────────────────────
+// El campo Proyecto de Personas es texto con el NOMBRE, no un link al registro.
+// Renombrar el proyecto dejaba a toda su gente apuntando a un nombre que ya no
+// existe: el proyecto pasaba a figurar con 0 devs y sin TEM, y desaparecía de
+// los filtros por proyecto.
+test('personasConProyecto: para renombrar también cuenta quien ya no está en BEON',()=>{
+  const c=conPersonas();
+  assert.equal(leer(c,'personasConProyecto("Atlas").map(p=>p.fields.Nombre).join("|")'),
+    'Ana Dev|Beto Dev|Caro Dev|Ex Dev');
+  // devsDeProyecto() es la otra mirada: solo los activos, que son los que
+  // definen el TEM de hoy
+  assert.equal(leer(c,'devsDeProyecto("Atlas").length'),3);
+});
+
+test('hayQueRenombrarProyecto: solo si el nombre cambió de verdad',()=>{
+  const c=conPersonas();
+  assert.equal(leer(c,'hayQueRenombrarProyecto("Atlas","Atlas Reloaded")'),true);
+  assert.equal(leer(c,'hayQueRenombrarProyecto("Atlas","Atlas")'),false);
+  assert.equal(leer(c,'hayQueRenombrarProyecto("Atlas","  Atlas  ")'),false); // solo espacios
+  assert.equal(leer(c,'hayQueRenombrarProyecto("Atlas","")'),false);          // nombre vacío
+  assert.equal(leer(c,'hayQueRenombrarProyecto("","Nuevo")'),false);          // sin nombre previo
+});
+
+test('renombrarProyectoEnRegistros: arrastra a su gente y a las tarjetas del Kanban',async()=>{
+  const c=conPersonas();
+  const patches=[];
+  c.atPatch=async(path,fields)=>{patches.push({path,fields});};
+  c.atGet=async(tabla,qs)=>tabla==='Checklist'
+    ? {records:[{id:'chk1',fields:{Persona:'Ana Dev',Proyecto:'Atlas'}}]}
+    : {records:[]};
+  const res=await leer(c,'renombrarProyectoEnRegistros("Atlas","Atlas Reloaded")');
+  assert.equal(res.personas,4);
+  assert.equal(res.tarjetas,1);
+  assert.deepEqual(patches.map(p=>p.path),
+    ['Personas/p1','Personas/p2','Personas/p3','Personas/p4','Checklist/chk1']);
+  assert.ok(patches.every(p=>p.fields.Proyecto==='Atlas Reloaded'));
+});
+
+test('renombrarProyectoEnRegistros: sin cambio de nombre no toca nada',async()=>{
+  const c=conPersonas();
+  c.atPatch=async()=>{throw new Error('no debería escribir nada');};
+  c.atGet=async()=>({records:[]});
+  const res=await leer(c,'renombrarProyectoEnRegistros("Atlas","Atlas")');
+  // Campo por campo: el objeto viene del sandbox y deepEqual lo compara contra
+  // el Object de este realm.
+  assert.equal(res.personas,0);
+  assert.equal(res.tarjetas,0);
+});
+
+// El Proyecto de la tarjeta es una copia para mostrar, no la asignación real:
+// si esa columna no existe en la base, el renombre de Personas igual tiene que
+// quedar hecho (ver guardarDatosDenormalizados, que defiende el mismo caso).
+test('renombrarProyectoEnRegistros: si falla la parte del Kanban, la gente igual queda renombrada',async()=>{
+  const c=conPersonas();
+  const patches=[];
+  c.atPatch=async(path,fields)=>{patches.push(path);};
+  c.atGet=async()=>{throw new Error('Unknown field name: "Proyecto"');};
+  const res=await leer(c,'renombrarProyectoEnRegistros("Atlas","Atlas Reloaded")');
+  assert.equal(res.personas,4);
+  assert.equal(res.tarjetas,0);
+  assert.equal(patches.length,4);
+});

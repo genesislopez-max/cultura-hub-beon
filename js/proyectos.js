@@ -172,6 +172,13 @@ function devsDeProyecto(nombre){
 function temsDeProyecto(nombre){
   return [...new Set(devsDeProyecto(nombre).map(p=>(p.fields.Manager||'').trim()).filter(Boolean))];
 }
+// Para renombrar: acá sí entra quien ya no está en BEON. Su proyecto es el
+// mismo proyecto, y si se queda con el nombre viejo su ficha histórica apunta
+// a algo que ya no existe.
+function personasConProyecto(nombre){
+  const buscado=normalizarNombre(nombre);
+  return (cachePersonasRaw||[]).filter(p=>normalizarNombre(p.fields.Proyecto)===buscado);
+}
 function temProyectoTexto(nombre){
   const tems=temsDeProyecto(nombre);
   return tems.length?`TEM: ${tems.join(', ')}`:'Sin TEM asignado';
@@ -240,6 +247,54 @@ async function guardarTemProyecto(nombreProyecto){
   return cambian.length;
 }
 
+// ─── RENOMBRAR UN PROYECTO ────────────────────────────────────────────────────
+// El campo Proyecto de Personas es texto con el NOMBRE del proyecto, no un link
+// al registro. Así que renombrarlo en Proyectos dejaba a toda su gente apuntando
+// a un nombre que ya no existe: el proyecto pasaba a figurar con 0 devs y sin
+// TEM, desaparecía de los filtros por proyecto, y las personas quedaban
+// asignadas a un proyecto fantasma. Lo mismo con el Proyecto que las tarjetas
+// del Kanban de Ingresos llevan copiado.
+//
+// (Off Sites y Get Together guardan el proyecto como linked record —se resuelve
+// por ID, ver loadOffsites()/loadGetTogether()— así que a ellos el renombre no
+// los afecta.)
+function hayQueRenombrarProyecto(viejo,nuevo){
+  const a=(viejo||'').trim(), b=(nuevo||'').trim();
+  return !!a&&!!b&&a!==b;
+}
+async function renombrarProyectoEnRegistros(viejo,nuevo){
+  if(!hayQueRenombrarProyecto(viejo,nuevo)) return {personas:0,tarjetas:0};
+  const personas=personasConProyecto(viejo);
+  for(const p of personas) await atPatch(`Personas/${p.id}`,{Proyecto:nuevo});
+
+  // Las tarjetas se piden a Airtable y no al cache: el Kanban de Ingresos puede
+  // no estar cargado, y acá no alcanza con las que estén a la vista. Si la
+  // columna no existe en esta base, se avisa y sigue — el dato de la tarjeta es
+  // una copia para mostrar, no la asignación real (ver guardarDatosDenormalizados).
+  let tarjetas=0;
+  try{
+    const esc=viejo.trim().replace(/"/g,'\\"');
+    const recs=await atGet('Checklist',`&filterByFormula={Proyecto}="${esc}"`).then(d=>d.records||[]);
+    for(const r of recs) await atPatch(`Checklist/${r.id}`,{Proyecto:nuevo});
+    tarjetas=recs.length;
+  }catch(e){
+    console.error(`No se pudo renombrar el proyecto en las tarjetas del Kanban (de "${viejo}" a "${nuevo}"):`,e.message);
+  }
+  return {personas:personas.length,tarjetas};
+}
+// Se avisa mientras se escribe, no después de guardar: renombrar toca los
+// registros de otra tabla y conviene verlo venir.
+function actualizarAvisoRenombreProyecto(){
+  const aviso=document.getElementById('f-ep-nombre-aviso');
+  if(!aviso||!window._proyectoEnEdicion) return;
+  const nuevo=document.getElementById('f-ep-nombre')?.value||'';
+  const viejo=window._proyectoEnEdicion;
+  const cuantas=hayQueRenombrarProyecto(viejo,nuevo)?personasConProyecto(viejo).length:0;
+  aviso.textContent=cuantas
+    ? `Al renombrarlo, "${nuevo.trim()}" también les queda cargado a las ${cuantas} ${cuantas===1?'persona':'personas'} que tienen este proyecto asignado.`
+    : '';
+}
+
 // Editar un proyecto ya existente (Nombre/Fecha de inicio/Estado/TEM) — antes
 // solo se podía cargar uno nuevo, no había forma de pasar uno a "Inactivo" (ni
 // corregir nada) sin ir directo a Airtable.
@@ -251,7 +306,10 @@ function editarProyecto(id){
   _openFormModal({
     title:`Editar — ${f.Proyecto||'proyecto'}`,
     html:()=>`
-<div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-ep-nombre" value="${(f.Proyecto||'').replace(/"/g,'&quot;')}"></div>
+<div class="field-group"><label class="field-label">Nombre *</label>
+  <input class="field-input" id="f-ep-nombre" value="${(f.Proyecto||'').replace(/"/g,'&quot;')}" oninput="actualizarAvisoRenombreProyecto()">
+  <div id="f-ep-nombre-aviso" class="field-hint"></div>
+</div>
 <div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-ep-fecha" type="date" value="${fechaInicioVal}"></div>
 <div class="field-group"><label class="field-label">Estado</label>
   <select class="field-input" id="f-ep-estado" onchange="toggleFechaFinProyecto('f-ep')">
@@ -262,7 +320,11 @@ ${campoFechaFinProyecto('f-ep',f.Estado,f['Fecha de fin'])}
 ${bloqueTemProyectoHtml(f.Proyecto||'')}`,
     // El nombre se puede editar en este mismo form, así que la gente asignada
     // se busca siempre por el nombre con el que se abrió, no por lo tipeado.
-    onMount:()=>{ window._proyectoEnEdicion=f.Proyecto||''; actualizarAvisoTemProyecto(); },
+    onMount:()=>{
+      window._proyectoEnEdicion=f.Proyecto||'';
+      actualizarAvisoTemProyecto();
+      actualizarAvisoRenombreProyecto();
+    },
     save:async()=>{
       const v=id2=>document.getElementById(id2)?.value||'';
       if(!v('f-ep-nombre')){toast('El nombre es obligatorio',true);return false;}
@@ -271,8 +333,12 @@ ${bloqueTemProyectoHtml(f.Proyecto||'')}`,
       const fin=fechaFinAGuardar(fields.Estado,v('f-ep-fin'),f['Fecha de fin']);
       if(fin!==undefined) fields['Fecha de fin']=fin;
       await atPatch(`Proyectos/${id}`,fields);
+      // El TEM se resuelve con el nombre viejo, que es con el que la gente
+      // sigue cargada — por eso va antes del renombre.
       const cambiados=await guardarTemProyecto(f.Proyecto||'');
       if(cambiados) toast(`TEM actualizado en ${cambiados} ${cambiados===1?'persona':'personas'} ✓`);
+      const renombrado=await renombrarProyectoEnRegistros(f.Proyecto||'',fields.Proyecto);
+      if(renombrado.personas) toast(`"${fields.Proyecto}" quedó cargado en ${renombrado.personas} ${renombrado.personas===1?'persona':'personas'} ✓`);
       return true;
     },
   });

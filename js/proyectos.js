@@ -157,8 +157,146 @@ function fechaFinAGuardar(estado,valor,finPrevio){
   return nuevo===(finPrevio||null)?undefined:nuevo;
 }
 
-// Editar un proyecto ya existente (Nombre/Fecha de inicio/Estado) — antes solo
-// se podía cargar uno nuevo, no había forma de pasar uno a "Inactivo" (ni
+// ─── TEM DEL PROYECTO ─────────────────────────────────────────────────────────
+// El TEM de un proyecto no es un campo de Proyectos: sale del campo "Manager"
+// de la gente asignada a él (ver el label del modal y el filtro de la tabla).
+// Por eso "cambiarle el TEM al proyecto" es reasignarle el TEM a esas personas:
+// si se guardara aparte en Proyectos quedarían dos verdades distintas, y la
+// tabla de Engineers seguiría mostrando la vieja.
+function devsDeProyecto(nombre){
+  const buscado=normalizarNombre(nombre);
+  return (cachePersonasRaw||[])
+    .filter(p=>!yaEgreso(p)&&normalizarNombre(p.fields.Proyecto)===buscado)
+    .sort((a,b)=>(a.fields.Nombre||'').localeCompare(b.fields.Nombre||'','es'));
+}
+function temsDeProyecto(nombre){
+  return [...new Set(devsDeProyecto(nombre).map(p=>(p.fields.Manager||'').trim()).filter(Boolean))];
+}
+// Para renombrar: acá sí entra quien ya no está en BEON. Su proyecto es el
+// mismo proyecto, y si se queda con el nombre viejo su ficha histórica apunta
+// a algo que ya no existe.
+function personasConProyecto(nombre){
+  const buscado=normalizarNombre(nombre);
+  return (cachePersonasRaw||[]).filter(p=>normalizarNombre(p.fields.Proyecto)===buscado);
+}
+function temProyectoTexto(nombre){
+  const tems=temsDeProyecto(nombre);
+  return tems.length?`TEM: ${tems.join(', ')}`:'Sin TEM asignado';
+}
+
+// El bloque del form: a quién se le cambia y a quién. Los devs vienen todos
+// tildados —cambiar el TEM del proyecto normalmente los abarca a todos— pero se
+// pueden destildar, que es lo que hace falta cuando el proyecto hoy tiene más
+// de un TEM y solo se quiere mover a una parte del equipo.
+function bloqueTemProyectoHtml(nombre){
+  const devs=devsDeProyecto(nombre);
+  if(!devs.length){
+    return`<div class="field-group">
+  <label class="field-label">TEM del proyecto</label>
+  <div class="field-hint" style="margin-top:0">Todavía no hay nadie asignado a este proyecto. El TEM sale del campo "TEM / Manager a cargo" de su gente, así que se define al asignarle devs.</div>
+</div>`;
+  }
+  const tems=temsDeProyecto(nombre);
+  const actual=tems.length===1?tems[0]:'';
+  const opciones=[...new Set([...listaTEMs(),...tems])].sort();
+  return`<div class="field-group">
+  <label class="field-label">TEM del proyecto</label>
+  <select class="field-input" id="f-ep-tem" onchange="actualizarAvisoTemProyecto()">
+    <option value="">Dejar como está</option>
+    ${opciones.map(t=>`<option value="${t.replace(/"/g,'&quot;')}"${t===actual?' selected':''}>${t}</option>`).join('')}
+  </select>
+  <div class="field-hint">El TEM del proyecto es el "TEM / Manager a cargo" de su gente: al cambiarlo acá se les actualiza a quienes estén tildados.</div>
+  <div id="f-ep-tem-aviso" class="field-hint" style="margin-top:6px"></div>
+  <div id="f-ep-tem-lista" style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:9px;padding:6px 10px;margin-top:8px">
+    ${devs.map(p=>{
+      const n=p.fields.Nombre||'';
+      const suTem=(p.fields.Manager||'').trim();
+      return`<label style="display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:13px;cursor:pointer">
+      <input type="checkbox" class="ep-tem-chk" value="${n.replace(/"/g,'&quot;')}" checked onchange="actualizarAvisoTemProyecto()">
+      <span>${n} <span style="color:var(--text3)">· ${suTem||'sin TEM'}</span></span>
+    </label>`;
+    }).join('')}
+  </div>
+</div>`;
+}
+// Cuántas personas cambian de verdad: quien ya tiene ese TEM no se toca, así
+// que el aviso no promete un cambio que no va a pasar.
+function personasACambiarTem(nombreProyecto,temNuevo,marcados){
+  if(!temNuevo) return [];
+  return devsDeProyecto(nombreProyecto).filter(p=>
+    marcados.has(p.fields.Nombre||'')&&(p.fields.Manager||'').trim()!==temNuevo);
+}
+function marcadosTemProyecto(){
+  return new Set([...document.querySelectorAll('.ep-tem-chk')].filter(c=>c.checked).map(c=>c.value));
+}
+function actualizarAvisoTemProyecto(){
+  const aviso=document.getElementById('f-ep-tem-aviso');
+  if(!aviso||!window._proyectoEnEdicion) return;
+  const tem=document.getElementById('f-ep-tem')?.value||'';
+  const cambian=personasACambiarTem(window._proyectoEnEdicion,tem,marcadosTemProyecto());
+  aviso.textContent=!tem
+    ? 'No se le cambia el TEM a nadie.'
+    : cambian.length
+      ? `Le va a quedar ${tem} como TEM a ${cambian.length} ${cambian.length===1?'persona':'personas'}: ${cambian.map(p=>p.fields.Nombre).join(', ')}.`
+      : `Ya todos los tildados tienen a ${tem} como TEM: no se cambia nada.`;
+}
+async function guardarTemProyecto(nombreProyecto){
+  const tem=document.getElementById('f-ep-tem')?.value||'';
+  const cambian=personasACambiarTem(nombreProyecto,tem,marcadosTemProyecto());
+  for(const p of cambian) await atPatch(`Personas/${p.id}`,{Manager:tem});
+  return cambian.length;
+}
+
+// ─── RENOMBRAR UN PROYECTO ────────────────────────────────────────────────────
+// El campo Proyecto de Personas es texto con el NOMBRE del proyecto, no un link
+// al registro. Así que renombrarlo en Proyectos dejaba a toda su gente apuntando
+// a un nombre que ya no existe: el proyecto pasaba a figurar con 0 devs y sin
+// TEM, desaparecía de los filtros por proyecto, y las personas quedaban
+// asignadas a un proyecto fantasma. Lo mismo con el Proyecto que las tarjetas
+// del Kanban de Ingresos llevan copiado.
+//
+// (Off Sites y Get Together guardan el proyecto como linked record —se resuelve
+// por ID, ver loadOffsites()/loadGetTogether()— así que a ellos el renombre no
+// los afecta.)
+function hayQueRenombrarProyecto(viejo,nuevo){
+  const a=(viejo||'').trim(), b=(nuevo||'').trim();
+  return !!a&&!!b&&a!==b;
+}
+async function renombrarProyectoEnRegistros(viejo,nuevo){
+  if(!hayQueRenombrarProyecto(viejo,nuevo)) return {personas:0,tarjetas:0};
+  const personas=personasConProyecto(viejo);
+  for(const p of personas) await atPatch(`Personas/${p.id}`,{Proyecto:nuevo});
+
+  // Las tarjetas se piden a Airtable y no al cache: el Kanban de Ingresos puede
+  // no estar cargado, y acá no alcanza con las que estén a la vista. Si la
+  // columna no existe en esta base, se avisa y sigue — el dato de la tarjeta es
+  // una copia para mostrar, no la asignación real (ver guardarDatosDenormalizados).
+  let tarjetas=0;
+  try{
+    const esc=viejo.trim().replace(/"/g,'\\"');
+    const recs=await atGet('Checklist',`&filterByFormula={Proyecto}="${esc}"`).then(d=>d.records||[]);
+    for(const r of recs) await atPatch(`Checklist/${r.id}`,{Proyecto:nuevo});
+    tarjetas=recs.length;
+  }catch(e){
+    console.error(`No se pudo renombrar el proyecto en las tarjetas del Kanban (de "${viejo}" a "${nuevo}"):`,e.message);
+  }
+  return {personas:personas.length,tarjetas};
+}
+// Se avisa mientras se escribe, no después de guardar: renombrar toca los
+// registros de otra tabla y conviene verlo venir.
+function actualizarAvisoRenombreProyecto(){
+  const aviso=document.getElementById('f-ep-nombre-aviso');
+  if(!aviso||!window._proyectoEnEdicion) return;
+  const nuevo=document.getElementById('f-ep-nombre')?.value||'';
+  const viejo=window._proyectoEnEdicion;
+  const cuantas=hayQueRenombrarProyecto(viejo,nuevo)?personasConProyecto(viejo).length:0;
+  aviso.textContent=cuantas
+    ? `Al renombrarlo, "${nuevo.trim()}" también les queda cargado a las ${cuantas} ${cuantas===1?'persona':'personas'} que tienen este proyecto asignado.`
+    : '';
+}
+
+// Editar un proyecto ya existente (Nombre/Fecha de inicio/Estado/TEM) — antes
+// solo se podía cargar uno nuevo, no había forma de pasar uno a "Inactivo" (ni
 // corregir nada) sin ir directo a Airtable.
 function editarProyecto(id){
   const r=cacheProyectosRaw.find(p=>p.id===id);
@@ -168,14 +306,25 @@ function editarProyecto(id){
   _openFormModal({
     title:`Editar — ${f.Proyecto||'proyecto'}`,
     html:()=>`
-<div class="field-group"><label class="field-label">Nombre *</label><input class="field-input" id="f-ep-nombre" value="${(f.Proyecto||'').replace(/"/g,'&quot;')}"></div>
+<div class="field-group"><label class="field-label">Nombre *</label>
+  <input class="field-input" id="f-ep-nombre" value="${(f.Proyecto||'').replace(/"/g,'&quot;')}" oninput="actualizarAvisoRenombreProyecto()">
+  <div id="f-ep-nombre-aviso" class="field-hint"></div>
+</div>
 <div class="field-group"><label class="field-label">Fecha de inicio</label><input class="field-input" id="f-ep-fecha" type="date" value="${fechaInicioVal}"></div>
 <div class="field-group"><label class="field-label">Estado</label>
   <select class="field-input" id="f-ep-estado" onchange="toggleFechaFinProyecto('f-ep')">
     ${PROYECTO_ESTADOS.map(e=>`<option value="${e}"${e===normalizarEstadoProyecto(f.Estado)?' selected':''}>${e}</option>`).join('')}
   </select>
 </div>
-${campoFechaFinProyecto('f-ep',f.Estado,f['Fecha de fin'])}`,
+${campoFechaFinProyecto('f-ep',f.Estado,f['Fecha de fin'])}
+${bloqueTemProyectoHtml(f.Proyecto||'')}`,
+    // El nombre se puede editar en este mismo form, así que la gente asignada
+    // se busca siempre por el nombre con el que se abrió, no por lo tipeado.
+    onMount:()=>{
+      window._proyectoEnEdicion=f.Proyecto||'';
+      actualizarAvisoTemProyecto();
+      actualizarAvisoRenombreProyecto();
+    },
     save:async()=>{
       const v=id2=>document.getElementById(id2)?.value||'';
       if(!v('f-ep-nombre')){toast('El nombre es obligatorio',true);return false;}
@@ -184,9 +333,24 @@ ${campoFechaFinProyecto('f-ep',f.Estado,f['Fecha de fin'])}`,
       const fin=fechaFinAGuardar(fields.Estado,v('f-ep-fin'),f['Fecha de fin']);
       if(fin!==undefined) fields['Fecha de fin']=fin;
       await atPatch(`Proyectos/${id}`,fields);
+      // El TEM se resuelve con el nombre viejo, que es con el que la gente
+      // sigue cargada — por eso va antes del renombre.
+      const cambiados=await guardarTemProyecto(f.Proyecto||'');
+      if(cambiados) toast(`TEM actualizado en ${cambiados} ${cambiados===1?'persona':'personas'} ✓`);
+      const renombrado=await renombrarProyectoEnRegistros(f.Proyecto||'',fields.Proyecto);
+      if(renombrado.personas) toast(`"${fields.Proyecto}" quedó cargado en ${renombrado.personas} ${renombrado.personas===1?'persona':'personas'} ✓`);
       return true;
     },
   });
+}
+
+// Desde el modal del proyecto: el form de edición vive en otro overlay que
+// queda POR DEBAJO de este, así que hay que cerrar éste antes de abrirlo.
+function editarTemDesdeMeet(){
+  if(!meetProyectoActual) return;
+  const {id}=meetProyectoActual;
+  closeMeetModal();
+  editarProyecto(id);
 }
 
 // ─── SUGERENCIA PARA EL PRÓXIMO MEET OUR TEAMS ────────────────────────────────
@@ -309,10 +473,9 @@ function openMeetModal(proyectoId, nombre, focusForm=false){
   // Personas, cargado como "TEM / Manager a cargo" en el form) — normalmente
   // todos comparten el mismo TEM, pero si hay más de uno se listan todos.
   const temLabel=document.getElementById('meet-tem-label');
-  if(temLabel){
-    const tems=[...new Set(asignados.map(p=>(p.fields.Manager||'').trim()).filter(Boolean))];
-    temLabel.textContent=tems.length?`TEM: ${tems.join(', ')}`:'Sin TEM asignado';
-  }
+  if(temLabel) temLabel.textContent=temProyectoTexto(nombre);
+  const btnTem=document.getElementById('meet-tem-editar');
+  if(btnTem) btnTem.style.display=puedeEscribir()?'inline-flex':'none';
 
   const pubs=(cacheMeetByProyecto[nombre]||[]).slice().sort((a,b)=>new Date(a.fecha)-new Date(b.fecha));
 

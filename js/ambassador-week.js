@@ -19,10 +19,13 @@ function calcPctVuelo(nombre, nivel, historial){
   const regla=AW_RULES[nivel]||AW_RULES.Spark;
   if(nivel==='Storm') return 50;
   // Contar cuántas veces anteriores fue con 50%
-  const vecesPrevias=historial.filter(r=>{
-    const p=typeof r.fields.Persona==='string'?r.fields.Persona:(Array.isArray(r.fields.Persona)?r.fields.Persona[0]:'');
-    return p.trim()===nombre.trim();
-  }).length;
+  // Por nombre normalizado: en Ambassador Week el nombre se tipea a mano y
+  // convive con y sin acento ("Jesús"/"Jesus"). Comparándolo crudo, sus
+  // asistencias previas no se contaban y el Hub le ofrecía un vuelo cubierto
+  // que ya había usado.
+  const buscado=normalizarNombre(nombre);
+  const vecesPrevias=historial.filter(r=>
+    normalizarNombre(nombreDePersonaRef(r.fields.Persona))===buscado).length;
   return vecesPrevias<regla.asistenciasConVuelo?50:0;
 }
 
@@ -234,10 +237,13 @@ function renderAWPersonas(){
   const loyaltyFil=document.getElementById('aw-loyalty')?.value||'';
   const temFil=document.getElementById('aw-tem')?.value||'';
 
-  // Contar asistencias por persona
+  // Contar asistencias por persona. La clave es el nombre normalizado y no el
+  // texto crudo: el de Ambassador Week se tipea a mano y puede venir con o sin
+  // acento respecto del de Personas, con lo que la cuenta daba 0 y la fila
+  // mostraba cobertura de vuelo todavía disponible.
   const asistMap={};
   cacheAWRaw.forEach(r=>{
-    const p=Array.isArray(r.fields.Persona)?r.fields.Persona[0]:r.fields.Persona;
+    const p=normalizarNombre(nombreDePersonaRef(r.fields.Persona));
     if(!p) return;
     if(!asistMap[p]) asistMap[p]={count:0,ediciones:[]};
     asistMap[p].count++;
@@ -264,7 +270,7 @@ function renderAWPersonas(){
     const nombre=p.fields.Nombre||'—';
     const nivel=normalizarNivel(p.fields['Nivel Loyalty']);
     const regla=AW_RULES[nivel]||AW_RULES.Spark;
-    const data=asistMap[nombre]||{count:0,ediciones:[]};
+    const data=asistMap[normalizarNombre(nombre)]||{count:0,ediciones:[]};
     const veces=data.count;
     const edicionesStr=data.ediciones.slice(-2).join(', ')+(data.ediciones.length>2?` +${data.ediciones.length-2}`:'');
 
@@ -301,12 +307,16 @@ function renderAWHistorial(){
   const q=(document.getElementById('aw-hist-search')?.value||'').toLowerCase();
   const temFil=document.getElementById('aw-hist-tem')?.value||'';
 
+  // A quien ya se fue de BEON no se lo lista, pero a quien NO se puede
+  // identificar contra Personas sí: esconderlo hacía desaparecer en silencio un
+  // registro que está cargado, y así quedaba la sensación de que el dato se
+  // había perdido. Mejor que se vea y se note que hay algo que corregir.
   const recs=cacheAWRaw.filter(r=>{
-    const p=Array.isArray(r.fields.Persona)?r.fields.Persona[0]:(r.fields.Persona||'');
+    const p=nombreDePersonaRef(r.fields.Persona);
     const dest=getEdicionAW(r.fields);
     const matchQ=!q||(p+dest).toLowerCase().includes(q);
     const matchTem=!temFil||managerDePersona(p)===temFil;
-    return personaActiva(p)&&matchQ&&matchTem;
+    return (!personaConocida(p)||personaActiva(p))&&matchQ&&matchTem;
   });
 
   document.getElementById('aw-badge-historial').textContent=`${recs.length} registros`;
@@ -316,9 +326,13 @@ function renderAWHistorial(){
 
   tb.innerHTML=recs.map((r,idx)=>{
     const f=r.fields;
-    const nombre=Array.isArray(f.Persona)?f.Persona[0]:(f.Persona||'—');
-    const persona=cachePersonasRaw.find(p=>p.fields.Nombre===nombre);
+    const nombre=nombreDePersonaRef(f.Persona)||'—';
+    const buscado=normalizarNombre(nombre);
+    const persona=cachePersonasRaw.find(p=>normalizarNombre(p.fields.Nombre)===buscado);
     const nivel=normalizarNivel(persona?.fields['Nivel Loyalty']);
+    // Sin registro en Personas el nivel saldría como Spark, que es el default
+    // de normalizarNivel() y no un dato real: se aclara en vez de inventarlo.
+    const sinFicha=!persona;
     const edicion=getEdicionAW(f)||'—';
     const acomp=f['Acompañantes'];
     // Normalizar porcentaje: puede venir como 0.5/1 (decimal) o 50/100 (entero)
@@ -326,8 +340,8 @@ function renderAWHistorial(){
     let pct=pctRaw!=null?(pctRaw<=1?Math.round(pctRaw*100):Number(pctRaw)):null;
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr style="${bg}">
-      <td>${avH(nombre)}${nombre}</td>
-      <td><span class="badge ${nivelColors[nivel]||'badge-gray'}">${nivel}</span></td>
+      <td>${avH(nombre)}${nombre}${sinFicha?' <span class="badge badge-amber" title="Este nombre no coincide con ninguna persona de la tabla Personas — revisá cómo está escrito">sin ficha</span>':''}</td>
+      <td>${sinFicha?'<span style="color:var(--text3);font-size:12px">—</span>':`<span class="badge ${nivelColors[nivel]||'badge-gray'}">${nivel}</span>`}</td>
       <td style="font-size:12px">${edicion}</td>
       <td style="font-size:12px;color:var(--text2)">${acomp!=null?acomp+' acomp.':'—'}</td>
       <td style="font-weight:600;color:${pct===50?'var(--blue)':pct===0?'var(--text3)':'var(--text2)'}">${pct!=null?pct+'%':'—'}</td>

@@ -3,7 +3,10 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const {loadApp}=require('../test-helpers/load-app');
 
-const ctx=loadApp(['constants.js','ambassador-week.js']);
+// utils.js aporta normalizarNombre()/nombreDePersonaRef(), con los que
+// calcPctVuelo() reconoce a la persona aunque su nombre esté escrito con o sin
+// acento; state.js, el cache de Personas que esos helpers consultan.
+const ctx=loadApp(['constants.js','state.js','personas.js','utils.js','ambassador-week.js']);
 
 test('calcPctVuelo: primera vez de una persona de nivel Spark, cubre 50% del vuelo', ()=>{
   assert.equal(ctx.calcPctVuelo('Juan','Spark',[]),50);
@@ -78,4 +81,14 @@ test('calcPctVuelo: con el nivel crudo se pierde la 2da cobertura de Thunder', (
   // Deja constancia de por qué el nivel tiene que pasar por normalizarNivel()
   assert.equal(ctxNivel.calcPctVuelo('Thalisson Barbosa','Thunder ',historial),0);
   assert.equal(ctxNivel.calcPctVuelo('Thalisson Barbosa',ctxNivel.normalizarNivel('Thunder '),historial),50);
+});
+
+// Bug real: el nombre en Ambassador Week se tipea a mano y convive con y sin
+// acento respecto del de Personas. Comparándolo crudo, sus asistencias previas
+// no se contaban y el Hub le ofrecía un vuelo cubierto que ya había usado.
+test('calcPctVuelo: cuenta las asistencias aunque el acento no coincida', ()=>{
+  const historial=[{fields:{Persona:'Jesus Figueroa'}}];   // sin acento, como en AW
+  assert.equal(ctx.calcPctVuelo('Jesús Figueroa','Spark',historial),0);
+  // Y sigue sin contar las de otra persona
+  assert.equal(ctx.calcPctVuelo('Otro Nombre','Spark',historial),50);
 });

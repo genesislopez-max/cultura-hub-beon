@@ -246,8 +246,11 @@ const PF_SECCIONES=[
 async function renderResumenPersona(nombre){
   const cont=document.getElementById('pf-extra');
   if(!cont||!nombre) return;
-  const esc=nombre.replace(/"/g,'\\"');
   const pedir=(tabla,qs)=>atGet(tabla,qs).catch(()=>({records:[]}));
+  // Las tablas que guardan a la persona por nombre van por pedirPorPersona(),
+  // que tolera acentos y descarta coincidencias de otra persona — ver allá.
+  const dePersona=(tabla,campo,qs='')=>pedirPorPersona(tabla,campo,nombre,qs)
+    .then(records=>({records})).catch(()=>({records:[]}));
   // El catálogo de beneficios (cacheBeneficiosRaw) lo llena loadBeneficios(),
   // que es LAZY: corre recién al entrar a la sección Beneficios. Esta ficha se
   // abre desde Engineers & Tech, así que muchas veces el cache está vacío y sin
@@ -255,14 +258,14 @@ async function renderResumenPersona(nombre){
   // en vez del nombre. Se pide solo si hace falta.
   const faltaCatalogo=!(cacheBeneficiosRaw&&cacheBeneficiosRaw.length);
   const [dBen,dCap,dAV,dAW,dOS,dGT,dCat]=await Promise.all([
-    pedir('Beneficios Asignados',`&filterByFormula=FIND("${esc}",{Persona})`),
-    pedir('Capacitaciones',`&filterByFormula=FIND("${esc}",{Persona})`),
-    pedir('Asistencia a Actividades',`&filterByFormula=FIND("${esc}",{Persona})&sort[0][field]=Fecha&sort[0][direction]=desc`),
+    dePersona('Beneficios Asignados','Persona'),
+    dePersona('Capacitaciones','Persona'),
+    dePersona('Asistencia a Actividades','Persona','&sort[0][field]=Fecha&sort[0][direction]=desc'),
     // Ambassador Week no tiene campo Fecha — pedir sort por Fecha hace que
     // Airtable rechace el pedido entero (ver verBenefPersona en side-panel.js).
-    pedir('Ambassador Week',`&filterByFormula=FIND("${esc}",{Persona})`),
-    pedir('Off Sites',`&filterByFormula=FIND("${esc}",{Persona})&sort[0][field]=Fecha inicio&sort[0][direction]=desc`),
-    pedir('Get Together',`&filterByFormula=FIND("${esc}",{BEONer})&sort[0][field]=Fecha&sort[0][direction]=desc`),
+    dePersona('Ambassador Week','Persona'),
+    dePersona('Off Sites','Persona','&sort[0][field]=Fecha inicio&sort[0][direction]=desc'),
+    dePersona('Get Together','BEONer','&sort[0][field]=Fecha&sort[0][direction]=desc'),
     faltaCatalogo?pedir('Beneficios',''):Promise.resolve(null),
   ]);
 

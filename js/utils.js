@@ -60,12 +60,65 @@ function listaTEMs(){
   // COO/Founder también — LIDER_ROLES cubre todos esos roles de liderazgo.
   return[...new Set(cachePersonasRaw.filter(p=>!yaEgreso(p)&&LIDER_ROLES.has((p.fields['Rol en empresa']||'').trim())).map(p=>p.fields.Nombre).filter(Boolean))].sort();
 }
-// Normaliza un nombre para comparar sin que un espacio de más, mayúscula
-// distinta, etc. haga fallar la búsqueda (ej. el nombre tipeado a mano en
-// Off Sites/Get Together no coincide caracter a caracter con el de
-// Personas) — misma idea que normalizarValor() en api/_lib/roles.js.
+// Normaliza un nombre para comparar sin que un espacio de más, una mayúscula
+// distinta o un acento haga fallar la búsqueda (ej. el nombre tipeado a mano en
+// Ambassador Week/Off Sites/Get Together no coincide caracter a caracter con el
+// de Personas) — misma idea que normalizarValor() en api/_lib/roles.js.
+//
+// Los acentos se sacan porque el mismo nombre convive escrito de las dos formas
+// en tablas distintas: "Jesús Figueroa" en Personas y "Jesus Figueroa" en
+// Ambassador Week. Sin esto, la persona no se reconocía y su registro
+// desaparecía del historial, su ficha decía "Sin registros", y el Hub le
+// ofrecía cobertura de vuelo que en realidad ya había usado.
+function sinAcentos(s){
+  return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'');
+}
 function normalizarNombre(s){
-  return String(s||'').replace(/\s+/g,' ').trim().toLowerCase();
+  return sinAcentos(s).replace(/\s+/g,' ').trim().toLowerCase();
+}
+
+// El valor de una columna que apunta a una persona puede llegar como texto, o
+// como linked record (un array con el id del registro). Varias secciones lo
+// resolvían por su cuenta; acá en un solo lugar.
+function nombreDePersonaRef(valor){
+  const v=Array.isArray(valor)?valor[0]:valor;
+  const txt=String(v||'');
+  if(/^rec[A-Za-z0-9]{14}$/.test(txt)){
+    const p=(cachePersonasRaw||[]).find(x=>x.id===txt);
+    return p?.fields?.Nombre||txt;
+  }
+  return txt;
+}
+
+// Pide las filas de una tabla que corresponden a una persona.
+//
+// Estas tablas guardan a la persona por NOMBRE, y se consultaban con FIND(),
+// que compara caracter a caracter: un acento distinto entre Personas y esa
+// tabla devolvía cero filas y el Hub mostraba "sin registros" sobre datos que
+// sí estaban cargados. Y FIND() además matchea por pedazo, así que el nombre de
+// alguien contenido en otro ("Ana" dentro de "Ana María") traía filas ajenas.
+//
+// Por eso: la fórmula compara en minúsculas y sin acentos (Airtable no tiene
+// función de normalizar: se reemplaza letra por letra), y lo que vuelve se
+// filtra acá por nombre normalizado, que es el mismo criterio que usa el resto
+// del Hub. Si la fórmula no le gusta a Airtable, se reintenta con el FIND de
+// siempre: nunca queda peor que antes.
+const ACENTOS_AIRTABLE=[['á','a'],['é','e'],['í','i'],['ó','o'],['ú','u'],['ü','u'],['ñ','n']];
+function campoNormalizadoAirtable(campo){
+  return ACENTOS_AIRTABLE.reduce((expr,[con,sin])=>`SUBSTITUTE(${expr},"${con}","${sin}")`,`LOWER({${campo}})`);
+}
+async function pedirPorPersona(tabla,campo,nombre,qsExtra=''){
+  const buscado=normalizarNombre(nombre);
+  const esc=s=>String(s||'').replace(/"/g,'\\"');
+  const pedir=qs=>atGet(tabla,qs).then(d=>d.records||[]);
+  let recs;
+  try{
+    recs=await pedir(`&filterByFormula=FIND("${esc(buscado)}",${campoNormalizadoAirtable(campo)})${qsExtra}`);
+  }catch(e){
+    console.warn(`Búsqueda sin acentos no soportada en "${tabla}" — se reintenta con el nombre tal cual:`,e.message);
+    recs=await pedir(`&filterByFormula=FIND("${esc(nombre)}",{${campo}})${qsExtra}`).catch(()=>[]);
+  }
+  return recs.filter(r=>normalizarNombre(nombreDePersonaRef(r.fields?.[campo]))===buscado);
 }
 // Resuelve el TEM de una persona a partir de su nombre — para tablas cuyas
 // filas ya no son el registro de Personas completo (ej. Off Sites, Get
@@ -82,6 +135,14 @@ function personaActiva(nombre){
   const buscado=normalizarNombre(nombre);
   const p=cachePersonasRaw.find(x=>normalizarNombre(x.fields.Nombre)===buscado);
   return!!p&&!yaEgreso(p);
+}
+// ¿Este nombre corresponde a alguien de la tabla Personas? Sirve para separar
+// "ya no está en BEON" (se esconde) de "no se puede identificar" (se muestra
+// igual, porque el registro existe y esconderlo lo haría desaparecer sin que
+// nadie se entere).
+function personaConocida(nombre){
+  const buscado=normalizarNombre(nombre);
+  return (cachePersonasRaw||[]).some(x=>normalizarNombre(x.fields.Nombre)===buscado);
 }
 // Badge "ex" para las secciones históricas (Off Sites), donde a quien ya se fue
 // SÍ hay que mostrarlo — pasó de verdad — pero conviene aclarar que no sigue en

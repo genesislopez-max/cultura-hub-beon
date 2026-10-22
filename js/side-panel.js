@@ -76,19 +76,23 @@ async function verBenefPersona(nombre, grupo, nivel){
   overlay.classList.add('open');
   document.body.style.overflow='hidden';
 
-  // Cargar datos en paralelo
+  // Cargar datos en paralelo. Todas estas tablas guardan a la persona por
+  // nombre, así que van por pedirPorPersona(), que tolera que el nombre esté
+  // escrito con o sin acento y descarta filas de otra persona — ver allá.
+  const dePersona=(tabla,campo,qs='')=>pedirPorPersona(tabla,campo,nombre,qs)
+    .then(records=>({records})).catch(()=>({records:[]}));
   const [dBenefAsig, dCap, dAW, dOS, dGT, dAV] = await Promise.all([
-    atGet('Beneficios Asignados',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
-    atGet('Capacitaciones',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
+    dePersona('Beneficios Asignados','Persona'),
+    dePersona('Capacitaciones','Persona'),
     // Ambassador Week no tiene campo "Fecha" (ver comentario en getEdicionAW,
     // js/ambassador-week.js) — pedir sort[0][field]=Fecha hacía que Airtable
     // rechazara el pedido entero (campo inexistente) y el .catch() de abajo
     // lo convertía en 0 registros silenciosamente, sin importar si la persona
     // sí tenía asistencias cargadas. Se ordena acá abajo por Edición AW.
-    atGet('Ambassador Week',`&filterByFormula=FIND("${nombre}",{Persona})`).catch(()=>({records:[]})),
-    atGet('Off Sites',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha inicio&sort[0][direction]=desc`).catch(()=>({records:[]})),
-    atGet('Get Together',`&filterByFormula=FIND("${nombre}",{BEONer})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
-    atGet('Asistencia a Actividades',`&filterByFormula=FIND("${nombre}",{Persona})&sort[0][field]=Fecha&sort[0][direction]=desc`).catch(()=>({records:[]})),
+    dePersona('Ambassador Week','Persona'),
+    dePersona('Off Sites','Persona','&sort[0][field]=Fecha inicio&sort[0][direction]=desc'),
+    dePersona('Get Together','BEONer','&sort[0][field]=Fecha&sort[0][direction]=desc'),
+    dePersona('Asistencia a Actividades','Persona','&sort[0][field]=Fecha&sort[0][direction]=desc'),
   ]);
 
   const benefAsig=dBenefAsig.records||[];

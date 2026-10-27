@@ -42,6 +42,7 @@ async function loadAmbassadors(){
   });
   poblarSelectorTEM('aw-tem');
   poblarSelectorTEM('aw-hist-tem');
+  actualizarFiltroFichaAW();
   renderAWMetricas();
   renderAWPersonas();
   renderAWHistorial();
@@ -303,9 +304,30 @@ function renderAWPersonas(){
   }).join('') || '<tr class="empty-row"><td colspan="6">Sin resultados</td></tr>';
 }
 
+// Registros cuyo nombre no coincide con nadie de la tabla Personas. Son los
+// que la sección marca con "sin ficha": un acento o una letra de más al
+// tipearlos, o alguien que nunca se cargó en Personas.
+function registrosSinFichaAW(){
+  return (cacheAWRaw||[]).filter(r=>!personaConocida(nombreDePersonaRef(r.fields.Persona)));
+}
+// El filtro lleva la cuenta en su propia etiqueta: antes de abrirlo ya se sabe
+// si hay algo que corregir, sin tener que recorrer el historial a ojo.
+function actualizarFiltroFichaAW(){
+  const sel=document.getElementById('aw-hist-ficha');
+  if(!sel) return;
+  const cuantos=registrosSinFichaAW().length;
+  const opcion=[...sel.options].find(o=>o.value==='sin-ficha');
+  if(!opcion) return;
+  opcion.textContent=cuantos?`Solo los que no tienen ficha (${cuantos})`:'Sin registros sin ficha';
+  opcion.disabled=!cuantos;
+  // Si se corrigió el último, el filtro no puede quedar activo mostrando nada.
+  if(!cuantos&&sel.value==='sin-ficha') sel.value='';
+}
+
 function renderAWHistorial(){
   const q=(document.getElementById('aw-hist-search')?.value||'').toLowerCase();
   const temFil=document.getElementById('aw-hist-tem')?.value||'';
+  const soloSinFicha=(document.getElementById('aw-hist-ficha')?.value||'')==='sin-ficha';
 
   // A quien ya se fue de BEON no se lo lista, pero a quien NO se puede
   // identificar contra Personas sí: esconderlo hacía desaparecer en silencio un
@@ -314,9 +336,10 @@ function renderAWHistorial(){
   const recs=cacheAWRaw.filter(r=>{
     const p=nombreDePersonaRef(r.fields.Persona);
     const dest=getEdicionAW(r.fields);
+    const sinFicha=!personaConocida(p);
     const matchQ=!q||(p+dest).toLowerCase().includes(q);
     const matchTem=!temFil||managerDePersona(p)===temFil;
-    return (!personaConocida(p)||personaActiva(p))&&matchQ&&matchTem;
+    return (sinFicha||personaActiva(p))&&matchQ&&matchTem&&(!soloSinFicha||sinFicha);
   });
 
   document.getElementById('aw-badge-historial').textContent=`${recs.length} registros`;

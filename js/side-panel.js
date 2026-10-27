@@ -81,7 +81,14 @@ async function verBenefPersona(nombre, grupo, nivel){
   // escrito con o sin acento y descarta filas de otra persona — ver allá.
   const dePersona=(tabla,campo,qs='')=>pedirPorPersona(tabla,campo,nombre,qs)
     .then(records=>({records})).catch(()=>({records:[]}));
-  const [dBenefAsig, dCap, dAW, dOS, dGT, dAV] = await Promise.all([
+  // El catálogo (cacheBeneficiosRaw) lo llena loadBeneficios(), que es LAZY. Sin
+  // él, el campo Beneficio de una asignación se queda en el id crudo del linked
+  // record, y con eso el Hub no puede saber QUÉ beneficio es: la fila se
+  // degradaba entera —título "recXXXX", "Activo desde" en vez de "Solicitado
+  // el", monto "/año" sobre una compra puntual, y sin el link al curso—.
+  // Se pide si falta, igual que hace renderResumenPersona() en js/personas.js.
+  const faltaCatalogo=!(cacheBeneficiosRaw&&cacheBeneficiosRaw.length);
+  const [dBenefAsig, dCap, dAW, dOS, dGT, dAV, dCat] = await Promise.all([
     dePersona('Beneficios Asignados','Persona'),
     dePersona('Capacitaciones','Persona'),
     // Ambassador Week no tiene campo "Fecha" (ver comentario en getEdicionAW,
@@ -93,7 +100,9 @@ async function verBenefPersona(nombre, grupo, nivel){
     dePersona('Off Sites','Persona','&sort[0][field]=Fecha inicio&sort[0][direction]=desc'),
     dePersona('Get Together','BEONer','&sort[0][field]=Fecha&sort[0][direction]=desc'),
     dePersona('Asistencia a Actividades','Persona','&sort[0][field]=Fecha&sort[0][direction]=desc'),
+    faltaCatalogo?atGet('Beneficios','').catch(()=>null):Promise.resolve(null),
   ]);
+  const catalogoBenef=faltaCatalogo?(dCat?.records||[]):cacheBeneficiosRaw;
 
   const benefAsig=dBenefAsig.records||[];
   spBenefAsigActual=benefAsig;
@@ -159,7 +168,7 @@ async function verBenefPersona(nombre, grupo, nivel){
     // un id de linked record, y ordenar por eso no significaría nada.
     const filasBenef=ordenarBenefAsignados(benefAsig.map(r=>{
       const bId=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
-      const benef=cacheBeneficiosRaw.find(b=>b.id===bId||b.fields.Beneficio===bId);
+      const benef=catalogoBenef.find(b=>b.id===bId||b.fields.Beneficio===bId);
       return {r,benef,nombre:benef?.fields.Beneficio||bId||'—'};
     }));
     // Una fila por asignación. Se usa suelta cuando el beneficio aparece una
@@ -169,8 +178,15 @@ async function verBenefPersona(nombre, grupo, nivel){
       // Dentro de un grupo, repetir el nombre del beneficio en cada fila es
       // ruido: ya lo dice el encabezado. Si la asignación tiene Curso cargado
       // (Udemy), ese es el dato que distingue una de otra.
+      //
+      // El curso se muestra SIEMPRE en los beneficios que lo usan, y si no está
+      // cargado se dice: antes la fila sin curso simplemente no lo mencionaba,
+      // así que dos cursos de Udemy se leían distinto —uno con el nombre del
+      // curso y otro sin— y no se notaba que a ese registro le faltaba el dato.
+      const usaCurso=esBeneficioUdemy(bNombre);
       const curso=(r.fields.Curso||'').trim();
-      const titulo=dentroDeGrupo?(curso||bNombre):bNombre;
+      const cursoTexto=usaCurso?(curso||'Curso sin cargar'):curso;
+      const titulo=dentroDeGrupo?(cursoTexto||bNombre):bNombre;
       // En credenciales el costo es uno solo aunque haya varias asignaciones:
       // repetirlo en cada fila del grupo hacía leer un gasto por cada vez que
       // se recompartieron. Va una sola vez, en el encabezado.
@@ -181,7 +197,7 @@ async function verBenefPersona(nombre, grupo, nivel){
       const fechaLabel=periodoBenefAsignado(r.fields,bNombre,finEnBeon);
       // El link se muestra en los beneficios que lo usan (Blogpost, Udemy):
       // el punto de tenerlo cargado es poder ir a la publicación desde acá.
-      const link=esBeneficioConLink(bNombre)?linkBenefAsignado(r.fields):'';
+      const link=esBeneficioConLink(bNombre)?linkBenefAsignado(r.fields,bNombre):'';
       const asistencia=asistenciaBenefAsignado(r.fields);
       // El comentario se muestra en la fila y no solo dentro del modal de
       // edición: el sentido de cargarlo es que se vea de un vistazo junto al
@@ -192,7 +208,7 @@ async function verBenefPersona(nombre, grupo, nivel){
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${titulo}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
           <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
-          ${!dentroDeGrupo&&curso?`<div class="bp-detalle-row-coment"><i class="ti ti-book"></i><span>${curso}</span></div>`:''}
+          ${!dentroDeGrupo&&cursoTexto?`<div class="bp-detalle-row-coment"${curso?'':' style="color:var(--text3)"'}><i class="ti ti-book"></i><span>${cursoTexto}</span></div>`:''}
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
         </div>
@@ -527,11 +543,19 @@ function montoBenefAsignado(fields,benefCatalogo,nombreBeneficio){
   return esBeneficioPorUnidad(nombreBeneficio)?cifra:`${cifra}/año`;
 }
 
+// El campo Link lo comparten Udemy y Blogpost, pero no apuntan a lo mismo: uno
+// lleva al curso y el otro a la publicación. El texto era siempre "Ver
+// publicación", así que un curso de Udemy invitaba a ver una publicación que no
+// existe.
+function textoLinkBenefAsignado(nombreBeneficio){
+  return esBeneficioUdemy(nombreBeneficio)?'Ver curso':'Ver publicación';
+}
+
 // Link de un beneficio asignado, listo para poner en la fila. Solo se acepta
 // http/https: el valor lo carga una persona en Airtable y un "javascript:" en
 // un href se ejecutaría al clickearlo. Si no valida, se muestra como texto
 // plano en vez de descartarlo — el dato sigue estando cargado.
-function linkBenefAsignado(fields){
+function linkBenefAsignado(fields,nombreBeneficio){
   const url=(fields.Link||'').trim();
   if(!url) return '';
   // Regex y no new URL(): el chequeo es una condición de seguridad y no puede
@@ -539,7 +563,7 @@ function linkBenefAsignado(fields){
   // links válidos se degradarían a texto sin que nadie se entere. Con exigir
   // que arranque en http:// o https:// alcanza para descartar javascript:.
   const ok=/^https?:\/\//i.test(url);
-  const texto='Ver publicación';
+  const texto=textoLinkBenefAsignado(nombreBeneficio);
   return ok
     ? `<a class="bp-detalle-row-link" href="${url.replace(/"/g,'&quot;')}" target="_blank" rel="noopener noreferrer"><i class="ti ti-external-link"></i>${texto}</a>`
     : `<span class="bp-detalle-row-link" title="El link cargado no es una URL válida"><i class="ti ti-link-off"></i>${url}</span>`;

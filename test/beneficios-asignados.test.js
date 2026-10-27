@@ -506,3 +506,44 @@ test('una compra dada de baja conserva la fecha en que se usó', ()=>{
   assert.equal(ctx.periodoBenefAsignado(f,'Hardware Bonus'),
     'Usado el 10 de ene de 2026 · Baja: 30 de jun de 2026');
 });
+
+// ─── La fila de un curso de Udemy ─────────────────────────────────────────────
+// El campo Link lo comparten Udemy y Blogpost, pero no apuntan a lo mismo: uno
+// lleva al curso y el otro a la publicación. El texto era siempre "Ver
+// publicación", así que un curso de Udemy invitaba a ver una publicación que no
+// existe.
+test('textoLinkBenefAsignado: el link dice adónde lleva según el beneficio', ()=>{
+  assert.equal(ctx.textoLinkBenefAsignado('Udemy Courses'),'Ver curso');
+  assert.equal(ctx.textoLinkBenefAsignado('Udemy'),'Ver curso');
+  assert.equal(ctx.textoLinkBenefAsignado('Blogpost'),'Ver publicación');
+  // Un beneficio cualquiera con link mantiene el texto genérico de antes
+  assert.equal(ctx.textoLinkBenefAsignado('Otro'),'Ver publicación');
+});
+
+test('linkBenefAsignado: usa el texto del beneficio que recibe', ()=>{
+  const html=ctx.linkBenefAsignado({Link:'https://udemy.com/curso'},'Udemy Courses');
+  assert.match(html,/Ver curso/);
+  assert.ok(!/Ver publicación/.test(html));
+  // Sin nombre de beneficio sigue andando, con el texto de antes
+  assert.match(ctx.linkBenefAsignado({Link:'https://blog.beon.tech/post'}),/Ver publicación/);
+});
+
+// Un curso de Udemy sin Curso cargado directamente no lo mencionaba, así que
+// dos filas del mismo beneficio se leían distinto y no se notaba que a ese
+// registro le faltaba el dato.
+test('periodoBenefAsignado: Udemy dice "Solicitado el", no "Activo desde"', ()=>{
+  assert.equal(
+    ctx.periodoBenefAsignado({'Fecha activación':'2026-03-10',Estado:'Activo'},'Udemy Courses',''),
+    'Solicitado el 10 de mar de 2026');
+  // Y si el catálogo no se pudo resolver, el nombre llega como el id del
+  // linked record: ahí no hay forma de saber qué beneficio es (lo cubre
+  // verBenefPersona, que ahora pide el catálogo si falta).
+  assert.match(
+    ctx.periodoBenefAsignado({'Fecha activación':'2026-03-10',Estado:'Activo'},'recABC123','')
+    ,/Activo desde/);
+});
+
+test('montoBenefAsignado: un curso de Udemy no lleva "/año"', ()=>{
+  assert.equal(ctx.montoBenefAsignado({Monto:40},null,'Udemy Courses'),'$40');
+  assert.equal(ctx.montoBenefAsignado({Monto:40},null,'Un Beneficio Anual'),'$40/año');
+});

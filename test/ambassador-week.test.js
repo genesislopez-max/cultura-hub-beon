@@ -92,3 +92,34 @@ test('calcPctVuelo: cuenta las asistencias aunque el acento no coincida', ()=>{
   // Y sigue sin contar las de otra persona
   assert.equal(ctx.calcPctVuelo('Otro Nombre','Spark',historial),50);
 });
+
+// ─── Filtro "sin ficha" del historial ─────────────────────────────────────────
+// Los registros cuyo nombre no coincide con nadie de Personas se muestran
+// marcados, pero había que recorrer el historial a ojo para encontrarlos: el
+// buscador de esa pestaña filtra por nombre y edición, así que escribir "sin
+// ficha" no los juntaba.
+const vm=require('node:vm');
+function sembrar(c,cache,datos){
+  c.__fixture=datos;
+  vm.runInContext(`${cache}=__fixture`,c);
+}
+
+test('registrosSinFichaAW: junta los que no matchean con nadie de Personas',()=>{
+  sembrar(ctx,'cachePersonasRaw',[
+    {id:'p1',fields:{Nombre:'Jesús Figueroa'}},
+    {id:'p2',fields:{Nombre:'Ex Dev','Fecha de egreso':'2024-01-01'}},
+  ]);
+  sembrar(ctx,'cacheAWRaw',[
+    {id:'a1',fields:{Persona:'Jesus Figueroa'}},      // sin acento: sí tiene ficha
+    {id:'a2',fields:{Persona:'Ex Dev'}},              // se fue, pero tiene ficha
+    {id:'a3',fields:{Persona:'Fulano Inexistente'}},
+    {id:'a4',fields:{Persona:'Mengana Perdida'}},
+  ]);
+  assert.equal(ctx.registrosSinFichaAW().map(r=>r.id).join('|'),'a3|a4');
+});
+
+test('registrosSinFichaAW: sin nada cargado no explota',()=>{
+  sembrar(ctx,'cachePersonasRaw',[]);
+  sembrar(ctx,'cacheAWRaw',[]);
+  assert.equal(ctx.registrosSinFichaAW().length,0);
+});

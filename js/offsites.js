@@ -21,6 +21,7 @@ async function loadOffsites(){
   buildOSProyMap(); // precalcular mapa de proyectos una sola vez
   poblarSelectorTEM('os-persona-tem');
   poblarSelectorTEM('os-hist-tem');
+  actualizarFiltroFichaOS();
   renderOSMetricas();
   renderOSDelMes();
   renderOSPersona();
@@ -303,7 +304,7 @@ function openOSProyModal(proy){
       ${personas.length?personas.map(p=>`
         <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--border)">
           ${avH(p)}
-          <span style="font-size:13px">${nombrePersonaHistorico(p)}</span>${badgeExBeoner(p)}
+          <span style="font-size:13px">${nombrePersonaHistorico(p)}</span>${badgeExBeoner(p)}${badgeSinFicha(p)}
         </div>`).join(''):'<div style="font-size:12px;color:var(--text3);font-style:italic;padding:6px 0">Sin persona asignada en Airtable</div>'}
     </div>`;
   });
@@ -351,7 +352,7 @@ function renderOSPersona(){
     const bg=idx%2===0?'background:var(--bg2)':'';
     const barW=maxDias?Math.round(d.dias/maxDias*100):0;
     return`<tr class="tr-clickable" style="${bg}" onclick="openOSPerModal(this.dataset.nombre)" data-nombre="${nombre.replace(/"/g,'&quot;')}">
-      <td>${avH(nombre)}${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}</td>
+      <td>${avH(nombre)}${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}${badgeSinFicha(nombre)}</td>
       <td><span class="os-count-chip">${d.count}</span></td>
       <td>${destChipsOS(d.destinos)}</td>
       <td><div style="display:flex;align-items:center;gap:11px"><span style="font-size:13px;font-weight:700;min-width:48px">${d.dias||0} días</span><div class="os-bar-track"><div class="os-bar-fill" style="width:${barW}%"></div></div></div></td>
@@ -386,10 +387,20 @@ function renderOSProyecto(){
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
 }
 
+// Registros cuyo nombre no coincide con nadie de Personas — los que la tabla
+// marca con "sin ficha". Mismo criterio que en Ambassador Week.
+function registrosSinFichaOS(){
+  return (cacheOSRaw||[]).filter(r=>registroSinFicha(nombreDePersonaRef(r.fields.Persona)));
+}
+function actualizarFiltroFichaOS(){
+  actualizarFiltroSinFicha('os-hist-ficha',registrosSinFichaOS().length);
+}
+
 function renderOSHistorial(){
   const q=(document.getElementById('os-search-hist')?.value||'').toLowerCase();
   const proyFil=document.getElementById('os-filter-proyecto')?.value||'';
   const temFil=document.getElementById('os-hist-tem')?.value||'';
+  const soloSinFicha=(document.getElementById('os-hist-ficha')?.value||'')==='sin-ficha';
   const recs=cacheOSRaw.filter(r=>{
     const f=r.fields;
     const texto=`${f.Persona||''} ${f.Proyecto||''} ${f.Destino||''}`.toLowerCase();
@@ -397,7 +408,8 @@ function renderOSHistorial(){
     // Sin filtro por personaActiva(): el historial tiene que listar el viaje
     // aunque la persona ya no esté en BEON — si no, se pierden registros
     // pasados enteros al egresar alguien.
-    return (!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil)&&(!temFil||managerDePersona(nombrePersona)===temFil);
+    return (!q||texto.includes(q))&&(!proyFil||(f.Proyecto||'')=== proyFil)&&(!temFil||managerDePersona(nombrePersona)===temFil)
+      &&(!soloSinFicha||registroSinFicha(nombrePersona));
   });
   (()=>{const _e=document.getElementById('os-badge-historial');if(_e) _e.textContent=`${recs.length} registros`;})();
   const tb=document.getElementById('os-tbody-historial');
@@ -410,7 +422,7 @@ function renderOSHistorial(){
     const persona=Array.isArray(f.Persona)?f.Persona[0]:(typeof f.Persona==='string'?f.Persona:String(f.Persona||''));
     const proyecto=Array.isArray(f.Proyecto)?f.Proyecto[0]:(f.Proyecto||'—');
     return`<tr style="${bg}">
-      <td>${avH(persona)}${nombrePersonaHistorico(persona)}${badgeExBeoner(persona)}</td>
+      <td>${avH(persona)}${nombrePersonaHistorico(persona)}${badgeExBeoner(persona)}${badgeSinFicha(persona)}</td>
       <td style="font-size:12px;color:var(--text2)">${proyecto}</td>
       <td style="font-size:12px">${f.Destino||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${fmt(f['Fecha inicio'])}</td>

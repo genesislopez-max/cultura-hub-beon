@@ -1432,6 +1432,13 @@
                   <option value="">Todos los managers</option>
                 </select>
               </div>
+              <div style="position:relative">
+                <i class="ti ti-alert-triangle" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="os-hist-ficha" onchange="filtrarOSHistorial()" style="padding-left:28px">
+                  <option value="">Todos los registros</option>
+                  <option value="sin-ficha">Solo los que no tienen ficha</option>
+                </select>
+              </div>
             </div>
             <div class="table-scroll">
             <table class="data-table">
@@ -1591,6 +1598,13 @@
                 <i class="ti ti-user-star" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
                 <select class="filter-select" id="gt-filter-tem" onchange="filtrarGTHistorial()" style="padding-left:28px">
                   <option value="">Todos los managers</option>
+                </select>
+              </div>
+              <div style="position:relative">
+                <i class="ti ti-alert-triangle" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+                <select class="filter-select" id="gt-hist-ficha" onchange="filtrarGTHistorial()" style="padding-left:28px">
+                  <option value="">Todos los registros</option>
+                  <option value="sin-ficha">Solo los que no tienen ficha</option>
                 </select>
               </div>
             </div>

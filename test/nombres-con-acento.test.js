@@ -127,3 +127,30 @@ test('pedirPorPersona: conserva el orden pedido y no inventa filas si no hay nad
   assert.equal(recs.length,0);
   assert.match(pedidos[0],/sort\[0\]\[field\]=Fecha/);
 });
+
+// ─── "Sin ficha": el criterio compartido por AW, Off Sites y Get Together ─────
+test('registroSinFicha: solo los nombres que no matchean con nadie',()=>{
+  const c=ctxUtils();
+  sembrar(c,'cachePersonasRaw',PERSONAS);
+  c.__n='Jesus Figueroa';
+  assert.equal(leer(c,'registroSinFicha(__n)'),false);          // sin acento: sí tiene ficha
+  c.__n='Ex Dev';
+  assert.equal(leer(c,'registroSinFicha(__n)'),false);          // se fue, pero tiene ficha
+  c.__n='Fulano Inexistente';
+  assert.equal(leer(c,'registroSinFicha(__n)'),true);
+  // Un vínculo que nunca se cargó, o que apunta a un registro borrado, es otro
+  // problema: nombrePersonaHistorico() ya lo explica en la propia celda.
+  assert.equal(leer(c,'registroSinFicha("")'),false);
+  assert.equal(leer(c,'registroSinFicha("   ")'),false);
+  assert.equal(leer(c,'registroSinFicha("recABCDEFGHIJKLMN")'),false);
+});
+
+test('badgeSinFicha: marca solo a los huérfanos',()=>{
+  const c=ctxUtils();
+  sembrar(c,'cachePersonasRaw',PERSONAS);
+  c.__n='Fulano Inexistente';
+  assert.match(leer(c,'badgeSinFicha(__n)'),/sin ficha/);
+  c.__n='Jesus Figueroa';
+  assert.equal(leer(c,'badgeSinFicha(__n)'),'');
+  assert.equal(leer(c,'badgeSinFicha("")'),'');
+});

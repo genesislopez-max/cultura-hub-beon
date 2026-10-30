@@ -308,20 +308,10 @@ function renderAWPersonas(){
 // que la sección marca con "sin ficha": un acento o una letra de más al
 // tipearlos, o alguien que nunca se cargó en Personas.
 function registrosSinFichaAW(){
-  return (cacheAWRaw||[]).filter(r=>!personaConocida(nombreDePersonaRef(r.fields.Persona)));
+  return (cacheAWRaw||[]).filter(r=>registroSinFicha(nombreDePersonaRef(r.fields.Persona)));
 }
-// El filtro lleva la cuenta en su propia etiqueta: antes de abrirlo ya se sabe
-// si hay algo que corregir, sin tener que recorrer el historial a ojo.
 function actualizarFiltroFichaAW(){
-  const sel=document.getElementById('aw-hist-ficha');
-  if(!sel) return;
-  const cuantos=registrosSinFichaAW().length;
-  const opcion=[...sel.options].find(o=>o.value==='sin-ficha');
-  if(!opcion) return;
-  opcion.textContent=cuantos?`Solo los que no tienen ficha (${cuantos})`:'Sin registros sin ficha';
-  opcion.disabled=!cuantos;
-  // Si se corrigió el último, el filtro no puede quedar activo mostrando nada.
-  if(!cuantos&&sel.value==='sin-ficha') sel.value='';
+  actualizarFiltroSinFicha('aw-hist-ficha',registrosSinFichaAW().length);
 }
 
 function renderAWHistorial(){
@@ -336,7 +326,7 @@ function renderAWHistorial(){
   const recs=cacheAWRaw.filter(r=>{
     const p=nombreDePersonaRef(r.fields.Persona);
     const dest=getEdicionAW(r.fields);
-    const sinFicha=!personaConocida(p);
+    const sinFicha=registroSinFicha(p);
     const matchQ=!q||(p+dest).toLowerCase().includes(q);
     const matchTem=!temFil||managerDePersona(p)===temFil;
     return (sinFicha||personaActiva(p))&&matchQ&&matchTem&&(!soloSinFicha||sinFicha);
@@ -356,6 +346,7 @@ function renderAWHistorial(){
     // Sin registro en Personas el nivel saldría como Spark, que es el default
     // de normalizarNivel() y no un dato real: se aclara en vez de inventarlo.
     const sinFicha=!persona;
+    const chipSinFicha=badgeSinFicha(nombre);
     const edicion=getEdicionAW(f)||'—';
     const acomp=f['Acompañantes'];
     // Normalizar porcentaje: puede venir como 0.5/1 (decimal) o 50/100 (entero)
@@ -363,7 +354,7 @@ function renderAWHistorial(){
     let pct=pctRaw!=null?(pctRaw<=1?Math.round(pctRaw*100):Number(pctRaw)):null;
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr style="${bg}">
-      <td>${avH(nombre)}${nombre}${sinFicha?' <span class="badge badge-amber" title="Este nombre no coincide con ninguna persona de la tabla Personas — revisá cómo está escrito">sin ficha</span>':''}</td>
+      <td>${avH(nombre)}${nombre}${chipSinFicha}</td>
       <td>${sinFicha?'<span style="color:var(--text3);font-size:12px">—</span>':`<span class="badge ${nivelColors[nivel]||'badge-gray'}">${nivel}</span>`}</td>
       <td style="font-size:12px">${edicion}</td>
       <td style="font-size:12px;color:var(--text2)">${acomp!=null?acomp+' acomp.':'—'}</td>

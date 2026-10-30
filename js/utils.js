@@ -165,6 +165,41 @@ function nombrePersonaHistorico(nombre){
   if(/^rec[A-Za-z0-9]{14}$/.test(n)) return '<span style="color:var(--text3);font-style:italic">Persona no encontrada</span>';
   return n;
 }
+// ─── NOMBRES QUE NO COINCIDEN CON NADIE ───────────────────────────────────────
+// Ambassador Week, Off Sites y Get Together guardan a la persona por nombre, y
+// en buena parte de los registros está tipeado a mano. Cuando ese nombre no
+// coincide con ninguno de Personas —un acento o una letra de más, o alguien que
+// nunca se cargó— el registro queda huérfano: no se le puede resolver el nivel,
+// ni el manager, ni sumarlo a su historial. Antes eso no se veía; ahora la fila
+// se marca y cada sección ofrece un filtro para juntarlos.
+//
+// Un nombre vacío o un id crudo NO entran acá: son otro problema (el vínculo
+// nunca se cargó, o apunta a un registro borrado) y nombrePersonaHistorico() ya
+// los explica en la propia celda.
+function registroSinFicha(nombre){
+  const n=(nombre||'').trim();
+  if(!n||/^rec[A-Za-z0-9]{14}$/.test(n)) return false;
+  return !personaConocida(n);
+}
+function badgeSinFicha(nombre){
+  return registroSinFicha(nombre)
+    ? `<span class="badge badge-amber" style="margin-left:7px;font-size:10px" title="Este nombre no coincide con ninguna persona de la tabla Personas — revisá cómo está escrito">sin ficha</span>`
+    : '';
+}
+// El filtro lleva la cuenta en su propia etiqueta: antes de abrirlo ya se sabe
+// si hay algo que corregir, sin tener que recorrer el historial a ojo. Si no
+// queda ninguno la opción se deshabilita, y si justo estaba aplicada se
+// desactiva sola para no dejar la tabla vacía sin motivo visible.
+function actualizarFiltroSinFicha(selectId,cantidad){
+  const sel=document.getElementById(selectId);
+  if(!sel) return;
+  const opcion=[...sel.options].find(o=>o.value==='sin-ficha');
+  if(!opcion) return;
+  opcion.textContent=cantidad?`Solo los que no tienen ficha (${cantidad})`:'Sin registros sin ficha';
+  opcion.disabled=!cantidad;
+  if(!cantidad&&sel.value==='sin-ficha') sel.value='';
+}
+
 // Puebla un <select id="selectId"> con "Todos los managers" + la lista de
 // listaTEMs(), preservando la selección vigente si sigue siendo válida.
 // El copy dice "managers" y no "TEMs" porque este selector se usa en tablas

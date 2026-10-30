@@ -22,6 +22,7 @@ async function loadGetTogether(){
   });
   poblarSelectorTEM('gt-filter-tem-per');
   poblarSelectorTEM('gt-filter-tem');
+  actualizarFiltroFichaGT();
   renderGTMetricas();
   renderGTPersona();
   renderGTCiudad();
@@ -76,7 +77,7 @@ function openGTCityModal(pais, ciudad){
         return`<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
           ${avH(nombre)}
           <div style="display:flex;flex-direction:column;gap:2px">
-            <div style="font-size:13px;font-weight:500;line-height:1.3">${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}</div>
+            <div style="font-size:13px;font-weight:500;line-height:1.3">${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}${badgeSinFicha(nombre)}</div>
             ${proyecto?`<div style="font-size:12px;color:var(--text3);line-height:1.3">${proyecto}</div>`:''}
           </div>
         </div>`;
@@ -244,7 +245,7 @@ function renderGTPersona(){
     const paisesHtml=[...d.paises].map(paisBadge).join(' ')||'—';
     return`<tr style="${bg}">
       <td style="text-align:center;width:40px">${rankHtml}</td>
-      <td>${avH(nombre)}${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}</td>
+      <td>${avH(nombre)}${nombrePersonaHistorico(nombre)}${badgeExBeoner(nombre)}${badgeSinFicha(nombre)}</td>
       <td><div style="display:flex;align-items:center;gap:10px"><span style="font-weight:700;font-size:18px;color:var(--blue);min-width:14px">${d.count}</span><div class="gt-bar-track"><div class="gt-bar-fill" style="width:${barW}%"></div></div></div></td>
       <td><div style="display:flex;flex-wrap:wrap;gap:4px">${paisesHtml}</div></td>
       <td style="font-size:12px;color:var(--text3)">${fmt(d.primerFecha)}</td>
@@ -285,17 +286,28 @@ function renderGTCiudad(){
   }).join('')||'<tr class="empty-row"><td colspan="5">Sin resultados</td></tr>';
 }
 
+// Registros cuyo nombre no coincide con nadie de Personas — los que la tabla
+// marca con "sin ficha". Mismo criterio que en Ambassador Week y Off Sites.
+function registrosSinFichaGT(){
+  return (cacheGetTogetherRaw||[]).filter(r=>registroSinFicha(nombreDePersonaRef(r.fields.BEONer)));
+}
+function actualizarFiltroFichaGT(){
+  actualizarFiltroSinFicha('gt-hist-ficha',registrosSinFichaGT().length);
+}
+
 function renderGTHistorial(){
   const q=(document.getElementById('gt-search-hist')?.value||'').toLowerCase();
   const paisFil=document.getElementById('gt-filter-pais')?.value||'';
   const proyFil=document.getElementById('gt-filter-proyecto')?.value||'';
   const temFil=document.getElementById('gt-filter-tem')?.value||'';
+  const soloSinFicha=(document.getElementById('gt-hist-ficha')?.value||'')==='sin-ficha';
   const recs=cacheGetTogetherRaw.filter(r=>{
     const f=r.fields;
     const txt=`${f.BEONer||''} ${f.Ciudad||''} ${f.País||''} ${f.Proyecto||''}`.toLowerCase();
     // Sin personaActiva(): el historial tiene que listar el encuentro aunque
     // quien fue ya no trabaje en BEON (ver renderGTPersona más arriba).
-    return (!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil)&&(!temFil||managerDePersona(f.BEONer)===temFil);
+    return (!q||txt.includes(q))&&(!paisFil||(f.País||'')===paisFil)&&(!proyFil||(f.Proyecto||'')===proyFil)&&(!temFil||managerDePersona(f.BEONer)===temFil)
+      &&(!soloSinFicha||registroSinFicha(f.BEONer));
   });
   document.getElementById('gt-badge-hist').textContent=`${recs.length} registros`;
   const tb=document.getElementById('gt-tbody-hist');
@@ -303,7 +315,7 @@ function renderGTHistorial(){
     const f=r.fields;
     const bg=idx%2===0?'background:var(--bg2)':'';
     return`<tr style="${bg}">
-      <td>${avH(f.BEONer||'')}${nombrePersonaHistorico(f.BEONer)}${badgeExBeoner(f.BEONer)}</td>
+      <td>${avH(f.BEONer||'')}${nombrePersonaHistorico(f.BEONer)}${badgeExBeoner(f.BEONer)}${badgeSinFicha(f.BEONer)}</td>
       <td style="font-size:12px">${paisBadge(f.País)}</td>
       <td style="font-size:12px">${f.Ciudad||'—'}</td>
       <td style="font-size:12px;color:var(--text2)">${f.Proyecto||'—'}</td>

@@ -263,6 +263,17 @@
             <button class="sc-more" id="sc-more-aniv" onclick="showSection('aniversarios',document.querySelector('.sb-item[onclick*=aniversarios]'))" style="display:none">Ver todos <i class="ti ti-arrow-right"></i></button>
           </div>
           <div class="summary-card">
+            <div class="sc-accent" style="background:var(--text-pink-accent)"></div>
+            <div class="sc-top">
+              <div class="sc-icon" style="background:var(--tinte-pink);color:var(--text-pink-accent)"><i class="ti ti-award"></i></div>
+              <div class="sc-label">Cambios de nivel</div>
+            </div>
+            <div class="sc-val" id="sc-loyalty" style="color:var(--text-pink-accent)">—</div>
+            <div class="sc-sub" id="sc-loyalty-sub">este mes</div>
+            <div class="sc-list" id="sc-list-loyalty"></div>
+            <button class="sc-more" id="sc-more-loyalty" onclick="abrirHistorialLoyalty()" style="display:none">Ver todos <i class="ti ti-arrow-right"></i></button>
+          </div>
+          <div class="summary-card">
             <div class="sc-accent" style="background:var(--amber)"></div>
             <div class="sc-top">
               <div class="sc-icon" style="background:var(--tinte-amber-icon);color:var(--amber)"><i class="ti ti-brand-google"></i></div>
@@ -2116,6 +2127,25 @@
     </div>
   </div>
 </div>
+<!-- LOYALTY — CAMBIOS DE NIVEL (card de Inicio, ver js/loyalty-historial.js) -->
+<div class="confirm-overlay" id="loyalty-overlay" onclick="cerrarHistorialLoyalty(event)">
+  <div class="meet-modal" onclick="event.stopPropagation()">
+    <div class="meet-header">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;">
+        <div>
+          <div class="meet-title">Cambios de Nivel Loyalty</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:3px;" id="loyalty-badge">—</div>
+        </div>
+        <button onclick="cerrarHistorialLoyalty()" style="background:none;border:none;cursor:pointer;color:var(--text2);font-size:22px;line-height:1;padding:2px;flex-shrink:0;"><i class="ti ti-x"></i></button>
+      </div>
+      <div style="margin-top:12px;position:relative;max-width:260px">
+        <i class="ti ti-calendar" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px;pointer-events:none"></i>
+        <select class="filter-select" id="loyalty-mes" onchange="renderHistorialLoyalty()" style="padding-left:28px;width:100%"></select>
+      </div>
+    </div>
+    <div class="meet-pub-list" id="loyalty-lista"></div>
+  </div>
+</div>
 <div class="confirm-overlay" id="meet-overlay" onclick="closeMeetModal(event)">
   <div class="meet-modal" onclick="event.stopPropagation()">
     <div class="meet-header">
@@ -2185,6 +2215,7 @@
 <script src="js/personas.js"></script>
 <script src="js/cumpleanos.js"></script>
 <script src="js/aniversarios.js"></script>
+<script src="js/loyalty-historial.js"></script>
 <script src="js/glassdoor.js"></script>
 <script src="js/proyectos.js"></script>
 <script src="js/tareas.js"></script>

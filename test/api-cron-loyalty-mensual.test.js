@@ -195,3 +195,78 @@ test('cron-loyalty-mensual: sin AIRTABLE_TOKEN/BASE configurado, devuelve 500', 
     process.env.AIRTABLE_TOKEN=originalToken;
   }
 });
+
+// ─── Cuando no se puede LEER el historial ─────────────────────────────────────
+// Airtable puede responder un error (la tabla no existe, el token perdió
+// permisos, cambió el nombre de un campo) con status 4xx y un body sin
+// records. Antes eso caía en `data.records||[]` y el cron anunciaba "Sin
+// cambios de nivel este mes": peor que no decir nada, porque afirma que no
+// pasó nada cuando en realidad no pudo leer.
+function mockFetchConError({status=422,error='Table not found',tiraExcepcion=false}={}){
+  const calls=[];
+  return {
+    calls,
+    fetchImpl: async(url,opts)=>{
+      calls.push({url:String(url),opts});
+      if(String(url).includes('api.airtable.com')){
+        if(tiraExcepcion) throw new Error('getaddrinfo ENOTFOUND');
+        return {ok:false,status,json:async()=>({error:{message:error}})};
+      }
+      if(String(url).includes('hooks.slack.test')) return {ok:true,json:async()=>({})};
+      throw new Error('fetch inesperado: '+url);
+    },
+  };
+}
+
+test('cron-loyalty-mensual: si Airtable responde un error, lo dice en vez de anunciar "sin cambios"', async()=>{
+  const {calls,fetchImpl}=mockFetchConError();
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const res=fakeRes();
+    await handler({headers:{}},res,{hoy:new Date(2026,7,31)});
+    const aSlack=calls.filter(c=>c.url.includes('hooks.slack.test'));
+    assert.equal(aSlack.length,1,'tiene que avisar igual');
+    const texto=JSON.parse(aSlack[0].opts.body).text;
+    assert.match(texto,/No se pudo leer la tabla "Historial Loyalty"/);
+    assert.match(texto,/Table not found/);
+    assert.ok(!/Sin cambios de nivel este mes/.test(texto),'no puede afirmar que no hubo cambios');
+    assert.match(texto,/Inicio → Cambios de nivel/,'conviene decir dónde mirarlo igual');
+    assert.equal(res.statusCode,200);
+    assert.match(res.body.errorLectura,/Table not found/);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+test('cron-loyalty-mensual: si la consulta ni siquiera sale, avisa por Slack en vez de morir con 502', async()=>{
+  const {calls,fetchImpl}=mockFetchConError({tiraExcepcion:true});
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const res=fakeRes();
+    await handler({headers:{}},res,{hoy:new Date(2026,7,31)});
+    const aSlack=calls.filter(c=>c.url.includes('hooks.slack.test'));
+    assert.equal(aSlack.length,1);
+    assert.match(JSON.parse(aSlack[0].opts.body).text,/No se pudo leer la tabla/);
+    // 200 a propósito: el aviso ya salió, y un 5xx haría que Vercel reintente
+    // la corrida y el mes termine con varios mensajes repetidos.
+    assert.equal(res.statusCode,200);
+    assert.match(res.body.errorLectura,/ENOTFOUND/);
+  }finally{
+    global.fetch=original;
+  }
+});
+
+test('cron-loyalty-mensual: una lectura buena no deja errorLectura en la respuesta', async()=>{
+  const {fetchImpl}=mockFetch({cambios:[]});
+  const original=global.fetch;
+  global.fetch=fetchImpl;
+  try{
+    const res=fakeRes();
+    await handler({headers:{}},res,{hoy:new Date(2026,7,31)});
+    assert.equal(res.body.errorLectura,undefined);
+  }finally{
+    global.fetch=original;
+  }
+});

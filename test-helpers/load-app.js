@@ -63,6 +63,13 @@ function loadApp(files,globales){
   sandbox.window={addEventListener(){}};
   sandbox.navigator={};
   sandbox.fetch=async()=>{throw new Error('fetch no disponible en tests unitarios');};
+  // Los temporizadores son globales del navegador como cualquier otro: sin
+  // ellos, cualquier código con un retardo (un reintento, el auto-ocultado de
+  // un aviso) explota con "setTimeout is not defined" dentro del sandbox.
+  sandbox.setTimeout=setTimeout;
+  sandbox.clearTimeout=clearTimeout;
+  sandbox.setInterval=setInterval;
+  sandbox.clearInterval=clearInterval;
   sandbox.atob=globalThis.atob;
   const context=vm.createContext(sandbox);
   for(const file of files){

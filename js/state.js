@@ -82,3 +82,9 @@ let currentFormFull=null;
 
 // Lazy loading — secciones que ya se cargaron en esta sesión (ver nav.js)
 let seccionesCargadas=new Set();
+
+// Historial Loyalty — quiénes cambiaron de nivel (card de Inicio, ver
+// js/loyalty-historial.js). El error se guarda aparte para que "no hubo
+// cambios" y "no se pudo leer" no se vean igual.
+let cacheHistorialLoyaltyRaw=[];
+let historialLoyaltyError='';

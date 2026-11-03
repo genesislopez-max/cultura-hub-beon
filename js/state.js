@@ -88,3 +88,6 @@ let seccionesCargadas=new Set();
 // cambios" y "no se pudo leer" no se vean igual.
 let cacheHistorialLoyaltyRaw=[];
 let historialLoyaltyError='';
+// Un cambio de nivel que no se pudo registrar, esperando el reintento del
+// banner (ver registrarCambioNivel en js/personas.js).
+let historialPendiente=null;

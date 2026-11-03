@@ -53,14 +53,23 @@ module.exports=async(req,res,opts={})=>{
   const formula=encodeURIComponent(`IS_SAME({Fecha}, "${hoyStr}", 'month')`);
   const url=`https://api.airtable.com/v0/${base}/${encodeURIComponent('Historial Loyalty')}?filterByFormula=${formula}`;
 
-  let cambios=[];
+  // No alcanza con atrapar la excepción: si Airtable responde un error (la
+  // tabla no existe, el token perdió permisos, el campo cambió de nombre), el
+  // body NO trae records y `data.records||[]` dejaba la lista vacía. El cron
+  // entonces anunciaba "Sin cambios de nivel este mes", que es peor que no
+  // decir nada: afirma que no pasó nada cuando en realidad no se pudo leer.
+  // Ahora el motivo se guarda y viaja en el propio mensaje.
+  let cambios=[], errorLectura='';
   try{
     const airtableRes=await fetch(url,{headers:{'Authorization':`Bearer ${token}`}});
-    const data=await airtableRes.json();
-    cambios=data.records||[];
+    const data=await airtableRes.json().catch(()=>({}));
+    if(!airtableRes.ok){
+      errorLectura=data?.error?.message||`Airtable respondió ${airtableRes.status}`;
+    }else{
+      cambios=data.records||[];
+    }
   }catch(e){
-    res.status(502).json({error:{message:'No se pudo consultar Airtable.'}});
-    return;
+    errorLectura=e.message||'no se pudo conectar con Airtable';
   }
 
   const mesTexto=`${MESES_ES[hoy.getMonth()]} de ${hoy.getFullYear()}`;
@@ -68,13 +77,18 @@ module.exports=async(req,res,opts={})=>{
   // producía ningún mensaje, y eso era indistinguible de que la automatización
   // estuviera rota (o de que los cambios no se estuvieran registrando en
   // "Historial Loyalty"): en los dos casos no llegaba nada.
-  const texto=cambios.length
-    ?`📊 *Resumen mensual — Cambios de Nivel Loyalty (${mesTexto})*\n`+
-      cambios.map(c=>{
-        const f=c.fields||{};
-        return `• *${f.Persona||'alguien'}*: ${f['Nivel anterior']||'—'} → ${f['Nivel nuevo']||'—'}`;
-      }).join('\n')
-    :`📊 *Resumen mensual — Cambios de Nivel Loyalty (${mesTexto})*\nSin cambios de nivel este mes.`;
+  const encabezado=`📊 *Resumen mensual — Cambios de Nivel Loyalty (${mesTexto})*`;
+  const texto=errorLectura
+    ?`⚠️ *Resumen mensual — Cambios de Nivel Loyalty (${mesTexto})*\n`+
+      `No se pudo leer la tabla "Historial Loyalty", así que este mes no hay resumen: ${errorLectura}.\n`+
+      `Los cambios igual se pueden ver en el Hub (Inicio → Cambios de nivel).`
+    :cambios.length
+      ?`${encabezado}\n`+
+        cambios.map(c=>{
+          const f=c.fields||{};
+          return `• *${f.Persona||'alguien'}*: ${f['Nivel anterior']||'—'} → ${f['Nivel nuevo']||'—'}`;
+        }).join('\n')
+      :`${encabezado}\nSin cambios de nivel este mes.`;
 
   try{
     await fetch(webhook,{
@@ -86,6 +100,10 @@ module.exports=async(req,res,opts={})=>{
     console.error('No se pudo enviar el resumen mensual de Loyalty a Slack:',e.message);
   }
 
-  res.status(200).json({ok:true,notificados:cambios.length});
+  // 200 aunque no se haya podido leer: el aviso ya salió por Slack, que es
+  // quien tiene que enterarse. Con un 5xx, Vercel reintenta la corrida y el
+  // mes terminaría con varios mensajes repetidos del mismo problema. El motivo
+  // queda en la respuesta para poder verlo en los logs.
+  res.status(200).json({ok:true,notificados:cambios.length,errorLectura:errorLectura||undefined});
 };
 module.exports.esUltimoDiaHabilDelMes=esUltimoDiaHabilDelMes;

@@ -100,3 +100,57 @@ test('loadHistorialLoyalty: una lectura buena limpia el error anterior',async()=
   assert.equal(leer(c,'historialLoyaltyError'),'');
   assert.equal(leer(c,'cacheHistorialLoyaltyRaw.length'),4);
 });
+
+// ─── Que un cambio de nivel no quede sin registrar ────────────────────────────
+// El registro en "Historial Loyalty" es lo único que hace que el cambio entre
+// al resumen mensual y a la card de Inicio. Antes era un solo intento, y el
+// aviso un toast que se va solo: si nadie llegaba a leerlo, el cambio quedaba
+// aplicado y fuera de todo registro.
+function ctxRegistro(){
+  return loadApp(['constants.js','state.js','personas.js','utils.js','loyalty-historial.js'],
+    {puedeEscribir:()=>true});
+}
+const CAMBIO={Persona:'Ana Dev','Nivel anterior':'Spark','Nivel nuevo':'Ray',Fecha:'2026-11-05'};
+
+test('registrarCambioNivel: reintenta una vez antes de darse por vencido',async()=>{
+  const c=ctxRegistro();
+  let intentos=0;
+  c.atPost=async()=>{ intentos++; if(intentos===1) throw new Error('Network error'); return {records:[{id:'recNUEVO'}]}; };
+  c.console={...console,error(){}};
+  c.__datos=CAMBIO;
+  assert.equal(await leer(c,'registrarCambioNivel(__datos)'),true);
+  assert.equal(intentos,2);
+});
+
+test('registrarCambioNivel: si falla dos veces devuelve false, para que se vea el banner',async()=>{
+  const c=ctxRegistro();
+  let intentos=0;
+  c.atPost=async()=>{ intentos++; throw new Error('Unknown field name: "Nivel nuevo"'); };
+  c.console={...console,error(){}};
+  c.__datos=CAMBIO;
+  assert.equal(await leer(c,'registrarCambioNivel(__datos)'),false);
+  assert.equal(intentos,2,'insiste una sola vez, no en loop');
+});
+
+test('registrarCambioNivel: al registrarlo, la card de Inicio lo muestra sin recargar la tabla',async()=>{
+  const c=ctxRegistro();
+  sembrar(c,'cacheHistorialLoyaltyRaw',[]);
+  c.atPost=async()=>({records:[{id:'recNUEVO'}]});
+  c.__datos=CAMBIO;
+  await leer(c,'registrarCambioNivel(__datos)');
+  assert.equal(leer(c,'cacheHistorialLoyaltyRaw.length'),1);
+  assert.equal(leer(c,'cacheHistorialLoyaltyRaw[0].fields.Persona'),'Ana Dev');
+  assert.equal(leer(c,'cacheHistorialLoyaltyRaw[0].id'),'recNUEVO');
+  // Y queda contado en el mes de su fecha, no en el de hoy
+  assert.equal(leer(c,'cambiosLoyaltyDelMes("2026-11").length'),1);
+});
+
+test('registrarCambioNivel: un fallo no ensucia el cache con un registro que no existe',async()=>{
+  const c=ctxRegistro();
+  sembrar(c,'cacheHistorialLoyaltyRaw',[]);
+  c.atPost=async()=>{throw new Error('nope');};
+  c.console={...console,error(){}};
+  c.__datos=CAMBIO;
+  await leer(c,'registrarCambioNivel(__datos)');
+  assert.equal(leer(c,'cacheHistorialLoyaltyRaw.length'),0);
+});

@@ -611,22 +611,13 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
   // siguiente en UTC, y podía quedar en el mes equivocado para el cron.
   const hoyLocal=new Date();
   const fechaHistorial=`${hoyLocal.getFullYear()}-${String(hoyLocal.getMonth()+1).padStart(2,'0')}-${String(hoyLocal.getDate()).padStart(2,'0')}`;
-  let falloHistorial=false;
-  try{
-    await atPost('Historial Loyalty',{
-      Persona:nombre,
-      'Nivel anterior':nivelAnterior,
-      'Nivel nuevo':nuevoNivel,
-      Fecha:fechaHistorial,
-    });
-  }catch(err){
-    // Antes esto era un .catch(()=>{}) mudo, y era el peor lugar para el
-    // silencio: si la tabla no existe o le falta un campo, el cambio de nivel
-    // se guarda igual pero NUNCA entra al resumen mensual, y no había forma de
-    // notarlo hasta preguntarse por qué el resumen llega vacío.
-    console.error('No se pudo registrar el cambio en "Historial Loyalty":',err.message);
-    falloHistorial=true;
-  }
+  const datosHistorial={
+    Persona:nombre,
+    'Nivel anterior':nivelAnterior,
+    'Nivel nuevo':nuevoNivel,
+    Fecha:fechaHistorial,
+  };
+  const falloHistorial=!await registrarCambioNivel(datosHistorial);
 
   // Notificar Slack
   const nivelEmojisSlack={Spark:'⚡',Ray:'☀️',Lightning:'🌩',Thunder:'🌪',Storm:'🌊'};
@@ -639,8 +630,72 @@ async function cambiarNivel(recordId, nuevoNivel, nivelAnterior, e){
 
   // Va último a propósito: mostrarRecordatorioBrevo() termina con el toast de
   // "Nivel actualizado ✓", y si el aviso saliera antes ese toast lo tapaba.
-  if(falloHistorial){
-    toast('⚠️ El nivel se guardó, pero el cambio no quedó registrado para el resumen mensual de Slack (revisá la tabla "Historial Loyalty").',true);
+  if(falloHistorial) mostrarHistorialPendiente(datosHistorial,grupo);
+}
+
+// ─── Registrar el cambio en "Historial Loyalty" ───────────────────────────────
+// Ese registro es lo ÚNICO que hace que el cambio entre al resumen mensual de
+// Slack y a la card "Cambios de nivel" de Inicio. Si falla, el nivel ya quedó
+// guardado en Personas y no se puede deshacer: lo único que corresponde es
+// insistir y, si tampoco sale, dejar a la vista qué hay que cargar a mano.
+//
+// Antes era un solo intento, y el aviso era un toast que se va solo a los
+// segundos: si nadie llegaba a leerlo, el cambio quedaba aplicado y fuera de
+// todo registro, sin manera de saber cuál faltaba.
+async function registrarCambioNivel(datos){
+  for(let intento=1;intento<=2;intento++){
+    try{
+      const creado=await atPost('Historial Loyalty',datos);
+      // El cache de Inicio ya está cargado: se le agrega el registro nuevo en
+      // vez de volver a pedir la tabla entera.
+      const rec=creado?.records?.[0];
+      if(typeof cacheHistorialLoyaltyRaw!=='undefined'){
+        cacheHistorialLoyaltyRaw.unshift({id:rec?.id||'nuevo',fields:{...datos}});
+        if(typeof renderCardLoyalty==='function') renderCardLoyalty();
+      }
+      return true;
+    }catch(err){
+      console.error(`No se pudo registrar el cambio en "Historial Loyalty" (intento ${intento}):`,err.message);
+      // La mayoría de estas fallas son de red y se resuelven solas; si la tabla
+      // o un campo no existen, el reintento falla igual y cae en el banner.
+      if(intento===1) await new Promise(r=>setTimeout(r,1200));
+    }
+  }
+  return false;
+}
+
+// Banner que NO se va solo: el toast anterior desaparecía a los segundos y con
+// él la única pista de que ese cambio no quedó registrado.
+function mostrarHistorialPendiente(datos,grupo){
+  historialPendiente=datos;
+  document.getElementById('historial-pendiente-banner')?.remove();
+  const banner=document.createElement('div');
+  banner.id='historial-pendiente-banner';
+  banner.className='nivel-pending-banner';
+  banner.innerHTML=`
+    <i class="ti ti-alert-triangle"></i>
+    <div style="flex:1">
+      El nivel de <strong>${datos.Persona}</strong> se guardó, pero el cambio
+      <strong>no quedó registrado</strong> en "Historial Loyalty": no va a aparecer
+      en el resumen mensual ni en la card de Inicio.
+      <div style="color:var(--text3);font-weight:400;margin-top:4px">
+        Para cargarlo a mano: ${datos.Persona} · ${datos['Nivel anterior']||'—'} → ${datos['Nivel nuevo']||'—'} · ${datos.Fecha}
+      </div>
+    </div>
+    <button onclick="reintentarHistorialPendiente()" style="background:none;border:1px solid var(--amber);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--amber);cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;margin-right:6px">Reintentar</button>
+    <button onclick="this.closest('.nivel-pending-banner').remove()" style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:18px;padding:2px;line-height:1;">×</button>`;
+  const wrap=document.getElementById(grupo==='core'?'wrap-coreteam':'wrap-engineers');
+  if(wrap) wrap.parentNode.insertBefore(banner,wrap);
+}
+async function reintentarHistorialPendiente(){
+  if(!historialPendiente) return;
+  const datos=historialPendiente;
+  if(await registrarCambioNivel(datos)){
+    historialPendiente=null;
+    document.getElementById('historial-pendiente-banner')?.remove();
+    toast(`El cambio de ${datos.Persona} quedó registrado ✓`);
+  }else{
+    toast('Sigue sin poder registrarse — revisá la tabla "Historial Loyalty" en Airtable',true);
   }
 }
 

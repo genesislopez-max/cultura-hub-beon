@@ -1,0 +1,5 @@
+# Playwright se instala afuera del repo (ver test/browser/README.md): un
+# package.json en la raíz cambia cómo Vercel construye el proyecto. Esto es
+# por si alguien igual lo instala acá, para que no termine commiteado.
+node_modules/
+package-lock.json

@@ -547,3 +547,48 @@ test('montoBenefAsignado: un curso de Udemy no lleva "/año"', ()=>{
   assert.equal(ctx.montoBenefAsignado({Monto:40},null,'Udemy Courses'),'$40');
   assert.equal(ctx.montoBenefAsignado({Monto:40},null,'Un Beneficio Anual'),'$40/año');
 });
+
+// ─── El curso de Udemy, completable desde la propia fila ──────────────────────
+// El dato falta en bastantes registros, y abrir el modal de edición entero para
+// escribir una línea era desproporcionado.
+test('contenidoCursoLinea: con el curso cargado solo lo muestra', ()=>{
+  ctx.puedeEscribir=()=>true;
+  const html=ctx.contenidoCursoLinea('a1','Node.js avanzado');
+  assert.match(html,/Node\.js avanzado/);
+  assert.ok(!/cargalo/.test(html),'no hay nada que completar');
+  assert.ok(!/<button/.test(html));
+});
+
+test('contenidoCursoLinea: sin curso, invita a cargarlo ahí mismo', ()=>{
+  ctx.puedeEscribir=()=>true;
+  const html=ctx.contenidoCursoLinea('a1','');
+  assert.match(html,/Curso sin cargar/);
+  assert.match(html,/editarCursoInline\('a1'\)/);
+});
+
+// Sin permiso de escritura el dato falta igual, pero no hay nada que esa
+// persona pueda hacer al respecto: se avisa sin ofrecer una acción que no va.
+test('contenidoCursoLinea: con rol de solo lectura avisa, pero no ofrece cargarlo', ()=>{
+  ctx.puedeEscribir=()=>false;
+  const html=ctx.contenidoCursoLinea('a1','');
+  assert.match(html,/Curso sin cargar/);
+  assert.ok(!/<button/.test(html));
+  ctx.puedeEscribir=()=>true;
+});
+
+// El nombre del curso lo escribe una persona y termina dentro de innerHTML.
+test('escaparHtml: un curso con caracteres de HTML no se inyecta', ()=>{
+  assert.equal(ctx.escaparHtml('<img src=x onerror=alert(1)>'),
+    '&lt;img src=x onerror=alert(1)&gt;');
+  assert.equal(ctx.escaparHtml(`Ana "la" <b>mejor</b> & Cía`),
+    'Ana &quot;la&quot; &lt;b&gt;mejor&lt;/b&gt; &amp; Cía');
+  assert.equal(ctx.escaparHtml(''),'');
+  assert.equal(ctx.escaparHtml(null),'');
+});
+
+test('contenidoCursoLinea: el nombre del curso se escapa antes de pintarlo', ()=>{
+  ctx.puedeEscribir=()=>true;
+  const html=ctx.contenidoCursoLinea('a1','<b>Node</b>');
+  assert.ok(!/<b>/.test(html),'no puede entrar HTML crudo del dato');
+  assert.match(html,/&lt;b&gt;Node&lt;\/b&gt;/);
+});

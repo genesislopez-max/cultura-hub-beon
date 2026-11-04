@@ -185,8 +185,7 @@ async function verBenefPersona(nombre, grupo, nivel){
       // curso y otro sin— y no se notaba que a ese registro le faltaba el dato.
       const usaCurso=esBeneficioUdemy(bNombre);
       const curso=(r.fields.Curso||'').trim();
-      const cursoTexto=usaCurso?(curso||'Curso sin cargar'):curso;
-      const titulo=dentroDeGrupo?(cursoTexto||bNombre):bNombre;
+      const titulo=dentroDeGrupo?(curso||bNombre):bNombre;
       // En credenciales el costo es uno solo aunque haya varias asignaciones:
       // repetirlo en cada fila del grupo hacía leer un gasto por cada vez que
       // se recompartieron. Va una sola vez, en el encabezado.
@@ -208,7 +207,7 @@ async function verBenefPersona(nombre, grupo, nivel){
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${titulo}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
           <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
-          ${!dentroDeGrupo&&cursoTexto?`<div class="bp-detalle-row-coment"${curso?'':' style="color:var(--text3)"'}><i class="ti ti-book"></i><span>${cursoTexto}</span></div>`:''}
+          ${usaCurso||curso?`<div class="bp-detalle-row-coment" id="curso-linea-${r.id}"${curso?'':' style="color:var(--text3)"'}>${contenidoCursoLinea(r.id,curso)}</div>`:''}
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
         </div>
@@ -541,6 +540,64 @@ function montoBenefAsignado(fields,benefCatalogo,nombreBeneficio){
   const cifra=`$${Number(monto).toLocaleString('es-AR')}`;
   if(esBeneficioMensual(nombreBeneficio)) return `${cifra}/mes`;
   return esBeneficioPorUnidad(nombreBeneficio)?cifra:`${cifra}/año`;
+}
+
+// ─── El curso de Udemy, completable desde la propia fila ──────────────────────
+// El dato falta en bastantes registros, y abrir el modal de edición entero para
+// escribir una línea era desproporcionado: la fila que dice "Curso sin cargar"
+// se completa ahí mismo.
+function escaparHtml(s){
+  return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function contenidoCursoLinea(id,curso){
+  const texto=(curso||'').trim();
+  if(texto) return `<i class="ti ti-book"></i><span>${escaparHtml(texto)}</span>`;
+  // Sin permiso de escritura queda como estaba: el dato falta igual, pero no
+  // hay nada que esta persona pueda hacer al respecto.
+  return puedeEscribir()
+    ? `<i class="ti ti-book"></i><button type="button" class="benef-curso-cargar" onclick="editarCursoInline('${id}')">Curso sin cargar — cargalo</button>`
+    : `<i class="ti ti-book"></i><span>Curso sin cargar</span>`;
+}
+function pintarCursoLinea(id,curso){
+  const linea=document.getElementById(`curso-linea-${id}`);
+  if(!linea) return;
+  linea.style.color=(curso||'').trim()?'':'var(--text3)';
+  linea.innerHTML=contenidoCursoLinea(id,curso);
+}
+function editarCursoInline(id){
+  const linea=document.getElementById(`curso-linea-${id}`);
+  if(!linea) return;
+  const actual=(spBenefAsigActual.find(r=>r.id===id)?.fields?.Curso||'').trim();
+  linea.style.color='';
+  linea.innerHTML=`<i class="ti ti-book"></i>
+    <input class="benef-curso-input" id="curso-input-${id}" placeholder="Nombre del curso"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();guardarCursoInline('${id}')}else if(event.key==='Escape')cancelarCursoInline('${id}')">
+    <button type="button" class="benef-curso-ok" onclick="guardarCursoInline('${id}')">Guardar</button>
+    <button type="button" class="benef-curso-cancelar" onclick="cancelarCursoInline('${id}')" title="Cancelar">×</button>`;
+  const input=document.getElementById(`curso-input-${id}`);
+  // Por value y no por el atributo: un nombre con comillas rompería el HTML.
+  input.value=actual;
+  input.focus();
+}
+function cancelarCursoInline(id){
+  pintarCursoLinea(id,spBenefAsigActual.find(r=>r.id===id)?.fields?.Curso||'');
+}
+async function guardarCursoInline(id){
+  const input=document.getElementById(`curso-input-${id}`);
+  const valor=(input?.value||'').trim();
+  if(!valor){ toast('Escribí el nombre del curso',true); input?.focus(); return; }
+  try{
+    await atPatch(`Beneficios Asignados/${id}`,{Curso:valor});
+  }catch(e){
+    toast('No se pudo guardar el curso: '+e.message,true);
+    return; // el input queda abierto con lo escrito, para no perderlo
+  }
+  // Se actualiza el registro que ya tiene la card en memoria en vez de volver a
+  // pedir las seis tablas de la persona: lo único que cambió es este campo.
+  const rec=spBenefAsigActual.find(r=>r.id===id);
+  if(rec) rec.fields.Curso=valor;
+  pintarCursoLinea(id,valor);
+  toast('Curso guardado ✓');
 }
 
 // El campo Link lo comparten Udemy y Blogpost, pero no apuntan a lo mismo: uno

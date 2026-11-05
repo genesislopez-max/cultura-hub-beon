@@ -556,6 +556,13 @@ textarea.field-input{resize:vertical;min-height:80px;}
    línea y no pegado al subtítulo porque puede ser largo: se deja que corte en
    varias líneas en vez de desbordar la fila. */
 .bp-detalle-row-coment{display:flex;align-items:flex-start;gap:5px;margin-top:4px;font-size:11.5px;line-height:1.45;color:var(--text2);white-space:pre-wrap;overflow-wrap:anywhere;}
+/* "Curso sin cargar" se completa en la propia fila (ver contenidoCursoLinea en
+   js/side-panel.js): el botón se lee como el texto que reemplaza, no como un
+   botón suelto en medio del detalle. */
+.benef-curso-cargar{background:none;border:none;padding:0;font:inherit;color:var(--blue);cursor:pointer;text-decoration:underline;text-underline-offset:2px;}
+.benef-curso-input{flex:1;min-width:0;font:inherit;padding:2px 6px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);}
+.benef-curso-ok{background:none;border:1px solid var(--blue);border-radius:6px;padding:1px 8px;font:inherit;font-weight:600;color:var(--blue);cursor:pointer;}
+.benef-curso-cancelar{background:none;border:none;padding:0 2px;font-size:15px;line-height:1;color:var(--text3);cursor:pointer;}
 .bp-detalle-row-coment i{font-size:12px;flex-shrink:0;margin-top:1px;color:var(--text3);}
 /* Link a la publicación (Blogpost) o al curso (Udemy). */
 .bp-detalle-row-link{display:inline-flex;align-items:center;gap:5px;margin-top:4px;font-size:11.5px;color:var(--blue);text-decoration:none;overflow-wrap:anywhere;}

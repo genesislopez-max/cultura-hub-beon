@@ -592,3 +592,76 @@ test('contenidoCursoLinea: el nombre del curso se escapa antes de pintarlo', ()=
   assert.ok(!/<b>/.test(html),'no puede entrar HTML crudo del dato');
   assert.match(html,/&lt;b&gt;Node&lt;\/b&gt;/);
 });
+
+// ─── El beneficio de una asignación, venga como venga ─────────────────────────
+// El campo Beneficio a veces llega resuelto a texto (cacheBenefAsignados) y a
+// veces como el id crudo del linked record (la card de la persona, que pide a
+// Airtable directo). Con el id no se podía saber QUÉ beneficio era, así que
+// AI Tools no se anualizaba y el presupuesto de la card salía 12 veces más
+// chico que el de la sección Beneficios para la misma persona.
+const CATALOGO=[
+  {id:'bAI',fields:{Beneficio:'AI Tools',Valor:10}},
+  {id:'bOR',fields:{Beneficio:"O'Reilly",Valor:300}},
+  {id:'bTer',fields:{Beneficio:'Terapia',Valor:600}},
+];
+const comoLlegaDeAirtable=(benefId,extra={})=>({fields:{Persona:'Anthony Dugarte',Beneficio:[benefId],...extra}});
+const yaResuelto=(nombre,extra={})=>({fields:{Persona:'Anthony Dugarte',Beneficio:nombre,...extra}});
+
+test('beneficioDeAsignacion: lo encuentra por id y por nombre', ()=>{
+  assert.equal(ctx.beneficioDeAsignacion(comoLlegaDeAirtable('bAI'),CATALOGO).nombre,'AI Tools');
+  assert.equal(ctx.beneficioDeAsignacion(yaResuelto('AI Tools'),CATALOGO).nombre,'AI Tools');
+  // Un id que no está en el catálogo se devuelve tal cual, en vez de perderse
+  assert.equal(ctx.beneficioDeAsignacion(comoLlegaDeAirtable('recDESCONOCIDO'),CATALOGO).nombre,'recDESCONOCIDO');
+  assert.equal(ctx.beneficioDeAsignacion({fields:{}},CATALOGO).nombre,'');
+});
+
+test('montoDeAsignacion: AI Tools se anualiza aunque el beneficio llegue como id', ()=>{
+  // $10/mes son $120 al año, venga el beneficio como sea
+  assert.equal(ctx.montoDeAsignacion(comoLlegaDeAirtable('bAI',{Monto:10}),CATALOGO),120);
+  assert.equal(ctx.montoDeAsignacion(yaResuelto('AI Tools',{Monto:10}),CATALOGO),120);
+  // Y uno anual no se multiplica
+  assert.equal(ctx.montoDeAsignacion(comoLlegaDeAirtable('bTer',{Monto:600}),CATALOGO),600);
+});
+
+test('montoDeAsignacion: sin Monto propio toma el Valor del catálogo, también por id', ()=>{
+  assert.equal(ctx.montoDeAsignacion(comoLlegaDeAirtable('bAI'),CATALOGO),120); // 10 × 12
+  assert.equal(ctx.montoDeAsignacion(comoLlegaDeAirtable('bTer'),CATALOGO),600);
+});
+
+// El caso que motivó esto: a Anthony le ampliaron AI Tools de $10 a $20/mes,
+// cargado como dos asignaciones. El gasto anual son $240.
+test('sumarMontosAsignados: dos aprobaciones de AI Tools suman el gasto anual de las dos', ()=>{
+  const asignaciones=[
+    comoLlegaDeAirtable('bAI',{Monto:10}),
+    comoLlegaDeAirtable('bAI',{Monto:10}),
+  ];
+  assert.equal(ctx.sumarMontosAsignados(asignaciones,CATALOGO),240);
+});
+
+test('sumarMontosAsignados: las credenciales se siguen deduplicando con el beneficio como id', ()=>{
+  const asignaciones=[
+    comoLlegaDeAirtable('bOR',{Monto:300}),
+    comoLlegaDeAirtable('bOR',{Monto:300}), // recompartidas: no es otro gasto
+  ];
+  assert.equal(ctx.sumarMontosAsignados(asignaciones,CATALOGO),300);
+});
+
+// ─── La unidad en el encabezado del grupo ─────────────────────────────────────
+// "$20 en total" se lee como un pago único de $20, cuando son $20 por mes.
+test('montoGrupoBenef: un beneficio mensual dice "/mes", no "en total"', ()=>{
+  const g={nombre:'AI Tools',benef:CATALOGO[0],items:[
+    {r:{fields:{Monto:10}}},
+    {r:{fields:{Monto:10}}},
+  ]};
+  const html=ctx.montoGrupoBenef(g);
+  assert.match(html,/\$20\/mes/);
+  assert.ok(!/en total/.test(html));
+});
+
+test('montoGrupoBenef: lo que se compra por unidad sí suma "en total"', ()=>{
+  const g={nombre:'Udemy Courses',benef:{fields:{Beneficio:'Udemy Courses',Valor:50}},items:[
+    {r:{fields:{Monto:40}}},
+    {r:{fields:{Monto:35}}},
+  ]};
+  assert.match(ctx.montoGrupoBenef(g),/\$75 en total/);
+});

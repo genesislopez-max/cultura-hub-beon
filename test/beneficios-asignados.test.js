@@ -665,3 +665,55 @@ test('montoGrupoBenef: lo que se compra por unidad sí suma "en total"', ()=>{
   ]};
   assert.match(ctx.montoGrupoBenef(g),/\$75 en total/);
 });
+
+// ─── Ampliar el monto de un beneficio que la persona ya tiene ─────────────────
+// A Anthony Dugarte le habilitaron $10/mes de AI Tools en 2023 y le aprobaron
+// $10 más en 2026. Lo que corresponde es dejar los dos registros, pero nada en
+// el Hub lo decía: la ampliación no se cargaba y figuraba con el monto viejo.
+function sembrarEnCtx(cache,datos){
+  ctx.__fixture=datos;
+  vm.runInContext(`${cache}=__fixture`,ctx);
+}
+const CAT_AMPLIAR=[
+  {id:'bAI',fields:{Beneficio:'AI Tools',Valor:10}},
+  {id:'bUd',fields:{Beneficio:'Udemy Courses',Valor:50}},
+  {id:'bTer',fields:{Beneficio:'Terapia',Valor:600}},
+];
+
+test('admiteAmpliacion: solo donde los montos se acumulan en un monto vigente', ()=>{
+  // Mensual: $10 + $10 son $20 por mes
+  assert.equal(ctx.admiteAmpliacion('AI Tools'),true);
+  // Por unidad: cada curso es una compra distinta, no una ampliación
+  assert.equal(ctx.admiteAmpliacion('Udemy Courses'),false);
+  assert.equal(ctx.admiteAmpliacion('Terapia'),false);
+  assert.equal(ctx.admiteAmpliacion(''),false);
+});
+
+test('textoMontoBenef: cada beneficio dice en qué unidad está su monto', ()=>{
+  assert.equal(ctx.textoMontoBenef(20,'AI Tools'),'$20/mes');
+  assert.equal(ctx.textoMontoBenef(600,'Terapia'),'$600/año');
+  assert.equal(ctx.textoMontoBenef(40,'Udemy Courses'),'$40');
+});
+
+test('asignacionesActivasDelBeneficio: las de ese beneficio, y solo las activas', ()=>{
+  sembrarEnCtx('cacheBeneficiosRaw',CAT_AMPLIAR);
+  sembrarEnCtx('asignacionesPersonaForm',[
+    {id:'a1',fields:{Beneficio:['bAI'],Monto:10,Estado:'Activo'}},
+    {id:'a2',fields:{Beneficio:['bAI'],Monto:10}},                 // sin Estado = Activo
+    {id:'a3',fields:{Beneficio:['bAI'],Monto:10,Estado:'Inactivo'}},
+    {id:'a4',fields:{Beneficio:['bUd'],Monto:40,Estado:'Activo'}},
+  ]);
+  assert.equal(ctx.asignacionesActivasDelBeneficio('AI Tools').map(a=>a.id).join('|'),'a1|a2');
+  assert.equal(ctx.asignacionesActivasDelBeneficio('Udemy Courses').map(a=>a.id).join('|'),'a4');
+  assert.equal(ctx.asignacionesActivasDelBeneficio('Terapia').length,0);
+  assert.equal(ctx.asignacionesActivasDelBeneficio('').length,0);
+});
+
+test('montoVigenteBenef: suma lo que la persona tiene hoy, con el valor del catálogo si falta el monto', ()=>{
+  sembrarEnCtx('cacheBeneficiosRaw',CAT_AMPLIAR);
+  const conMonto=[{fields:{Monto:10}},{fields:{Monto:10}}];
+  assert.equal(ctx.montoVigenteBenef(conMonto,'AI Tools'),20);
+  // Una asignación sin Monto cae en el Valor del catálogo
+  assert.equal(ctx.montoVigenteBenef([{fields:{}}],'AI Tools'),10);
+  assert.equal(ctx.montoVigenteBenef([],'AI Tools'),0);
+});

@@ -112,7 +112,15 @@ async function verBenefPersona(nombre, grupo, nivel){
   // anualizan y las credenciales se cuentan una sola vez. Estaba repetida acá
   // con su propio criterio, así que este número podía no coincidir con el de la
   // tabla de la que se abre esta misma card.
-  const usadoBenef=sumarMontosAsignados(benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo'));
+  //
+  // Hay que pasarle el catálogo: sin él cae en cacheBeneficiosRaw, que está
+  // vacío cuando esta card se abre sin haber visitado la sección Beneficios
+  // (p. ej. desde Ex BEONers). Y sin catálogo el beneficio queda en el id crudo
+  // del linked record, así que no se lo reconoce como mensual ni como
+  // credenciales: AI Tools no se anualizaba y las recompartidas se contaban dos
+  // veces, justo en el caso en que esta card es la única vista disponible.
+  const usadoBenef=sumarMontosAsignados(
+    benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo'),catalogoBenef);
   // Proyecto es un linked record — resolver el ID a nombre acá también,
   // igual que hacen loadOffsites()/loadGetTogether() con su propio caché,
   // para no mostrar el código crudo (recXXXXXXXX) en el resumen.
@@ -506,6 +514,14 @@ function montoGrupoBenef(g){
   const tope=Number(g.benef?.fields?.Valor||0);
   if(esBeneficioOneTime(g.nombre)&&tope){
     return `<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} de $${tope.toLocaleString('es-AR')}</span>`;
+  }
+  // En un beneficio mensual las asignaciones no son gastos que se suman una
+  // vez: son el monto que corre por mes. Alguien a quien le ampliaron AI Tools
+  // de $10 a $20 leía "$20 en total", como si fuera un pago único de $20, en
+  // vez de los $20/mes que efectivamente tiene. Mismo criterio que la fila
+  // (montoBenefAsignado) y que la tarjeta del catálogo (montoCatalogoBenef).
+  if(esBeneficioMensual(g.nombre)){
+    return `<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')}/mes</span>`;
   }
   return `<span class="bp-detalle-row-amount">$${total.toLocaleString('es-AR')} en total</span>`;
 }

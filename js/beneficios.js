@@ -983,12 +983,25 @@ function valorVinculado(campo){
 // contaba USD 20 al año donde el gasto real son 240. La card sigue mostrando el
 // monto mensual, que es como se habla del beneficio; acá se anualiza solo para
 // el presupuesto.
+// El campo Beneficio de una asignación a veces llega resuelto a texto
+// (cacheBenefAsignados, que loadBeneficios resuelve) y a veces como el id crudo
+// del linked record (la card de la persona, que pide a Airtable directo). Con
+// el id, NADA de lo que depende de saber qué beneficio es funcionaba: no se lo
+// reconocía como mensual, así que AI Tools no se anualizaba y el presupuesto de
+// la card salía 12 veces más chico que el de la sección Beneficios para la
+// misma persona; y tampoco se deduplicaban las credenciales.
+// Es la misma causa raíz del "Activo desde" de Udemy (ver verBenefPersona).
+function beneficioDeAsignacion(a,catalogo){
+  const ref=valorVinculado(a?.fields?.Beneficio);
+  const benef=(catalogo||cacheBeneficiosRaw||[]).find(b=>b.id===ref||b.fields?.Beneficio===ref);
+  return {benef,nombre:benef?.fields?.Beneficio||ref||''};
+}
 function montoDeAsignacion(a,catalogo){
-  const bNombre=valorVinculado(a.fields.Beneficio);
+  const {benef,nombre}=beneficioDeAsignacion(a,catalogo);
   const propio=a.fields.Monto
     ?Number(a.fields.Monto)||0
-    :Number((catalogo||cacheBeneficiosRaw||[]).find(b=>b.fields.Beneficio===bNombre)?.fields?.Valor)||0;
-  return esBeneficioMensual(bNombre)?propio*12:propio;
+    :Number(benef?.fields?.Valor)||0;
+  return esBeneficioMensual(nombre)?propio*12:propio;
 }
 // Total usado. O'Reilly/Pluralsight se pagan UNA sola vez por persona: volver
 // a compartirle las credenciales (porque cambió la contraseña) deja otra
@@ -1001,7 +1014,7 @@ function sumarMontosAsignados(asignaciones,catalogo){
   const credenciales=new Map();
   (asignaciones||[]).forEach(a=>{
     const monto=montoDeAsignacion(a,catalogo);
-    const bNombre=valorVinculado(a.fields.Beneficio);
+    const bNombre=beneficioDeAsignacion(a,catalogo).nombre;
     if(!esBeneficioCredenciales(bNombre)){ total+=monto; return; }
     const clave=`${normalizarNombre(valorVinculado(a.fields.Persona))}|${normalizarBeneficioKey(bNombre)}`;
     credenciales.set(clave,Math.max(credenciales.get(clave)||0,monto));

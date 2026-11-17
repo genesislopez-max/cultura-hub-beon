@@ -374,18 +374,19 @@ const FORMS={
     <i class="ti ti-search search-icon"></i>
     <input class="search-input" id="f-ba-persona-buscar" placeholder="Buscar persona…" oninput="filtrarPersonaAsignacion()">
   </div>
-  <select class="field-input" id="f-ba-persona" onchange="actualizarBeneficiosPorPersona()">
+  <select class="field-input" id="f-ba-persona" onchange="actualizarBeneficiosPorPersona();cargarAsignacionesPersonaForm();">
     <option value="">Seleccioná una persona…</option>
   </select>
 </div>
 <div class="field-group"><label class="field-label">Beneficio *</label>
-  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef();toggleCamposTerapia();toggleCamposLink();toggleCamposComentarios();">
+  <select class="field-input" id="f-ba-beneficio" onchange="actualizarMontoBenef();toggleCamposTerapia();toggleCamposLink();toggleCamposComentarios();actualizarAvisoAmpliacion();">
     <option value="">Seleccioná un beneficio…</option>
   </select>
   <div class="field-hint" id="f-ba-beneficio-hint" style="font-size:11px;color:var(--text3);padding:4px 0 0"></div>
 </div>
-<div class="field-group"><label class="field-label">Monto ($)</label>
-  <input class="field-input" id="f-ba-monto" type="number" min="0" placeholder="Se autocompleta si el beneficio tiene valor fijo">
+<div class="benef-ya-tiene" id="f-ba-ya-tiene" style="display:none"></div>
+<div class="field-group"><label class="field-label" id="f-ba-monto-label">Monto ($)</label>
+  <input class="field-input" id="f-ba-monto" type="number" min="0" placeholder="Se autocompleta si el beneficio tiene valor fijo" oninput="actualizarLabelMontoBenef()">
 </div>
 <div class="field-group"><label class="field-label">Fecha activación</label><input class="field-input" id="f-ba-fecha" type="date"></div>
 <div id="fg-ba-terapia" style="display:none">
@@ -414,7 +415,7 @@ const FORMS={
 </div>
 <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">Si el beneficio tiene valor fijo en el catálogo, se autocompleta. Podés modificarlo.</div>
 `;},
-    onMount:()=>{ filtrarPersonaAsignacion(); actualizarBeneficiosPorPersona(); },
+    onMount:()=>{ filtrarPersonaAsignacion(); actualizarBeneficiosPorPersona(); cargarAsignacionesPersonaForm(); },
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       const nombrePersona=v('f-ba-persona'), nombreBeneficio=v('f-ba-beneficio');

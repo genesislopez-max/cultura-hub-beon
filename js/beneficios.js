@@ -1136,6 +1136,104 @@ function actualizarMontoBenef(){
   }
 }
 
+// ─── Ampliar el monto de un beneficio que la persona ya tiene ─────────────────
+// Cuando a alguien le aprueban MÁS plata sobre un beneficio que ya tiene (a
+// Anthony Dugarte le habilitaron $10/mes de AI Tools en 2023 y le aprobaron
+// $10 más en 2026), lo que corresponde es dejar los dos registros: así se ve
+// desde cuándo tiene cada parte. Pero nada en el Hub lo decía, y el encabezado
+// de la card lee dos asignaciones como "2 asignaciones · 2 activas", que suena
+// a duplicado. Resultado: la ampliación no se cargaba y la persona figuraba con
+// el monto viejo.
+//
+// Acá el form lo dice y lo ofrece. No se agrega ningún campo ni tabla: ampliar
+// escribe exactamente la misma asignación que siempre, con el monto adicional.
+// Lo que cambia es el encuadre — se pide cuánto se SUMA, y se muestra en cuánto
+// queda.
+let asignacionesPersonaForm=[];
+async function cargarAsignacionesPersonaForm(){
+  const nombre=document.getElementById('f-ba-persona')?.value||'';
+  asignacionesPersonaForm=[];
+  if(nombre){
+    // Se pide a Airtable en vez de mirar cacheBenefAsignados: ese cache lo
+    // llena loadBeneficios(), que es lazy, y este form también se abre desde la
+    // card de una persona sin haber pasado por la sección Beneficios.
+    asignacionesPersonaForm=await pedirPorPersona('Beneficios Asignados','Persona',nombre).catch(()=>[]);
+  }
+  actualizarAvisoAmpliacion();
+}
+function asignacionesActivasDelBeneficio(nombreBeneficio){
+  if(!nombreBeneficio) return [];
+  const clave=normalizarBeneficioKey(nombreBeneficio);
+  return asignacionesPersonaForm.filter(a=>
+    (a.fields?.Estado||'Activo')==='Activo'&&
+    normalizarBeneficioKey(beneficioDeAsignacion(a,cacheBeneficiosRaw).nombre)===clave);
+}
+// Solo se ofrece ampliar donde los montos se acumulan en un monto vigente: en
+// un mensual, $10 + $10 son $20 por mes. En lo que se compra por unidad (un
+// curso de Udemy, una certificación) cada asignación es una compra distinta, no
+// una ampliación de la anterior.
+function admiteAmpliacion(nombreBeneficio){
+  return esBeneficioMensual(nombreBeneficio);
+}
+function montoVigenteBenef(asignaciones,nombreBeneficio){
+  const benef=cacheBeneficiosRaw.find(b=>b.fields.Beneficio===nombreBeneficio);
+  return asignaciones.reduce((s,a)=>s+Number(a.fields?.Monto||benef?.fields?.Valor||0),0);
+}
+function unidadMontoBenef(nombreBeneficio){
+  if(esBeneficioMensual(nombreBeneficio)) return '/mes';
+  if(esBeneficioOneTime(nombreBeneficio)) return '';
+  return esBeneficioPorUnidad(nombreBeneficio)?'':'/año';
+}
+function textoMontoBenef(monto,nombreBeneficio){
+  return `$${Number(monto||0).toLocaleString('es-AR')}${unidadMontoBenef(nombreBeneficio)}`;
+}
+function ampliacionElegida(){
+  return !!document.getElementById('f-ba-ampliar')?.checked;
+}
+function actualizarAvisoAmpliacion(){
+  const aviso=document.getElementById('f-ba-ya-tiene');
+  if(!aviso) return;
+  const nombreBeneficio=document.getElementById('f-ba-beneficio')?.value||'';
+  const activas=asignacionesActivasDelBeneficio(nombreBeneficio);
+  if(!activas.length){
+    aviso.style.display='none';
+    aviso.innerHTML='';
+    actualizarLabelMontoBenef();
+    return;
+  }
+  const desde=activas.map(a=>a.fields?.['Fecha activación']).filter(Boolean).sort()[0];
+  const vigente=montoVigenteBenef(activas,nombreBeneficio);
+  const nombrePersona=document.getElementById('f-ba-persona')?.value||'esta persona';
+  aviso.style.display='block';
+  aviso.innerHTML=`
+    <div><strong>${nombrePersona}</strong> ya tiene ${nombreBeneficio}${vigente?`: ${textoMontoBenef(vigente,nombreBeneficio)}`:''}${desde?` desde el ${fmt(desde)}`:''}.</div>
+    ${admiteAmpliacion(nombreBeneficio)
+      ?`<label style="display:flex;align-items:center;gap:7px;margin-top:7px;cursor:pointer">
+          <input type="checkbox" id="f-ba-ampliar" checked onchange="actualizarLabelMontoBenef()">
+          <span>Es una ampliación del monto que ya tiene</span>
+        </label>
+        <div class="field-hint" id="f-ba-ampliar-hint" style="margin-top:4px"></div>`
+      :`<div class="field-hint" style="margin-top:4px">Si cargás otra, van a quedar las dos — revisá que no sea una repetida.</div>`}`;
+  actualizarLabelMontoBenef();
+}
+// Con la ampliación tildada, el Monto deja de ser "cuánto tiene" y pasa a ser
+// "cuánto se le suma": sin decirlo, escribir el total ahí lo duplicaría.
+function actualizarLabelMontoBenef(){
+  const nombreBeneficio=document.getElementById('f-ba-beneficio')?.value||'';
+  const label=document.getElementById('f-ba-monto-label');
+  const hint=document.getElementById('f-ba-ampliar-hint');
+  const ampliando=ampliacionElegida();
+  if(label) label.textContent=ampliando?'Monto adicional ($)':'Monto ($)';
+  if(!hint) return;
+  if(!ampliando){ hint.textContent=''; return; }
+  const activas=asignacionesActivasDelBeneficio(nombreBeneficio);
+  const vigente=montoVigenteBenef(activas,nombreBeneficio);
+  const adicional=Number(document.getElementById('f-ba-monto')?.value||0);
+  hint.textContent=adicional
+    ? `Queda en ${textoMontoBenef(vigente+adicional,nombreBeneficio)} (${textoMontoBenef(vigente,nombreBeneficio)} + ${textoMontoBenef(adicional,nombreBeneficio)}).`
+    : `Escribí cuánto se le suma a los ${textoMontoBenef(vigente,nombreBeneficio)} que ya tiene.`;
+}
+
 // Atajo desde la tabla "Por persona" — abre el mismo form de "Asignar
 // beneficio" pero con la persona ya elegida (y el select de Beneficio ya
 // filtrado por su grupo), para no tener que volver a buscarla ahí.

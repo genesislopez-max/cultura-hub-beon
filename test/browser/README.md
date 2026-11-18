@@ -67,6 +67,10 @@ Variables opcionales:
 | `probar-sin-ficha-os-gt.js` | ídem en Off Sites y Get Together |
 | `probar-card-loyalty.js` | la card "Cambios de nivel" de Inicio y su selector de mes |
 | `probar-historial-pendiente.js` | un cambio de nivel que no se pudo registrar queda a la vista |
+| `probar-curso-inline.js` | cargar el nombre de un curso de Udemy desde la fila, sin abrir el modal |
+| `probar-aitools-ampliado.js` | un beneficio mensual ampliado se lee como "$20/mes", no como un pago único |
+| `probar-ampliar-monto.js` | asignar algo que la persona ya tiene ofrece ampliar el monto y dice en cuánto queda |
+| `probar-benef-etapa-anterior.js` | los beneficios de quien se fue y volvió figuran cerrados, y no suman al presupuesto de hoy |
 
 ## Cómo escribir uno nuevo
 

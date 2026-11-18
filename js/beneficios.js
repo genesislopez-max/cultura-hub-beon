@@ -137,7 +137,7 @@ function beneficioAplicaAPersona(b,p){
 function usoActualBeneficios(grupoFil){
   const equipo=personasActivasParaMetricas(grupoFil);
   const porNombre=new Map(equipo.map(p=>[normalizarNombre(p.fields.Nombre),p]));
-  const asignacionesActivas=(cacheBenefAsignados||[]).filter(a=>(a.fields.Estado||'Activo')==='Activo');
+  const asignacionesActivas=(cacheBenefAsignados||[]).filter(asignacionVigente);
 
   return (cacheBeneficiosRaw||[])
     .filter(b=>(b.fields.Estado||'Activo')==='Activo')
@@ -446,8 +446,7 @@ function renderBenefMetricas(){
   document.getElementById('mb-activos').textContent=activos;
 
   // Presupuesto total usado = suma de valores de beneficios asignados activos
-  const totalUsado=sumarMontosAsignados(
-    cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo'));
+  const totalUsado=sumarMontosAsignados(cacheBenefAsignados.filter(asignacionVigente));
   // "Resto del equipo", HR y Manager ven el catálogo/asignaciones de su
   // grupo, pero no el agregado de gasto total — se oculta la tarjeta entera
   // (no solo el número) para no dejar la etiqueta sin nada al lado. TEM y
@@ -464,7 +463,7 @@ function renderBenefMetricas(){
   // Personas con/sin beneficios — solo sobre el equipo activo hoy, igual
   // criterio (yaEgreso) que el resto de las vistas de Beneficios.
   const nombresActivos=new Set(cachePersonasRaw.filter(estaEnElEquipo).map(p=>(p.fields.Nombre||'').trim()));
-  const personasConBenef=new Set(cacheBenefAsignados.filter(a=>(a.fields.Estado||'Activo')==='Activo').map(a=>{
+  const personasConBenef=new Set(cacheBenefAsignados.filter(asignacionVigente).map(a=>{
     const nombre=Array.isArray(a.fields.Persona)?a.fields.Persona[0]:a.fields.Persona;
     return (nombre||'').trim();
   }).filter(nombre=>nombresActivos.has(nombre)));
@@ -1010,6 +1009,25 @@ function montoDeAsignacion(a,catalogo){
     :Number(benef?.fields?.Valor)||0;
   return esBeneficioMensual(nombre)?propio*12:propio;
 }
+// ¿Cuándo se cerró esta asignación por el lado de la persona? Devuelve la
+// fecha de fin de la etapa en BEON a la que pertenece, si esa etapa ya
+// terminó, y '' si sigue corriendo.
+//
+// Mirar solo el campo Estado no alcanza: cuando alguien se va, nadie entra a
+// Airtable a marcar Inactivo cada uno de sus beneficios, así que quedan en
+// "Activo" para siempre. Esto los cierra con el dato que sí está cargado —la
+// fecha de egreso— sin tocar los registros.
+function finEtapaDeAsignacion(fields){
+  const persona=personaPorNombre(fields?.Persona??fields?.BEONer);
+  if(!persona) return '';
+  return finEtapaDeBeneficio(persona,fields?.['Fecha activación']||'');
+}
+// Una asignación está vigente si está en Activo Y pertenece a la etapa actual
+// de la persona en BEON. Es el criterio único de "lo que hoy se le cubre":
+// presupuesto, métricas, tabla por persona, card y el aviso de ampliación.
+function asignacionVigente(a){
+  return (a?.fields?.Estado||'Activo')==='Activo'&&!finEtapaDeAsignacion(a?.fields||{});
+}
 // Total usado. O'Reilly/Pluralsight se pagan UNA sola vez por persona: volver
 // a compartirle las credenciales (porque cambió la contraseña) deja otra
 // asignación cargada, pero no es otro gasto. Sin esta deduplicación, cada
@@ -1172,7 +1190,7 @@ function asignacionesActivasDelBeneficio(nombreBeneficio){
   if(!nombreBeneficio) return [];
   const clave=normalizarBeneficioKey(nombreBeneficio);
   return asignacionesPersonaForm.filter(a=>
-    (a.fields?.Estado||'Activo')==='Activo'&&
+    asignacionVigente(a)&&
     normalizarBeneficioKey(beneficioDeAsignacion(a,cacheBeneficiosRaw).nombre)===clave);
 }
 // Solo se ofrece ampliar donde los montos se acumulan en un monto vigente: en
@@ -1407,7 +1425,7 @@ function renderBenefPersonas(){
     // Beneficios asignados activos para esta persona
     const asignados=cacheBenefAsignados.filter(a=>{
       const pNombre=typeof a.fields.Persona==='string'?a.fields.Persona:(Array.isArray(a.fields.Persona)?a.fields.Persona[0]:'');
-      return pNombre.trim()===nombre.trim()&&(a.fields.Estado||'Activo')==='Activo';
+      return pNombre.trim()===nombre.trim()&&asignacionVigente(a);
     });
 
     const usado=sumarMontosAsignados(asignados);

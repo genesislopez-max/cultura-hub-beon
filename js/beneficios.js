@@ -1022,11 +1022,27 @@ function finEtapaDeAsignacion(fields){
   if(!persona) return '';
   return finEtapaDeBeneficio(persona,fields?.['Fecha activación']||'');
 }
-// Una asignación está vigente si está en Activo Y pertenece a la etapa actual
-// de la persona en BEON. Es el criterio único de "lo que hoy se le cubre":
-// presupuesto, métricas, tabla por persona, card y el aviso de ampliación.
+// ¿Esta asignación es anterior a que la persona entrara a BEON? Devuelve la
+// fecha de ingreso si lo es, '' si no.
+function ingresoPosteriorAAsignacion(fields){
+  const persona=personaPorNombre(fields?.Persona??fields?.BEONer);
+  if(!persona) return '';
+  return beneficioAnteriorAlIngreso(persona,fields?.['Fecha activación']||'');
+}
+// Una asignación está vigente si está en Activo Y cae dentro de una etapa de
+// la persona en BEON: ni antes de haber entrado, ni en una etapa que ya
+// terminó. Es el criterio único de "lo que hoy se le cubre": presupuesto,
+// métricas, tabla por persona, card y el aviso de ampliación.
 function asignacionVigente(a){
-  return (a?.fields?.Estado||'Activo')==='Activo'&&!finEtapaDeAsignacion(a?.fields||{});
+  const f=a?.fields||{};
+  return (f.Estado||'Activo')==='Activo'&&!finEtapaDeAsignacion(f)&&!ingresoPosteriorAAsignacion(f);
+}
+
+// Las asignaciones con fecha anterior al ingreso de su persona. Son casi
+// siempre un error de fecha, así que no alcanza con dejarlas inactivas: si no
+// se las puede encontrar, nadie las corrige y el dato queda mal para siempre.
+function asignacionesAnterioresAlIngreso(asignaciones){
+  return (asignaciones||cacheBenefAsignados||[]).filter(a=>ingresoPosteriorAAsignacion(a?.fields||{}));
 }
 // Total usado. O'Reilly/Pluralsight se pagan UNA sola vez por persona: volver
 // a compartirle las credenciales (porque cambió la contraseña) deja otra
@@ -1336,7 +1352,28 @@ function textoVacioBenefPersonas(estadoFil,coincideFiltros){
   return `Sin resultados. Hay ${ocultos} ${ocultos===1?'persona que coincide':'personas que coinciden'} en «Todos (histórico)».`;
 }
 
+// Dejarlos inactivos arregla los números, pero el dato sigue mal cargado en
+// Airtable. Sin esto habría que abrir la card de cada persona para encontrarlos,
+// así que no los corregiría nadie: el aviso dice cuántos son y quiénes, que es
+// lo que hace falta para ir a arreglarlos.
+function renderAvisoPreIngreso(){
+  const cont=document.getElementById('benef-aviso-pre-ingreso');
+  if(!cont) return;
+  const fuera=asignacionesAnterioresAlIngreso();
+  if(!fuera.length){ cont.innerHTML=''; return; }
+  const personas=[...new Set(fuera.map(a=>nombreDePersonaRef(a.fields.Persona)).filter(Boolean))];
+  const lista=personas.slice(0,6).join(', ');
+  const resto=personas.length-6;
+  cont.innerHTML=`<div style="display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;padding:10px 12px;border-radius:10px;background:var(--chip-amber-bg);color:var(--chip-amber-text);font-size:12px;line-height:1.5">
+    <i class="ti ti-calendar-exclamation" style="font-size:15px;flex-shrink:0;margin-top:1px"></i>
+    <span><b>${fuera.length} beneficio${fuera.length!==1?'s':''}</b> con fecha anterior al ingreso de su persona
+    (${lista}${resto>0?` y ${resto} más`:''}). No cuentan como activos ni suman al presupuesto, pero la fecha
+    conviene corregirla: abriendo la card de la persona se ve cuál es, marcada como <b>Fuera de período</b>.</span>
+  </div>`;
+}
+
 function renderBenefPersonas(){
+  renderAvisoPreIngreso();
   const q=(document.getElementById('benef-persona-search')?.value||'').toLowerCase();
   // HR solo puede ver Core Team acá — se fuerza el filtro sin importar lo
   // que diga el selector (que además queda deshabilitado, ver

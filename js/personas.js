@@ -396,6 +396,20 @@ function finEtapaDeBeneficio(persona,fechaActivacion){
   return fechaActivacion&&fechaActivacion<=egreso?egreso:'';
 }
 
+// Un beneficio con fecha anterior al ingreso de la persona no puede estar
+// corriendo: ese día todavía no trabajaba acá. Casi siempre es un error de
+// fecha al subir histórico (en la lista de accounting apareció uno cargado
+// cuatro años antes del ingreso), y mientras figura como activo suma al
+// presupuesto y al monto vigente del beneficio.
+//
+// Devuelve la fecha de ingreso si el beneficio es anterior, y '' si no. El
+// mismo día del ingreso cuenta como válido: es su primer día.
+function beneficioAnteriorAlIngreso(persona,fechaActivacion){
+  const ingreso=persona?.fields?.['Fecha de ingreso'];
+  if(!ingreso||!fechaActivacion) return '';
+  return fechaActivacion<ingreso?ingreso:'';
+}
+
 // Alguien con Fecha de ingreso futura todavía no es parte del equipo: ya está
 // cargado y aparece en el Kanban de Ingresos (en Pre-ingreso, que es donde
 // tiene que estar), pero contarlo en Engineers & Tech infla el tamaño del

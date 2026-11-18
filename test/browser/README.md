@@ -71,6 +71,7 @@ Variables opcionales:
 | `probar-aitools-ampliado.js` | un beneficio mensual ampliado se lee como "$20/mes", no como un pago único |
 | `probar-ampliar-monto.js` | asignar algo que la persona ya tiene ofrece ampliar el monto y dice en cuánto queda |
 | `probar-benef-etapa-anterior.js` | los beneficios de quien se fue y volvió figuran cerrados, y no suman al presupuesto de hoy |
+| `probar-benef-antes-del-ingreso.js` | un beneficio con fecha anterior al ingreso no corre, se ve por qué y se puede encontrar |
 | `probar-certifications-sponsorship.js` | una Certifications cargada como beneficio aparece en Certifications Sponsorship |
 
 ## Cómo escribir uno nuevo

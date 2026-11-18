@@ -919,6 +919,13 @@ function actualizarBeneficiosPorPersona(){
   const hint=document.getElementById('f-ba-beneficio-hint');
   if(hint) hint.textContent=grupo?`Mostrando beneficios de ${grupo}`:'Elegí una persona para filtrar por su grupo';
   if(!nombres.includes(actual)){ actualizarMontoBenef(); toggleCamposTerapia(); toggleCamposLink(); toggleCamposComentarios(); }
+  // Las asignaciones que ya tiene se traen acá y no en el onMount del form:
+  // abrirAsignarBeneficioPara() (el botón "+ Asignar" de la card de una
+  // persona) define su PROPIO onMount y pisa el del form, así que por ese
+  // camino —el más natural, con la persona ya elegida— no se pedían nunca y el
+  // aviso de "ya tiene este beneficio" no aparecía. Todo lo que cambia de
+  // persona pasa por esta función, así que es el lugar que no se puede saltear.
+  cargarAsignacionesPersonaForm();
 }
 
 // Terapia es el único beneficio que hoy necesita datos extra al asignarlo

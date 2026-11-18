@@ -56,10 +56,19 @@ const TABLAS={
     await esperar(400);
     const limpio=id=>document.getElementById(id)?.textContent.replace(/\s+/g,' ').trim()||'';
 
+    // El aviso se arma cuando vuelven las asignaciones de la persona, que se
+    // piden a Airtable: se espera a que aparezca en vez de a un tiempo fijo.
+    const esperarAviso=async()=>{
+      for(let i=0;i<40;i++){
+        if(document.getElementById('f-ba-ya-tiene')?.style.display!=='none') return true;
+        await esperar(25);
+      }
+      return false;
+    };
     const elegir=async(persona,beneficio)=>{
       document.getElementById('f-ba-persona').value=persona;
-      actualizarBeneficiosPorPersona();
-      await cargarAsignacionesPersonaForm();
+      actualizarBeneficiosPorPersona();     // esto dispara la carga de asignaciones
+      await esperar(300);
       document.getElementById('f-ba-beneficio').value=beneficio;
       actualizarMontoBenef(); actualizarAvisoAmpliacion();
       await esperar(80);
@@ -72,8 +81,21 @@ const TABLAS={
       };
     };
 
-    _openFormModal(FORMS['beneficios-asignados']);
+    // Se abre como lo abre una persona: desde "+ Asignar" en la card de alguien.
+    // Ese botón define su propio onMount y pisa el del form, así que si la carga
+    // de las asignaciones viviera ahí, por este camino no correría nunca — que
+    // es exactamente lo que pasaba.
+    await verBenefPersona('Anthony Dugarte','Engineers & Tech','Thunder');
+    await esperar(400);
+    abrirAsignarBeneficioPara('Anthony Dugarte');
     await esperar(250);
+    const alAbrirDesdeLaCard={
+      persona:document.getElementById('f-ba-persona').value,
+      beneficio:(document.getElementById('f-ba-beneficio').value=
+        'AI Tools',actualizarMontoBenef(),actualizarAvisoAmpliacion(),'AI Tools'),
+      avisoLlega:await esperarAviso(),
+      aviso:limpio('f-ba-ya-tiene'),
+    };
 
     // 1) Un beneficio que no tiene: nada de esto aparece
     const nuevo=await elegir('Sin Nada','AI Tools');
@@ -103,10 +125,15 @@ const TABLAS={
     await saveRecord();
     await esperar(400);
 
-    return {nuevo,mensual,conMonto,destildado,porUnidad};
+    return {alAbrirDesdeLaCard,nuevo,mensual,conMonto,destildado,porUnidad};
   });
 
-  console.log('── Beneficio que la persona NO tiene ──');
+  console.log('── Abriendo desde "+ Asignar" de la card ──');
+  console.log('  Persona ya elegida:',r.alAbrirDesdeLaCard.persona);
+  console.log('  ¿Llega el aviso?  :',r.alAbrirDesdeLaCard.avisoLlega);
+  console.log('  Dice:',r.alAbrirDesdeLaCard.aviso);
+
+  console.log('\n── Beneficio que la persona NO tiene ──');
   console.log('  Aviso:',r.nuevo.avisoVisible?'visible (mal)':'oculto','· label:',r.nuevo.labelMonto);
   console.log('\n── AI Tools, que ya tiene ($10/mes desde 2023) ──');
   console.log('  Aviso :',r.mensual.aviso);
@@ -121,6 +148,10 @@ const TABLAS={
   creados.forEach(c=>console.log('  ',c.tabla,JSON.stringify(c.fields)));
 
   const fallas=[];
+  if(r.alAbrirDesdeLaCard.persona!=='Anthony Dugarte') fallas.push('el atajo no preselecciona a la persona');
+  if(!r.alAbrirDesdeLaCard.avisoLlega) fallas.push('abriendo desde "+ Asignar" de la card, el aviso no aparece nunca');
+  if(!/\$10\/mes/.test(r.alAbrirDesdeLaCard.aviso)) fallas.push('por ese camino el aviso no trae el monto: '+r.alAbrirDesdeLaCard.aviso);
+
   if(r.nuevo.avisoVisible) fallas.push('avisa "ya tiene" sobre un beneficio que no tiene');
   if(r.nuevo.labelMonto!=='Monto ($)') fallas.push('cambia el label sin que haya nada que ampliar: '+r.nuevo.labelMonto);
 

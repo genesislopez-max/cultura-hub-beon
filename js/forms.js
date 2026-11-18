@@ -374,7 +374,7 @@ const FORMS={
     <i class="ti ti-search search-icon"></i>
     <input class="search-input" id="f-ba-persona-buscar" placeholder="Buscar persona…" oninput="filtrarPersonaAsignacion()">
   </div>
-  <select class="field-input" id="f-ba-persona" onchange="actualizarBeneficiosPorPersona();cargarAsignacionesPersonaForm();">
+  <select class="field-input" id="f-ba-persona" onchange="actualizarBeneficiosPorPersona()">
     <option value="">Seleccioná una persona…</option>
   </select>
 </div>
@@ -415,7 +415,7 @@ const FORMS={
 </div>
 <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">Si el beneficio tiene valor fijo en el catálogo, se autocompleta. Podés modificarlo.</div>
 `;},
-    onMount:()=>{ filtrarPersonaAsignacion(); actualizarBeneficiosPorPersona(); cargarAsignacionesPersonaForm(); },
+    onMount:()=>{ filtrarPersonaAsignacion(); actualizarBeneficiosPorPersona(); },
     save:async()=>{
       const v=id=>document.getElementById(id)?.value||'';
       const nombrePersona=v('f-ba-persona'), nombreBeneficio=v('f-ba-beneficio');

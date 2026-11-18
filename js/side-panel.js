@@ -40,8 +40,9 @@ function agruparBenefAsignados(filas){
     g.items.sort((a,b)=>(b.r.fields['Fecha activación']||'').localeCompare(a.r.fields['Fecha activación']||''));
     // "Activas" son las que siguen corriendo hoy. Una asignación de una etapa
     // anterior en BEON (f.fin) no cuenta, aunque su Estado diga Activo.
-    g.activos=g.items.filter(f=>!f.fin&&(f.r.fields.Estado||'Activo')==='Activo').length;
+    g.activos=g.items.filter(f=>!fueraDePeriodo(f)&&(f.r.fields.Estado||'Activo')==='Activo').length;
     g.cerradas=g.items.filter(f=>f.fin).length;
+    g.preIngreso=g.items.filter(f=>f.preIngreso).length;
   }
   return [...grupos.values()];
 }
@@ -174,6 +175,7 @@ async function verBenefPersona(nombre, grupo, nivel){
   // asignación por asignación según de qué etapa venga.
   const finEtapaPrevia=finEtapaPreviaDe(nombre);
   const finDeFila=f=>finEnBeon||(finEtapaPrevia&&(f['Fecha activación']||'')&&(f['Fecha activación']||'')<=finEtapaPrevia?finEtapaPrevia:'');
+  const preIngresoDeFila=f=>ingresoPosteriorAAsignacion(f);
   const activosCount=benefAsig.filter(asignacionVigente).length;
   const benefCount=finEnBeon?benefAsig.length:activosCount;
   const benefLabel=finEnBeon?'En su histórico':'Beneficios';
@@ -201,11 +203,11 @@ async function verBenefPersona(nombre, grupo, nivel){
     const filasBenef=ordenarBenefAsignados(benefAsig.map(r=>{
       const bId=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
       const benef=catalogoBenef.find(b=>b.id===bId||b.fields.Beneficio===bId);
-      return {r,benef,nombre:benef?.fields.Beneficio||bId||'—',fin:finDeFila(r.fields)};
+      return {r,benef,nombre:benef?.fields.Beneficio||bId||'—',fin:finDeFila(r.fields),preIngreso:preIngresoDeFila(r.fields)};
     }));
     // Una fila por asignación. Se usa suelta cuando el beneficio aparece una
     // sola vez, y dentro del desplegable cuando hay varias del mismo.
-    const filaBenefHtml=({r,benef,nombre:bNombre,fin},dentroDeGrupo)=>{
+    const filaBenefHtml=({r,benef,nombre:bNombre,fin,preIngreso},dentroDeGrupo)=>{
       const cat=estiloCategoria(benef?.fields.Categoria);
       // Dentro de un grupo, repetir el nombre del beneficio en cada fila es
       // ruido: ya lo dice el encabezado. Si la asignación tiene Curso cargado
@@ -225,7 +227,12 @@ async function verBenefPersona(nombre, grupo, nivel){
       const estado=r.fields.Estado||'Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
       const motivoBaja=r.fields['Motivo de baja'];
-      const fechaLabel=periodoBenefAsignado(r.fields,bNombre,fin);
+      // Una fecha anterior al ingreso no describe un período que corrió y
+      // terminó: no corrió nunca. Se muestran las dos fechas para que se vea
+      // de un vistazo si es un desfasaje de días o un error de años.
+      const fechaLabel=preIngreso
+        ?periodoAnteriorAlIngreso(r.fields,preIngreso)
+        :periodoBenefAsignado(r.fields,bNombre,fin);
       // El link se muestra en los beneficios que lo usan (Blogpost, Udemy):
       // el punto de tenerlo cargado es poder ir a la publicación desde acá.
       const link=esBeneficioConLink(bNombre)?linkBenefAsignado(r.fields,bNombre):'';
@@ -243,7 +250,7 @@ async function verBenefPersona(nombre, grupo, nivel){
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
         </div>
-        ${badgeEstadoBenefHistorico(estado,fin)}
+        ${preIngreso?badgeAnteriorAlIngreso():badgeEstadoBenefHistorico(estado,fin)}
         <div class="bp-detalle-actions">
           <button class="bp-detalle-action-btn" onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar"><i class="ti ti-pencil"></i></button>
           <button class="bp-detalle-action-btn danger" onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar"><i class="ti ti-trash"></i></button>
@@ -453,6 +460,26 @@ function badgeEstadoBenef(estado){
 // así que los registros siguen diciendo "Activo". Un badge verde en la card de
 // alguien que se fue hace dos años afirma algo falso: ahí el estado real es
 // "cerró cuando se fue".
+// Una fila fuera de período: o es de una etapa que ya terminó, o es anterior
+// a que la persona entrara. En los dos casos no corre hoy, y ese es el criterio
+// con el que se cuenta y se suma.
+function fueraDePeriodo(f){ return !!(f?.fin||f?.preIngreso); }
+
+// Badge de un beneficio con fecha anterior al ingreso. No dice "Cerrado"
+// porque no se cerró: nunca llegó a correr, y lo más probable es que la fecha
+// esté mal cargada.
+function badgeAnteriorAlIngreso(){
+  return '<span class="badge badge-amber" title="La fecha es anterior al ingreso de la persona — probablemente esté mal cargada">Fuera de período</span>';
+}
+
+// Texto de esa fila. Se muestran las dos fechas juntas: así se ve si es un
+// desfasaje de días (algo entregado en la víspera del primer día) o un error
+// de años, que es lo que hay que corregir en Airtable.
+function periodoAnteriorAlIngreso(fields,ingreso){
+  const act=fields['Fecha activación'];
+  return `${fmt(act)} · anterior a su ingreso (${fmt(ingreso)})`;
+}
+
 function badgeEstadoBenefHistorico(estado,finEnBeon){
   if(finEnBeon&&(estado||'Activo')==='Activo'){
     return '<span class="badge badge-gray" title="Terminó cuando la persona dejó BEON">Cerrado</span>';
@@ -530,7 +557,7 @@ function montoGrupoBenef(g){
   // se fue y volvió se le cubren $120/mes cuando se le cubren $100. Si NO
   // quedó nada vigente (el histórico de quien ya no está), se suma todo: ahí
   // el encabezado describe lo que llegó a tener, no lo que tiene.
-  const vigentes=todas.filter(f=>!f.fin);
+  const vigentes=todas.filter(f=>!fueraDePeriodo(f));
   const items=vigentes.length?vigentes:todas;
   const montoDe=f=>Number(f.r.fields.Monto||g.benef?.fields?.Valor||0);
   if(esBeneficioCredenciales(g.nombre)){
@@ -565,9 +592,12 @@ function resumenGrupoBenef(g,finEnBeon){
   }
   // Grupo mixto: alguien que volvió y tiene asignaciones de las dos etapas.
   // Decir "3 asignaciones · 3 activas" ahí es justamente lo que se reportó.
-  if(g.cerradas&&!esBeneficioCredenciales(g.nombre)){
-    const vig=items.length-g.cerradas;
-    return `${vig} vigente${vig!==1?'s':''} · ${g.cerradas} de su etapa anterior`;
+  if((g.cerradas||g.preIngreso)&&!esBeneficioCredenciales(g.nombre)){
+    const vig=items.length-(g.cerradas||0)-(g.preIngreso||0);
+    const partes=[`${vig} vigente${vig!==1?'s':''}`];
+    if(g.cerradas) partes.push(`${g.cerradas} de su etapa anterior`);
+    if(g.preIngreso) partes.push(`${g.preIngreso} anterior${g.preIngreso!==1?'es':''} a su ingreso`);
+    return partes.join(' · ');
   }
   if(esBeneficioCredenciales(g.nombre)){
     const fechas=items.map(f=>f.r.fields['Fecha activación']).filter(Boolean).sort();

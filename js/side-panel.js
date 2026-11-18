@@ -188,13 +188,24 @@ async function verBenefPersona(nombre, grupo, nivel){
   // mismo registro dos veces en la misma card.
   const benefNoCert=benefAsig.filter(a=>
     consumeTopeBeneficios(beneficioDeAsignacion(a,catalogoBenef).nombre));
-  const activosCount=benefNoCert.filter(asignacionVigente).length;
-  const benefCount=finEnBeon?benefNoCert.length:activosCount;
+  // Beneficios distintos, que es lo que muestra la lista de abajo: agrupa por
+  // beneficio, así que 12 cursos de Udemy son UNA fila. El número decía 15
+  // arriba de tres filas.
+  const benefVigentes=benefNoCert.filter(asignacionVigente);
+  const activosCount=beneficiosDistintosAsignados(benefVigentes,catalogoBenef);
+  const benefCount=finEnBeon
+    ?beneficiosDistintosAsignados(benefNoCert,catalogoBenef)
+    :activosCount;
+  // El total de asignaciones no se pierde: cada grupo dice cuántos usos tiene,
+  // y el stat lo aclara cuando no coinciden.
+  const usosCount=finEnBeon?benefNoCert.length:benefVigentes.length;
+  const detalleUsos=usosCount!==benefCount
+    ? ` title="${usosCount} asignaciones en total: hay beneficios con más de un uso"`:'';
   const benefLabel=finEnBeon?'En su histórico':'Beneficios';
   const nombreEscJs=nombre.replace(/'/g,"\\'");
 
   document.getElementById('bpd-stats').innerHTML=`
-    <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">${benefCount}</div><div class="bp-detalle-stat-label">${benefLabel}</div></div>
+    <div class="bp-detalle-stat"${detalleUsos}><div class="bp-detalle-stat-val">${benefCount}</div><div class="bp-detalle-stat-label">${benefLabel}</div></div>
     <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">$${usadoBenef.toLocaleString('es-AR')}</div><div class="bp-detalle-stat-label">Presupuesto</div></div>
     <div class="bp-detalle-stat"><div class="bp-detalle-stat-val">${osRecs.length}</div><div class="bp-detalle-stat-label">Viajes</div></div>`;
 

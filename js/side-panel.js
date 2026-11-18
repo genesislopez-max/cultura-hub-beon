@@ -317,8 +317,9 @@ async function verBenefPersona(nombre, grupo, nivel){
     html+=`<div class="bp-detalle-rows">${certs.map(c=>`<div class="bp-detalle-row">
         <div class="bp-detalle-row-icon" style="background:${capEstilo.tinte};color:${capEstilo.accent}"><i class="ti ${capEstilo.icon}"></i></div>
         <div class="bp-detalle-row-mid">
-          <div class="bp-detalle-row-title">${escaparHtml(c.titulo)}</div>
+          <div class="bp-detalle-row-title"${c.titulo?'':' style="color:var(--text3);font-weight:500"'}>${tituloCertHtml(c)}</div>
           <div class="bp-detalle-row-sub">${c.fecha?fmt(c.fecha):'Sin fecha registrada'}${origenCertTexto(c)}${linkCertHtml(c.url)}</div>
+          ${c.comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${escaparHtml(c.comentario)}</span></div>`:''}
         </div>
         <div class="bp-detalle-row-meta" style="font-weight:700;color:${c.vigente?'var(--blue)':'var(--text3)'}">$${c.monto.toLocaleString('es-AR')}</div>
         ${accionesCertHtml(c,nombre,grupo,nivel)}
@@ -503,7 +504,8 @@ function periodoAnteriorAlIngreso(fields,ingreso){
 // el monto con otra distinta.
 function certificacionesDeCard(caps,benefAsig,catalogo){
   const deCapacitaciones=(caps||[]).map(r=>({
-    titulo:(r.fields.Descripción||'').trim()||'Certificación sin descripción',
+    titulo:(r.fields.Descripción||'').trim(),
+    comentario:'',
     fecha:r.fields.Fecha||'',
     monto:Number(r.fields.Monto||0),
     url:(r.fields['URL del curso']||'').trim(),
@@ -516,9 +518,14 @@ function certificacionesDeCard(caps,benefAsig,catalogo){
       const f=a.fields||{};
       const {benef}=beneficioDeAsignacion(a,catalogo);
       return {
-        // Qué certificación es: primero el campo propio, y si no el comentario
-        // libre, que es donde se viene anotando ("Certificación AWS").
-        titulo:(f.Curso||'').trim()||(f.Comentarios||'').trim()||'Certificación sin descripción',
+        // Qué certificación es: el campo propio. El comentario NO sirve de
+        // título: es texto libre donde se anota el pedido ("Compro un curso de
+        // Rails específicamente para diversas necesidades del proyecto. Ya lo
+        // inicio."), así que usarlo dejaba un párrafo de tres líneas en
+        // negrita como nombre del ítem. Va abajo, como comentario, y el título
+        // dice que falta cargarlo.
+        titulo:(f.Curso||'').trim(),
+        comentario:(f.Comentarios||'').trim(),
         fecha:f['Fecha activación']||'',
         monto:f.Monto?Number(f.Monto)||0:Number(benef?.fields?.Valor)||0,
         url:(f.Link||'').trim(),
@@ -544,6 +551,13 @@ function origenCertTexto(c){
   return c.vigente
     ? ' · <span style="color:var(--text3)" title="Cargada como beneficio asignado">desde Beneficios</span>'
     : ' · <span style="color:var(--text3)" title="Es de una etapa anterior de la persona en BEON: no consume el tope de hoy">desde Beneficios · fuera de período</span>';
+}
+
+// El nombre de la certificación. Si no está cargado se dice, en vez de
+// inventarle un título con otro campo: así se nota que falta el dato y se lo
+// puede cargar con el lápiz de la misma fila.
+function tituloCertHtml(c){
+  return c.titulo?escaparHtml(c.titulo):'Certificación sin nombre cargado';
 }
 
 // Editar y borrar una certificación. Solo tienen botones las que vienen de
@@ -882,8 +896,11 @@ ${esConLink?`
 <div class="field-group"><label class="field-label">${esBlogpost?'Link a la publicación':'Link'}</label><input class="field-input" id="f-eba-link" type="url" value="${f.Link||''}" placeholder="https://…"></div>
 `:''}
 ${esCertif?`
+<div class="field-group"><label class="field-label">Certificación</label>
+  <input class="field-input" id="f-eba-curso" value="${f.Curso||''}" placeholder="Ej: AWS Solutions Architect Associate">
+</div>
 <div class="field-group"><label class="field-label">Comentarios</label>
-  <textarea class="field-input" id="f-eba-comentarios" placeholder="Ej: qué certificación es, cuándo la rinde, si el monto es estimado…">${f.Comentarios||''}</textarea>
+  <textarea class="field-input" id="f-eba-comentarios" placeholder="Ej: cuándo la rinde, si el monto es estimado, quién la aprobó…">${f.Comentarios||''}</textarea>
 </div>
 `:''}`,
     save:async()=>{
@@ -916,7 +933,10 @@ ${esCertif?`
         fields.Frecuencia=v('f-eba-frecuencia')||null;
         fields['Profesional Asignado']=v('f-eba-profesional')||null;
       }
-      if(esUdemy) fields.Curso=v('f-eba-curso')||null;
+      // Certifications usa el mismo campo para el nombre: antes no tenía
+      // dónde guardarlo y terminaba anotado en Comentarios, que es texto
+      // libre del pedido y no el nombre de la certificación.
+      if(esUdemy||esCertif) fields.Curso=v('f-eba-curso')||null;
       if(esConLink) fields.Link=v('f-eba-link')||null;
       if(esCertif) fields.Comentarios=v('f-eba-comentarios')||null;
       if(esConQuarterAuto) fields.Quarter=fecha?quarterLabel(fecha):null;

@@ -1,5 +1,7 @@
 // Una Certifications cargada como beneficio tiene que aparecer en el área
-// "Certifications Sponsorship" de la persona, no solo arriba en la lista.
+// "Certifications Sponsorship" de la persona — ahí y SOLO ahí, no repetida
+// arriba— con su nombre de título (no el comentario del pedido), su monto
+// contra el tope de capacitación, y pudiéndose editar y borrar desde su fila.
 const {lanzar,urlDelHub}=require('./_comun');
 
 const PERSONAS=[
@@ -13,7 +15,9 @@ const BENEFICIOS=[
 const ASIGNADOS=[
   {id:'a1',fields:{Persona:'Raphael Montani',Beneficio:['bAI'],Monto:10,'Fecha activación':'2023-12-29',Estado:'Activo'}},
   {id:'a2',fields:{Persona:'Raphael Montani',Beneficio:['bCe'],Monto:150,'Fecha activación':'2023-06-02',
-    Estado:'Activo',Comentarios:'Certificación AWS'}},
+    Estado:'Activo',Comentarios:'Compro un curso de Rails específicamente para diversas necesidades del proyecto. Ya lo inicio.'}},
+  {id:'a5',fields:{Persona:'Raphael Montani',Beneficio:['bCe'],Monto:300,'Fecha activación':'2026-02-10',
+    Estado:'Activo',Curso:'AWS Solutions Architect Associate',Comentarios:'aprobada por el TEM'}},
   {id:'a3',fields:{Persona:'Raphael Montani',Beneficio:['bUd'],Monto:0,'Fecha activación':'2025-01-01',
     Estado:'Activo',Curso:'Kubernetes Certified Application Developer (CKAD) with Tests',Link:'https://udemy.com/ckad'}},
 ];
@@ -29,11 +33,16 @@ const TABLAS={
 (async()=>{
   const browser=await lanzar();
   const page=await browser.newPage({viewport:{width:1500,height:1100}});
+  const escrituras=[];
   await page.route('**/api/**',route=>{
     const req=route.request();
     const url=decodeURIComponent(req.url());
     if(url.includes('/api/slack')) return route.fulfill({status:200,contentType:'application/json',body:'{}'});
     const tabla=((url.match(/path=([^&]+)/)||[])[1]||'').split('/')[0];
+    if(req.method()==='PATCH'){
+      escrituras.push(JSON.parse(req.postData()||'{}').fields||{});
+      return route.fulfill({status:200,contentType:'application/json',body:'{"id":"a2","fields":{}}'});
+    }
     if(req.method()!=='GET') return route.fulfill({status:200,contentType:'application/json',body:'{"records":[]}'});
     let records=TABLAS[tabla]||[];
     const form=(url.match(/filterByFormula=(.*?)(?:&sort|$)/)||[])[1]||'';
@@ -51,92 +60,107 @@ const TABLAS={
     document.getElementById('login-screen').style.display='none';
     await cargarSeccionesIniciales();
     await cargarSeccionLazy('beneficios');
-    await new Promise(r=>setTimeout(r,400));
+    const esperar=ms=>new Promise(r=>setTimeout(r,ms));
+    await esperar(400);
     await verBenefPersona('Raphael Montani','Engineers','Storm');
-    await new Promise(r=>setTimeout(r,500));
+    await esperar(500);
+
     const limpio=el=>el?el.textContent.replace(/\s+/g,' ').trim():'';
-    // La sección arranca en el head "Certifications Sponsorship" y termina en el siguiente head
     const nodos=[...document.getElementById('bpd-body').children];
-    // El encabezado de sección, no cualquier nodo que mencione el texto: la
-    // fila del beneficio ahora también dice "cuenta en Certifications Sponsorship".
+    // El encabezado de sección, no cualquier nodo que mencione el texto.
     const i=nodos.findIndex(n=>n.classList.contains('bp-detalle-section-head')
       &&/Certifications Sponsorship/.test(n.textContent||''));
-    const j=nodos.findIndex((n,k)=>k>i&&n.classList.contains('bp-detalle-section-head'));
-    const filaCert=nodos.slice(i).flatMap(n=>[...n.querySelectorAll('.bp-detalle-row')])
-      .find(e=>/Certificación AWS/.test(e.textContent));
-    const botonesCert=filaCert?[...filaCert.querySelectorAll('.bp-detalle-action-btn')]:[];
+    const filasDe=lista=>lista.flatMap(n=>[...n.querySelectorAll('.bp-detalle-row')]);
+    // Cada fila se lee por partes y no como un texto pegado: el punto de este
+    // check es justamente qué va en el título y qué va en el comentario.
+    const leer=el=>({
+      titulo:limpio(el.querySelector('.bp-detalle-row-title')),
+      sub:limpio(el.querySelector('.bp-detalle-row-sub')),
+      coment:limpio(el.querySelector('.bp-detalle-row-coment')),
+      monto:limpio(el.querySelector('.bp-detalle-row-meta')),
+      botones:el.querySelectorAll('.bp-detalle-action-btn').length,
+    });
+    const arriba=filasDe(nodos.slice(0,i)).map(leer);
+    const certs=filasDe(nodos.slice(i)).map(leer);
 
-    // Que el botón esté no alcanza: tiene que abrir el registro correcto. El
-    // lápiz abre el modal de edición con el monto y la fecha de ESA
-    // certificación; el tacho, el cartel nombrándola.
-    let editaMonto='',editaFecha='',cartel='';
-    if(botonesCert[0]){
-      botonesCert[0].click();
-      await new Promise(r=>setTimeout(r,250));
+    // Cargar el nombre desde el lápiz de la fila que no lo tiene
+    const sinNombre=filasDe(nodos.slice(i)).find(e=>/sin nombre cargado/.test(e.textContent));
+    const botones=sinNombre?[...sinNombre.querySelectorAll('.bp-detalle-action-btn')]:[];
+    let editaMonto='',editaFecha='',hayCampoNombre=false,cartel='';
+    if(botones[0]){
+      botones[0].click(); await esperar(250);
       editaMonto=document.getElementById('f-eba-monto')?.value||'';
       editaFecha=document.getElementById('f-eba-fecha')?.value||'';
-      closeModal();
-      await new Promise(r=>setTimeout(r,150));
+      const campo=document.getElementById('f-eba-curso');
+      hayCampoNombre=!!campo;
+      if(campo){ campo.value='AWS Certified Developer'; await window._activeForm.save(); }
+      closeModal(); await esperar(200);
     }
-    if(botonesCert[1]){
-      botonesCert[1].click();
-      await new Promise(r=>setTimeout(r,250));
-      cartel=(document.getElementById('confirm-overlay')?.textContent||'').replace(/\s+/g,' ').trim();
+    if(botones[1]){
+      botones[1].click(); await esperar(250);
+      cartel=limpio(document.getElementById('confirm-overlay'));
       document.getElementById('confirm-overlay')?.classList.remove('open');
     }
 
-    return {
-      editaMonto,editaFecha,cartel,
-      seccion:nodos.slice(i,j<0?undefined:j).map(limpio),
-      // Solo las filas que están antes del head de Certifications Sponsorship:
-      // las de la sección también son .bp-detalle-row.
-      benefs:nodos.slice(0,i).flatMap(n=>[...n.querySelectorAll('.bp-detalle-row')]).map(limpio),
+    return {arriba,certs,editaMonto,editaFecha,hayCampoNombre,cartel,
+      badge:limpio(document.querySelector('.bp-detalle-section-badge')),
       presupuesto:limpio([...document.querySelectorAll('#bpd-stats .bp-detalle-stat')]
         .find(e=>/Presupuesto/.test(e.textContent))),
-      badge:limpio(document.querySelector('.bp-detalle-section-badge')),
-      accionesCert:botonesCert.length,
+      barra:limpio(nodos.slice(i).find(n=>/Presupuesto usado/.test(n.textContent||''))),
     };
   });
-  console.log('── Beneficios asignados ──');
-  r.benefs.forEach(f=>console.log('   •',f));
-  console.log('  Presupuesto de beneficios:',r.presupuesto,'· badge:',r.badge);
-  console.log('\n── Certifications Sponsorship ──');
-  console.log('   (botones:',r.accionesCert,'· el lápiz abre $'+r.editaMonto,'del',r.editaFecha+')');
-  console.log('   (el tacho dice:',r.cartel+')');
-  r.seccion.forEach(f=>console.log('   ',f));
+
+  const mostrar=(t,filas)=>{
+    console.log(`\n── ${t} ──`);
+    filas.forEach(f=>{
+      console.log(`   • ${f.titulo}  ${f.monto}${f.botones?'  [✏️ 🗑]':''}`);
+      console.log(`     ${f.sub}`);
+      if(f.coment) console.log(`     💬 ${f.coment}`);
+    });
+  };
+  mostrar('Beneficios asignados — '+r.badge+' · '+r.presupuesto,r.arriba);
+  mostrar('Certifications Sponsorship — '+r.barra,r.certs);
+  console.log('\n── Cargar el nombre desde el lápiz ──');
+  console.log('   abre: $'+r.editaMonto,'del',r.editaFecha,'· ¿hay campo?',r.hayCampoNombre);
+  console.log('   guarda:',JSON.stringify(escrituras));
+  console.log('   el tacho dice:',r.cartel);
   await browser.close();
 
-  const texto=r.seccion.join(' ⏎ ');
   const fallas=[];
-  if(/Sin certificaciones registradas/.test(texto)) fallas.push('la sección sigue vacía teniendo una Certifications cargada como beneficio');
-  if(!/Certificación AWS/.test(texto)) fallas.push('no aparece la certificación cargada como beneficio');
-  if(!/02 de jun de 2023/.test(texto)) fallas.push('no aparece su fecha');
-  if(!/desde Beneficios/.test(texto)) fallas.push('no dice de dónde sale, así que no se sabe dónde corregirla');
-  // La de Capacitaciones no se perdió, y van ordenadas de la más nueva a la más vieja
-  if(!/CKA/.test(texto)) fallas.push('se perdió la certificación que venía de Capacitaciones');
-  if(texto.indexOf('CKA')>texto.indexOf('Certificación AWS')) fallas.push('no están ordenadas de la más reciente a la más vieja');
-  // La barra tiene que contar las dos: 300 + 150
-  if(!/\$450 \/ \$2\.000/.test(texto)) fallas.push('la barra no suma lo cargado como beneficio: '+texto);
-  // Y Udemy, que no es una certificación, no se cuela
-  if(/CKAD with Tests|Kubernetes Certified/.test(texto)) fallas.push('se coló un beneficio que no es una certificación');
+  const txtArriba=r.arriba.map(f=>f.titulo).join(' | ');
+  const porTitulo=t=>r.certs.find(f=>new RegExp(t).test(f.titulo));
 
-  // Una certificación pesa contra el tope de capacitación, no contra el de
-  // beneficios: quedan AI Tools ($10/mes ×12 = $120) + Udemy ($50 del catálogo,
-  // porque la asignación no trae monto propio) = $170. Con la certificación
-  // adentro serían $320, y el mismo monto estaría restando dos topes distintos.
-  if(!/\$170/.test(r.presupuesto)) fallas.push('la certificación sigue pesando en el presupuesto de beneficios: '+r.presupuesto);
-  // Una certificación se ve en UN solo lugar: su sección. Repetirla arriba
-  // mostraba el mismo registro dos veces en la misma card.
-  const arriba=r.benefs.join(' ⏎ ');
-  if(/Certifications|Certificación AWS/.test(arriba)) fallas.push('la certificación sigue duplicada en la lista de beneficios: '+arriba);
-  if(!/AI Tools/.test(arriba)||!/Udemy/.test(arriba)) fallas.push('se llevó puesto algún beneficio que sí va arriba: '+arriba);
-  if(!/^2 activos/.test(r.badge)) fallas.push('el conteo sigue incluyendo la certificación: '+r.badge);
-  // Y desde su sección se la tiene que poder editar y borrar: al salir de la
-  // lista de beneficios, esa fila es la única que la representa en la card.
-  if(r.accionesCert!==2) fallas.push('la certificación quedó sin botones para editarla o borrarla: '+r.accionesCert);
-  if(r.editaMonto!=='150'||r.editaFecha!=='2023-06-02') fallas.push(`el lápiz no abre esa certificación: monto="${r.editaMonto}" fecha="${r.editaFecha}"`);
+  // 1 · La certificación va en su sección, y no repetida arriba
+  if(/Certifications|AWS|Rails/.test(txtArriba)) fallas.push('la certificación sigue duplicada arriba: '+txtArriba);
+  if(!/AI Tools/.test(txtArriba)||!/Udemy/.test(txtArriba)) fallas.push('se llevó puesto un beneficio que sí va arriba: '+txtArriba);
+  if(!/^2 activos/.test(r.badge)) fallas.push('el conteo incluye la certificación: '+r.badge);
+  if(!/\$170/.test(r.presupuesto)) fallas.push('la certificación pesa en el presupuesto de beneficios: '+r.presupuesto);
+
+  // 2 · El comentario NO es el título
+  const rails=porTitulo('sin nombre cargado');
+  if(!rails) fallas.push('no se dice que falta cargar el nombre: '+r.certs.map(f=>f.titulo).join(' | '));
+  if(rails&&/Compro un curso de Rails/.test(rails.titulo)) fallas.push('el comentario se usa de título: '+rails.titulo);
+  if(rails&&!/Compro un curso de Rails/.test(rails.coment)) fallas.push('se perdió el comentario, que es el único contexto: '+rails.coment);
+
+  // 3 · La que sí tiene nombre lo muestra, con su comentario debajo
+  const aws=porTitulo('AWS Solutions Architect Associate');
+  if(!aws) fallas.push('la que tiene nombre cargado no lo muestra como título');
+  if(aws&&!/aprobada por el TEM/.test(aws.coment)) fallas.push('no muestra su comentario debajo: '+aws?.coment);
+
+  // 4 · Conviven los dos orígenes, de la más nueva a la más vieja
+  if(!porTitulo('^CKA$')) fallas.push('se perdió la certificación que viene de Capacitaciones');
+  const orden=r.certs.map(f=>f.titulo).join(' | ');
+  if(!/AWS Solutions.*CKA.*sin nombre/.test(orden)) fallas.push('no van de la más reciente a la más vieja: '+orden);
+  if(aws&&!/desde Beneficios/.test(aws.sub)) fallas.push('no dice de dónde sale, así que no se sabe dónde corregirla');
+  if(!/\$750 \/ \$2\.000/.test(r.barra)) fallas.push('la barra no suma las tres (300+300+150): '+r.barra);
+
+  // 5 · Y se puede editar, borrar y completar el nombre desde su propia fila
+  if(!rails||rails.botones!==2) fallas.push('la certificación quedó sin botones para editarla o borrarla');
+  if(r.editaMonto!=='150'||r.editaFecha!=='2023-06-02') fallas.push(`el lápiz no abre esa certificación: $${r.editaMonto} del ${r.editaFecha}`);
+  if(!r.hayCampoNombre) fallas.push('el título promete cargar el nombre pero el modal no tiene dónde');
+  if(escrituras.find(f=>'Curso' in f)?.Curso!=='AWS Certified Developer') fallas.push('no guarda el nombre cargado: '+JSON.stringify(escrituras));
   if(!/Certifications/.test(r.cartel)||!/Raphael Montani/.test(r.cartel)) fallas.push('el cartel de borrar no nombra el registro: '+r.cartel);
 
-  console.log(fallas.length?'\n❌ '+fallas.join('\n❌ '):'\n✅ Las certificaciones cargadas como beneficio aparecen en Certifications Sponsorship');
+  console.log(fallas.length?'\n❌ '+fallas.join('\n❌ '):'\n✅ La certificación vive solo en su sección, con su nombre de título y editable desde ahí');
   process.exit(fallas.length?1:0);
 })();

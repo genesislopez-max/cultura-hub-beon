@@ -31,28 +31,37 @@ const benef=(bId,fecha,extra={})=>({id:'a'+fecha,fields:{Persona:'Raphael Montan
 test('una Certifications cargada como beneficio aparece en la sección',()=>{
   const ctx=ctxCert();
   sembrar(ctx,'cachePersonasRaw',[PERSONA]);
-  const certs=ctx.certificacionesDeCard([],[benef('bCe','2023-06-02',{Monto:150,Comentarios:'Certificación AWS'})],CATALOGO);
+  const certs=ctx.certificacionesDeCard([],[benef('bCe','2023-06-02',
+    {Monto:150,Curso:'AWS Solutions Architect',Comentarios:'aprobada por el TEM'})],CATALOGO);
   assert.equal(certs.length,1);
-  assert.equal(certs[0].titulo,'Certificación AWS');
+  assert.equal(certs[0].titulo,'AWS Solutions Architect');
+  assert.equal(certs[0].comentario,'aprobada por el TEM');
   assert.equal(certs[0].fecha,'2023-06-02');
   assert.equal(certs[0].monto,150);
   assert.equal(certs[0].origen,'Beneficios');
   assert.equal(certs[0].vigente,true);
 });
 
-test('el campo Curso gana sobre el comentario cuando está cargado',()=>{
+test('el comentario no se usa de título: es el texto del pedido',()=>{
   const ctx=ctxCert();
   sembrar(ctx,'cachePersonasRaw',[PERSONA]);
-  const certs=ctx.certificacionesDeCard([],[benef('bCe','2023-06-02',
-    {Monto:150,Curso:'AWS Solutions Architect',Comentarios:'pedida por el TEM'})],CATALOGO);
-  assert.equal(certs[0].titulo,'AWS Solutions Architect');
+  // Un comentario real: un párrafo explicando el pedido. Usarlo de título
+  // dejaba tres líneas en negrita como nombre del ítem.
+  const largo='Compro un curso de Rails específicamente para diversas necesidades del proyecto. Ya lo inicio.';
+  const certs=ctx.certificacionesDeCard([],[benef('bCe','2025-04-22',{Monto:140,Comentarios:largo})],CATALOGO);
+  assert.equal(certs[0].titulo,'');
+  assert.equal(certs[0].comentario,largo,'el comentario no se pierde: es el único contexto del registro');
+  assert.match(ctx.tituloCertHtml(certs[0]),/sin nombre cargado/);
 });
 
-test('sin Curso ni comentario no queda una fila sin nombre',()=>{
+test('sin nombre cargado se dice, no se deja la fila en blanco',()=>{
   const ctx=ctxCert();
   sembrar(ctx,'cachePersonasRaw',[PERSONA]);
   const certs=ctx.certificacionesDeCard([],[benef('bCe','2023-06-02',{Monto:150})],CATALOGO);
-  assert.equal(certs[0].titulo,'Certificación sin descripción');
+  assert.equal(certs[0].titulo,'');
+  assert.equal(ctx.tituloCertHtml(certs[0]),'Certificación sin nombre cargado');
+  // Y el que sí tiene nombre sale escapado
+  assert.equal(ctx.tituloCertHtml({titulo:'AWS <Pro>'}),'AWS &lt;Pro&gt;');
 });
 
 test('sin Monto propio se toma el valor del catálogo',()=>{
@@ -78,8 +87,8 @@ test('los dos orígenes se mezclan, de la más reciente a la más vieja',()=>{
   sembrar(ctx,'cachePersonasRaw',[PERSONA]);
   const certs=ctx.certificacionesDeCard(
     [cap('CKA','2024-03-01',300)],
-    [benef('bCe','2025-01-10',{Monto:150,Comentarios:'Terraform'}),
-     benef('bCe','2023-06-02',{Monto:150,Comentarios:'AWS'})],
+    [benef('bCe','2025-01-10',{Monto:150,Curso:'Terraform'}),
+     benef('bCe','2023-06-02',{Monto:150,Curso:'AWS'})],
     CATALOGO);
   assert.equal(certs.map(c=>c.titulo).join('|'),'Terraform|CKA|AWS');
 });
@@ -90,7 +99,7 @@ test('no se cuela ningún otro beneficio en la sección',()=>{
   const certs=ctx.certificacionesDeCard([],[
     benef('bUd','2025-01-01',{Monto:50,Curso:'CKAD with Tests'}),
     benef('bAI','2023-12-29',{Monto:10}),
-    benef('bCe','2023-06-02',{Monto:150,Comentarios:'AWS'}),
+    benef('bCe','2023-06-02',{Monto:150,Curso:'AWS'}),
   ],CATALOGO);
   assert.equal(certs.map(c=>c.titulo).join('|'),'AWS');
 });
@@ -209,4 +218,11 @@ test('consumeTopeBeneficios es el mismo criterio que saca la fila de arriba',()=
   assert.equal(ctx.consumeTopeBeneficios('Certifications'),false);
   assert.equal(ctx.consumeTopeBeneficios('AI Tools'),true);
   assert.equal(ctx.consumeTopeBeneficios('Udemy Courses'),true);
+});
+
+test('la Descripción de Capacitaciones sigue siendo el título, sin comentario',()=>{
+  const ctx=ctxCert();
+  const certs=ctx.certificacionesDeCard([cap('CKA','2024-03-01',300)],[],CATALOGO);
+  assert.equal(certs[0].titulo,'CKA');
+  assert.equal(certs[0].comentario,'');
 });

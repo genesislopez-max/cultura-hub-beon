@@ -183,8 +183,13 @@ async function verBenefPersona(nombre, grupo, nivel){
   const finEtapaPrevia=finEtapaPreviaDe(nombre);
   const finDeFila=f=>finEnBeon||(finEtapaPrevia&&(f['Fecha activación']||'')&&(f['Fecha activación']||'')<=finEtapaPrevia?finEtapaPrevia:'');
   const preIngresoDeFila=f=>ingresoPosteriorAAsignacion(f);
-  const activosCount=benefAsig.filter(asignacionVigente).length;
-  const benefCount=finEnBeon?benefAsig.length:activosCount;
+  // Las certificaciones no van en esta lista: tienen su propia sección más
+  // abajo, con su tope y su detalle. Mostrarlas en los dos lados repetía el
+  // mismo registro dos veces en la misma card.
+  const benefNoCert=benefAsig.filter(a=>
+    consumeTopeBeneficios(beneficioDeAsignacion(a,catalogoBenef).nombre));
+  const activosCount=benefNoCert.filter(asignacionVigente).length;
+  const benefCount=finEnBeon?benefNoCert.length:activosCount;
   const benefLabel=finEnBeon?'En su histórico':'Beneficios';
   const nombreEscJs=nombre.replace(/'/g,"\\'");
 
@@ -204,10 +209,10 @@ async function verBenefPersona(nombre, grupo, nivel){
     </div>
     <button class="bp-detalle-assign-btn" onclick="abrirAsignarBeneficioPara('${nombreEscJs}')"><i class="ti ti-plus"></i>Asignar</button>
   </div>`;
-  if(benefAsig.length){
+  if(benefNoCert.length){
     // El nombre del beneficio se resuelve antes de ordenar: el registro guarda
     // un id de linked record, y ordenar por eso no significaría nada.
-    const filasBenef=ordenarBenefAsignados(benefAsig.map(r=>{
+    const filasBenef=ordenarBenefAsignados(benefNoCert.map(r=>{
       const bId=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
       const benef=catalogoBenef.find(b=>b.id===bId||b.fields.Beneficio===bId);
       return {r,benef,nombre:benef?.fields.Beneficio||bId||'—',fin:finDeFila(r.fields),preIngreso:preIngresoDeFila(r.fields)};
@@ -252,7 +257,7 @@ async function verBenefPersona(nombre, grupo, nivel){
         <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${titulo}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
-          <div class="bp-detalle-row-sub">${fechaLabel}${notaTopeCapacitacion(bNombre)}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
+          <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
           ${usaCurso||curso?`<div class="bp-detalle-row-coment" id="curso-linea-${r.id}"${curso?'':' style="color:var(--text3)"'}>${contenidoCursoLinea(r.id,curso)}</div>`:''}
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
@@ -316,6 +321,7 @@ async function verBenefPersona(nombre, grupo, nivel){
           <div class="bp-detalle-row-sub">${c.fecha?fmt(c.fecha):'Sin fecha registrada'}${origenCertTexto(c)}${linkCertHtml(c.url)}</div>
         </div>
         <div class="bp-detalle-row-meta" style="font-weight:700;color:${c.vigente?'var(--blue)':'var(--text3)'}">$${c.monto.toLocaleString('es-AR')}</div>
+        ${accionesCertHtml(c,nombre,grupo,nivel)}
       </div>`).join('')}</div>`;
   } else {
     html+=bpEmptyBox(capEstilo.icon,'Sin certificaciones registradas',null);
@@ -518,6 +524,10 @@ function certificacionesDeCard(caps,benefAsig,catalogo){
         url:(f.Link||'').trim(),
         origen:'Beneficios',
         vigente:asignacionVigente(a),
+        // Para editarla o borrarla desde acá: al salir de la lista de
+        // beneficios, esta es la única fila que la representa en la card.
+        id:a.id,
+        nombreBeneficio:beneficioDeAsignacion(a,catalogo).nombre,
       };
     });
   // De la más reciente a la más vieja, mezclando los dos orígenes: lo último
@@ -536,21 +546,26 @@ function origenCertTexto(c){
     : ' · <span style="color:var(--text3)" title="Es de una etapa anterior de la persona en BEON: no consume el tope de hoy">desde Beneficios · fuera de período</span>';
 }
 
+// Editar y borrar una certificación. Solo tienen botones las que vienen de
+// Beneficios: al sacarlas de la lista de beneficios, esta pasó a ser la única
+// fila que las representa en la card, y sin esto quedarían sin forma de
+// tocarse. Las que vienen de Capacitaciones se cargan en esa tabla y nunca
+// tuvieron acciones acá.
+function accionesCertHtml(c,nombrePersona,grupo,nivel){
+  if(c.origen!=='Beneficios'||!c.id) return '';
+  const p=nombrePersona.replace(/'/g,"\\'"),b=(c.nombreBeneficio||'Certifications').replace(/'/g,"\\'");
+  return `<div class="bp-detalle-actions">
+    <button class="bp-detalle-action-btn" onclick="editarBenefAsignado('${c.id}','${p}','${grupo}','${nivel}')" title="Editar"><i class="ti ti-pencil"></i></button>
+    <button class="bp-detalle-action-btn danger" onclick="eliminarBenefAsignado('${c.id}','${b}','${p}','${grupo}','${nivel}')" title="Eliminar"><i class="ti ti-trash"></i></button>
+  </div>`;
+}
+
 // Mismo criterio que linkBenefAsignado: el href se valida antes de salir, para
 // que un campo mal cargado no termine siendo un javascript:.
 function linkCertHtml(url){
   if(!url) return '';
   if(!/^https?:\/\//i.test(url)) return ` · <span title="El link cargado no es una URL válida">${escaparHtml(url)}</span>`;
   return ` · <a href="${escaparHtml(url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue)">Ver curso →</a>`;
-}
-
-// El monto de una certificación se ve en la fila, pero no entra en el
-// "Presupuesto" del encabezado: consume el tope de capacitación, no el de
-// beneficios. Sin decirlo acá, la resta no cerraría y la diferencia parecería
-// un error de la card.
-function notaTopeCapacitacion(nombreBeneficio){
-  if(consumeTopeBeneficios(nombreBeneficio)) return '';
-  return ' · <span style="color:var(--text3)" title="Se cubre contra el tope anual de capacitación, no contra el de beneficios">cuenta en Certifications Sponsorship</span>';
 }
 
 function badgeEstadoBenefHistorico(estado,finEnBeon){

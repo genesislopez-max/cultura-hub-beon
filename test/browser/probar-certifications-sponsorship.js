@@ -62,17 +62,47 @@ const TABLAS={
     const i=nodos.findIndex(n=>n.classList.contains('bp-detalle-section-head')
       &&/Certifications Sponsorship/.test(n.textContent||''));
     const j=nodos.findIndex((n,k)=>k>i&&n.classList.contains('bp-detalle-section-head'));
+    const filaCert=nodos.slice(i).flatMap(n=>[...n.querySelectorAll('.bp-detalle-row')])
+      .find(e=>/Certificación AWS/.test(e.textContent));
+    const botonesCert=filaCert?[...filaCert.querySelectorAll('.bp-detalle-action-btn')]:[];
+
+    // Que el botón esté no alcanza: tiene que abrir el registro correcto. El
+    // lápiz abre el modal de edición con el monto y la fecha de ESA
+    // certificación; el tacho, el cartel nombrándola.
+    let editaMonto='',editaFecha='',cartel='';
+    if(botonesCert[0]){
+      botonesCert[0].click();
+      await new Promise(r=>setTimeout(r,250));
+      editaMonto=document.getElementById('f-eba-monto')?.value||'';
+      editaFecha=document.getElementById('f-eba-fecha')?.value||'';
+      closeModal();
+      await new Promise(r=>setTimeout(r,150));
+    }
+    if(botonesCert[1]){
+      botonesCert[1].click();
+      await new Promise(r=>setTimeout(r,250));
+      cartel=(document.getElementById('confirm-overlay')?.textContent||'').replace(/\s+/g,' ').trim();
+      document.getElementById('confirm-overlay')?.classList.remove('open');
+    }
+
     return {
+      editaMonto,editaFecha,cartel,
       seccion:nodos.slice(i,j<0?undefined:j).map(limpio),
-      benefs:[...document.querySelectorAll('#bpd-body .bp-detalle-row')].map(limpio).slice(0,3),
+      // Solo las filas que están antes del head de Certifications Sponsorship:
+      // las de la sección también son .bp-detalle-row.
+      benefs:nodos.slice(0,i).flatMap(n=>[...n.querySelectorAll('.bp-detalle-row')]).map(limpio),
       presupuesto:limpio([...document.querySelectorAll('#bpd-stats .bp-detalle-stat')]
         .find(e=>/Presupuesto/.test(e.textContent))),
+      badge:limpio(document.querySelector('.bp-detalle-section-badge')),
+      accionesCert:botonesCert.length,
     };
   });
   console.log('── Beneficios asignados ──');
   r.benefs.forEach(f=>console.log('   •',f));
-  console.log('  Presupuesto de beneficios:',r.presupuesto);
+  console.log('  Presupuesto de beneficios:',r.presupuesto,'· badge:',r.badge);
   console.log('\n── Certifications Sponsorship ──');
+  console.log('   (botones:',r.accionesCert,'· el lápiz abre $'+r.editaMonto,'del',r.editaFecha+')');
+  console.log('   (el tacho dice:',r.cartel+')');
   r.seccion.forEach(f=>console.log('   ',f));
   await browser.close();
 
@@ -95,8 +125,17 @@ const TABLAS={
   // porque la asignación no trae monto propio) = $170. Con la certificación
   // adentro serían $320, y el mismo monto estaría restando dos topes distintos.
   if(!/\$170/.test(r.presupuesto)) fallas.push('la certificación sigue pesando en el presupuesto de beneficios: '+r.presupuesto);
-  const filaCert=r.benefs.find(f=>/Certifications/.test(f))||'';
-  if(!/cuenta en Certifications Sponsorship/.test(filaCert)) fallas.push('la fila no aclara dónde cuenta el monto, así que la resta del encabezado no cierra: '+filaCert);
+  // Una certificación se ve en UN solo lugar: su sección. Repetirla arriba
+  // mostraba el mismo registro dos veces en la misma card.
+  const arriba=r.benefs.join(' ⏎ ');
+  if(/Certifications|Certificación AWS/.test(arriba)) fallas.push('la certificación sigue duplicada en la lista de beneficios: '+arriba);
+  if(!/AI Tools/.test(arriba)||!/Udemy/.test(arriba)) fallas.push('se llevó puesto algún beneficio que sí va arriba: '+arriba);
+  if(!/^2 activos/.test(r.badge)) fallas.push('el conteo sigue incluyendo la certificación: '+r.badge);
+  // Y desde su sección se la tiene que poder editar y borrar: al salir de la
+  // lista de beneficios, esa fila es la única que la representa en la card.
+  if(r.accionesCert!==2) fallas.push('la certificación quedó sin botones para editarla o borrarla: '+r.accionesCert);
+  if(r.editaMonto!=='150'||r.editaFecha!=='2023-06-02') fallas.push(`el lápiz no abre esa certificación: monto="${r.editaMonto}" fecha="${r.editaFecha}"`);
+  if(!/Certifications/.test(r.cartel)||!/Raphael Montani/.test(r.cartel)) fallas.push('el cartel de borrar no nombra el registro: '+r.cartel);
 
   console.log(fallas.length?'\n❌ '+fallas.join('\n❌ '):'\n✅ Las certificaciones cargadas como beneficio aparecen en Certifications Sponsorship');
   process.exit(fallas.length?1:0);

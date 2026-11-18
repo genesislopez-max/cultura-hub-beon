@@ -127,3 +127,41 @@ test('el título se escapa: un nombre con comillas no rompe el HTML',()=>{
   const ctx=ctxCert();
   assert.equal(ctx.escaparHtml('AWS "Pro" <beta>'),'AWS &quot;Pro&quot; &lt;beta&gt;');
 });
+
+// ── Contra qué tope pesa una certificación ──
+// Se cubre contra el "Tope anual capacitación", no contra el de beneficios.
+// Si contara en los dos, el mismo monto restaría dos topes distintos.
+
+test('una certificación no suma al presupuesto de beneficios',()=>{
+  const ctx=ctxCert();
+  sembrar(ctx,'cachePersonasRaw',[PERSONA]);
+  const asignaciones=[
+    benef('bAI','2023-12-29',{Monto:10}),     // mensual: 10 × 12 = 120
+    benef('bCe','2023-06-02',{Monto:150}),    // certificación: no cuenta acá
+  ];
+  assert.equal(ctx.sumarMontosAsignados(asignaciones,CATALOGO),120);
+});
+
+test('el resto de los beneficios sigue sumando igual',()=>{
+  const ctx=ctxCert();
+  sembrar(ctx,'cachePersonasRaw',[PERSONA]);
+  assert.equal(ctx.sumarMontosAsignados([benef('bUd','2025-01-01',{Monto:50})],CATALOGO),50);
+  assert.equal(ctx.consumeTopeBeneficios('AI Tools'),true);
+  assert.equal(ctx.consumeTopeBeneficios('Udemy Courses'),true);
+  assert.equal(ctx.consumeTopeBeneficios('Certifications'),false);
+});
+
+test('la fila del beneficio aclara dónde cuenta el monto',()=>{
+  const ctx=ctxCert();
+  // Sin esto, el $150 de la fila no aparecería en el total del encabezado y
+  // la diferencia se leería como un error de la card.
+  assert.match(ctx.notaTopeCapacitacion('Certifications'),/cuenta en Certifications Sponsorship/);
+  assert.equal(ctx.notaTopeCapacitacion('AI Tools'),'');
+});
+
+test('y sigue sumando en el tope de capacitación, que es el que consume',()=>{
+  const ctx=ctxCert();
+  sembrar(ctx,'cachePersonasRaw',[PERSONA]);
+  const certs=ctx.certificacionesDeCard([],[benef('bCe','2023-06-02',{Monto:150,Comentarios:'AWS'})],CATALOGO);
+  assert.equal(certs.filter(c=>c.vigente).reduce((s,c)=>s+c.monto,0),150);
+});

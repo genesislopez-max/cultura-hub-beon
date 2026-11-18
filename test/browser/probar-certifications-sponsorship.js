@@ -57,15 +57,21 @@ const TABLAS={
     const limpio=el=>el?el.textContent.replace(/\s+/g,' ').trim():'';
     // La sección arranca en el head "Certifications Sponsorship" y termina en el siguiente head
     const nodos=[...document.getElementById('bpd-body').children];
-    const i=nodos.findIndex(n=>/Certifications Sponsorship/.test(n.textContent||''));
+    // El encabezado de sección, no cualquier nodo que mencione el texto: la
+    // fila del beneficio ahora también dice "cuenta en Certifications Sponsorship".
+    const i=nodos.findIndex(n=>n.classList.contains('bp-detalle-section-head')
+      &&/Certifications Sponsorship/.test(n.textContent||''));
     const j=nodos.findIndex((n,k)=>k>i&&n.classList.contains('bp-detalle-section-head'));
     return {
       seccion:nodos.slice(i,j<0?undefined:j).map(limpio),
       benefs:[...document.querySelectorAll('#bpd-body .bp-detalle-row')].map(limpio).slice(0,3),
+      presupuesto:limpio([...document.querySelectorAll('#bpd-stats .bp-detalle-stat')]
+        .find(e=>/Presupuesto/.test(e.textContent))),
     };
   });
   console.log('── Beneficios asignados ──');
   r.benefs.forEach(f=>console.log('   •',f));
+  console.log('  Presupuesto de beneficios:',r.presupuesto);
   console.log('\n── Certifications Sponsorship ──');
   r.seccion.forEach(f=>console.log('   ',f));
   await browser.close();
@@ -83,6 +89,14 @@ const TABLAS={
   if(!/\$450 \/ \$2\.000/.test(texto)) fallas.push('la barra no suma lo cargado como beneficio: '+texto);
   // Y Udemy, que no es una certificación, no se cuela
   if(/CKAD with Tests|Kubernetes Certified/.test(texto)) fallas.push('se coló un beneficio que no es una certificación');
+
+  // Una certificación pesa contra el tope de capacitación, no contra el de
+  // beneficios: quedan AI Tools ($10/mes ×12 = $120) + Udemy ($50 del catálogo,
+  // porque la asignación no trae monto propio) = $170. Con la certificación
+  // adentro serían $320, y el mismo monto estaría restando dos topes distintos.
+  if(!/\$170/.test(r.presupuesto)) fallas.push('la certificación sigue pesando en el presupuesto de beneficios: '+r.presupuesto);
+  const filaCert=r.benefs.find(f=>/Certifications/.test(f))||'';
+  if(!/cuenta en Certifications Sponsorship/.test(filaCert)) fallas.push('la fila no aclara dónde cuenta el monto, así que la resta del encabezado no cierra: '+filaCert);
 
   console.log(fallas.length?'\n❌ '+fallas.join('\n❌ '):'\n✅ Las certificaciones cargadas como beneficio aparecen en Certifications Sponsorship');
   process.exit(fallas.length?1:0);

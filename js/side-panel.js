@@ -252,7 +252,7 @@ async function verBenefPersona(nombre, grupo, nivel){
         <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${titulo}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
-          <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
+          <div class="bp-detalle-row-sub">${fechaLabel}${notaTopeCapacitacion(bNombre)}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
           ${usaCurso||curso?`<div class="bp-detalle-row-coment" id="curso-linea-${r.id}"${curso?'':' style="color:var(--text3)"'}>${contenidoCursoLinea(r.id,curso)}</div>`:''}
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
@@ -542,6 +542,15 @@ function linkCertHtml(url){
   if(!url) return '';
   if(!/^https?:\/\//i.test(url)) return ` · <span title="El link cargado no es una URL válida">${escaparHtml(url)}</span>`;
   return ` · <a href="${escaparHtml(url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue)">Ver curso →</a>`;
+}
+
+// El monto de una certificación se ve en la fila, pero no entra en el
+// "Presupuesto" del encabezado: consume el tope de capacitación, no el de
+// beneficios. Sin decirlo acá, la resta no cerraría y la diferencia parecería
+// un error de la card.
+function notaTopeCapacitacion(nombreBeneficio){
+  if(consumeTopeBeneficios(nombreBeneficio)) return '';
+  return ' · <span style="color:var(--text3)" title="Se cubre contra el tope anual de capacitación, no contra el de beneficios">cuenta en Certifications Sponsorship</span>';
 }
 
 function badgeEstadoBenefHistorico(estado,finEnBeon){

@@ -151,12 +151,15 @@ test('el resto de los beneficios sigue sumando igual',()=>{
   assert.equal(ctx.consumeTopeBeneficios('Certifications'),false);
 });
 
-test('la fila del beneficio aclara dónde cuenta el monto',()=>{
+test('la certificación no aparece en la lista de beneficios',()=>{
   const ctx=ctxCert();
-  // Sin esto, el $150 de la fila no aparecería en el total del encabezado y
-  // la diferencia se leería como un error de la card.
-  assert.match(ctx.notaTopeCapacitacion('Certifications'),/cuenta en Certifications Sponsorship/);
-  assert.equal(ctx.notaTopeCapacitacion('AI Tools'),'');
+  // El mismo criterio decide las dos cosas: lo que no consume el tope de
+  // beneficios sale de esa lista y vive en Certifications Sponsorship. Antes
+  // hacía falta una aclaración en la fila de arriba ("cuenta en Certifications
+  // Sponsorship") porque el monto se veía ahí sin entrar en el total; ya no,
+  // porque esa fila dejó de existir.
+  assert.equal(typeof ctx.notaTopeCapacitacion,'undefined');
+  assert.equal(ctx.consumeTopeBeneficios('Certifications'),false);
 });
 
 test('y sigue sumando en el tope de capacitación, que es el que consume',()=>{
@@ -164,4 +167,46 @@ test('y sigue sumando en el tope de capacitación, que es el que consume',()=>{
   sembrar(ctx,'cachePersonasRaw',[PERSONA]);
   const certs=ctx.certificacionesDeCard([],[benef('bCe','2023-06-02',{Monto:150,Comentarios:'AWS'})],CATALOGO);
   assert.equal(certs.filter(c=>c.vigente).reduce((s,c)=>s+c.monto,0),150);
+});
+
+// ── Una sola vez en la card ──
+// La certificación salió de la lista de beneficios: tiene su propia sección,
+// y mostrarla en los dos lados repetía el mismo registro en la misma card.
+
+test('la fila de la sección lleva lo necesario para editarla y borrarla',()=>{
+  const ctx=ctxCert();
+  sembrar(ctx,'cachePersonasRaw',[PERSONA]);
+  const certs=ctx.certificacionesDeCard([],[benef('bCe','2023-06-02',{Monto:150,Comentarios:'AWS'})],CATALOGO);
+  assert.equal(certs[0].id,'a2023-06-02');
+  assert.equal(certs[0].nombreBeneficio,'Certifications');
+});
+
+test('solo tienen botones las que vienen de Beneficios',()=>{
+  const ctx=ctxCert();
+  const deBenef={origen:'Beneficios',id:'a1',nombreBeneficio:'Certifications'};
+  const html=ctx.accionesCertHtml(deBenef,'Raphael Montani','Engineers','Storm');
+  assert.match(html,/editarBenefAsignado\('a1','Raphael Montani','Engineers','Storm'\)/);
+  assert.match(html,/eliminarBenefAsignado\('a1','Certifications','Raphael Montani'/);
+  // Las de Capacitaciones se cargan en esa tabla y nunca tuvieron acciones acá
+  assert.equal(ctx.accionesCertHtml({origen:'Capacitaciones'},'Raphael Montani','Engineers','Storm'),'');
+  // Sin id no se puede apuntar a ningún registro: mejor sin botón que con uno roto
+  assert.equal(ctx.accionesCertHtml({origen:'Beneficios'},'Raphael Montani','Engineers','Storm'),'');
+});
+
+test('un apóstrofo en el nombre no rompe el onclick',()=>{
+  const ctx=ctxCert();
+  const html=ctx.accionesCertHtml({origen:'Beneficios',id:'a1',nombreBeneficio:"O'Reilly Cert"},
+    "D'Angelo Pérez",'Engineers','Storm');
+  assert.match(html,/editarBenefAsignado\('a1','D\\'Angelo Pérez'/);
+  assert.match(html,/eliminarBenefAsignado\('a1','O\\'Reilly Cert'/);
+});
+
+test('consumeTopeBeneficios es el mismo criterio que saca la fila de arriba',()=>{
+  const ctx=ctxCert();
+  // La lista de beneficios filtra con esto, así que lo que se va de arriba es
+  // exactamente lo que aparece abajo: no hay registro que caiga en los dos ni
+  // en ninguno.
+  assert.equal(ctx.consumeTopeBeneficios('Certifications'),false);
+  assert.equal(ctx.consumeTopeBeneficios('AI Tools'),true);
+  assert.equal(ctx.consumeTopeBeneficios('Udemy Courses'),true);
 });

@@ -156,7 +156,14 @@ async function verBenefPersona(nombre, grupo, nivel){
   // Tope capacitación
   const topeCapEntry=cachePresupuestoLoyalty.find(r=>r.fields.Grupo===grupo&&r.fields.Nivel===nivel);
   const topeCap=topeCapEntry?.fields['Tope anual capacitación']||0;
-  const totalCap=caps.reduce((s,r)=>s+Number(r.fields.Monto||0),0);
+  // Las certificaciones llegan por dos caminos y la sección miraba uno solo:
+  // quien la tenía cargada como beneficio veía "$150" arriba y
+  // "Sin certificaciones registradas" acá abajo.
+  const certs=certificacionesDeCard(caps,benefAsig,catalogoBenef);
+  // La barra cuenta lo que efectivamente se cubrió: una asignación de una
+  // etapa anterior en BEON se lista (es parte del historial) pero no consume
+  // el tope de hoy.
+  const totalCap=certs.filter(c=>c.vigente).reduce((s,c)=>s+c.monto,0);
   const capPct=topeCap>0?Math.min(100,Math.round((totalCap/topeCap)*100)):0;
   const capBarColor=capPct>=90?'var(--critical)':capPct>=70?'var(--warning)':'var(--blue)';
 
@@ -245,7 +252,7 @@ async function verBenefPersona(nombre, grupo, nivel){
         <div class="bp-detalle-row-icon" style="background:${cat.tinte};color:${cat.accent}"><i class="ti ${cat.icon}"></i></div>
         <div class="bp-detalle-row-mid">
           <div class="bp-detalle-row-title">${titulo}${valor?`<span class="bp-detalle-row-amount">${valor}</span>`:''}</div>
-          <div class="bp-detalle-row-sub">${fechaLabel}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
+          <div class="bp-detalle-row-sub">${fechaLabel}${notaTopeCapacitacion(bNombre)}${motivoBaja?` · "${motivoBaja}"`:''}${asistencia?` · <span title="Asistencia registrada">📊 ${asistencia}</span>`:''}</div>
           ${usaCurso||curso?`<div class="bp-detalle-row-coment" id="curso-linea-${r.id}"${curso?'':' style="color:var(--text3)"'}>${contenidoCursoLinea(r.id,curso)}</div>`:''}
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
@@ -301,18 +308,15 @@ async function verBenefPersona(nombre, grupo, nivel){
       </div>
     </div>`;
   }
-  if(caps.length){
-    html+=`<div class="bp-detalle-rows">${caps.map(r=>{
-      const f=r.fields;
-      return`<div class="bp-detalle-row">
+  if(certs.length){
+    html+=`<div class="bp-detalle-rows">${certs.map(c=>`<div class="bp-detalle-row">
         <div class="bp-detalle-row-icon" style="background:${capEstilo.tinte};color:${capEstilo.accent}"><i class="ti ${capEstilo.icon}"></i></div>
         <div class="bp-detalle-row-mid">
-          <div class="bp-detalle-row-title">${f.Descripción||'—'}</div>
-          <div class="bp-detalle-row-sub">${f.Fecha?fmt(f.Fecha):''}${f['URL del curso']?` · <a href="${f['URL del curso']}" target="_blank" style="color:var(--blue)">Ver curso →</a>`:''}</div>
+          <div class="bp-detalle-row-title">${escaparHtml(c.titulo)}</div>
+          <div class="bp-detalle-row-sub">${c.fecha?fmt(c.fecha):'Sin fecha registrada'}${origenCertTexto(c)}${linkCertHtml(c.url)}</div>
         </div>
-        <div class="bp-detalle-row-meta" style="font-weight:700;color:var(--blue)">$${Number(f.Monto||0).toLocaleString('es-AR')}</div>
-      </div>`;
-    }).join('')}</div>`;
+        <div class="bp-detalle-row-meta" style="font-weight:700;color:${c.vigente?'var(--blue)':'var(--text3)'}">$${c.monto.toLocaleString('es-AR')}</div>
+      </div>`).join('')}</div>`;
   } else {
     html+=bpEmptyBox(capEstilo.icon,'Sin certificaciones registradas',null);
   }
@@ -478,6 +482,75 @@ function badgeAnteriorAlIngreso(){
 function periodoAnteriorAlIngreso(fields,ingreso){
   const act=fields['Fecha activación'];
   return `${fmt(act)} · anterior a su ingreso (${fmt(ingreso)})`;
+}
+
+// Una certificación puede estar cargada en dos lugares: la tabla
+// Capacitaciones, o como una asignación del beneficio "Certifications" en
+// Beneficios Asignados. Es el mismo hecho por dos caminos, y la sección
+// "Certifications Sponsorship" miraba solo el primero: alguien con su
+// certificación cargada como beneficio veía el monto arriba, en la lista de
+// beneficios, y "Sin certificaciones registradas" acá abajo.
+//
+// No se deduplican las que podrían estar en los dos lados. Si una está
+// repetida se ve repetida —con su origen al lado, así se sabe cuál borrar—,
+// que es mejor que esconder una silenciosamente porque coincidieron la fecha y
+// el monto con otra distinta.
+function certificacionesDeCard(caps,benefAsig,catalogo){
+  const deCapacitaciones=(caps||[]).map(r=>({
+    titulo:(r.fields.Descripción||'').trim()||'Certificación sin descripción',
+    fecha:r.fields.Fecha||'',
+    monto:Number(r.fields.Monto||0),
+    url:(r.fields['URL del curso']||'').trim(),
+    origen:'Capacitaciones',
+    vigente:true,
+  }));
+  const deBeneficios=(benefAsig||[])
+    .filter(a=>esBeneficioCertifications(beneficioDeAsignacion(a,catalogo).nombre))
+    .map(a=>{
+      const f=a.fields||{};
+      const {benef}=beneficioDeAsignacion(a,catalogo);
+      return {
+        // Qué certificación es: primero el campo propio, y si no el comentario
+        // libre, que es donde se viene anotando ("Certificación AWS").
+        titulo:(f.Curso||'').trim()||(f.Comentarios||'').trim()||'Certificación sin descripción',
+        fecha:f['Fecha activación']||'',
+        monto:f.Monto?Number(f.Monto)||0:Number(benef?.fields?.Valor)||0,
+        url:(f.Link||'').trim(),
+        origen:'Beneficios',
+        vigente:asignacionVigente(a),
+      };
+    });
+  // De la más reciente a la más vieja, mezclando los dos orígenes: lo último
+  // que hizo la persona es lo que se busca primero.
+  return [...deCapacitaciones,...deBeneficios]
+    .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+}
+
+// De dónde salió la fila. Solo se aclara en las que vienen de Beneficios: son
+// las nuevas acá, y sin esto no se sabría dónde ir a corregir el monto o la
+// fecha. Si además quedó fuera de período, se dice.
+function origenCertTexto(c){
+  if(c.origen!=='Beneficios') return '';
+  return c.vigente
+    ? ' · <span style="color:var(--text3)" title="Cargada como beneficio asignado">desde Beneficios</span>'
+    : ' · <span style="color:var(--text3)" title="Es de una etapa anterior de la persona en BEON: no consume el tope de hoy">desde Beneficios · fuera de período</span>';
+}
+
+// Mismo criterio que linkBenefAsignado: el href se valida antes de salir, para
+// que un campo mal cargado no termine siendo un javascript:.
+function linkCertHtml(url){
+  if(!url) return '';
+  if(!/^https?:\/\//i.test(url)) return ` · <span title="El link cargado no es una URL válida">${escaparHtml(url)}</span>`;
+  return ` · <a href="${escaparHtml(url)}" target="_blank" rel="noopener noreferrer" style="color:var(--blue)">Ver curso →</a>`;
+}
+
+// El monto de una certificación se ve en la fila, pero no entra en el
+// "Presupuesto" del encabezado: consume el tope de capacitación, no el de
+// beneficios. Sin decirlo acá, la resta no cerraría y la diferencia parecería
+// un error de la card.
+function notaTopeCapacitacion(nombreBeneficio){
+  if(consumeTopeBeneficios(nombreBeneficio)) return '';
+  return ' · <span style="color:var(--text3)" title="Se cubre contra el tope anual de capacitación, no contra el de beneficios">cuenta en Certifications Sponsorship</span>';
 }
 
 function badgeEstadoBenefHistorico(estado,finEnBeon){

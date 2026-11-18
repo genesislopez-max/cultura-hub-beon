@@ -1050,12 +1050,22 @@ function asignacionesAnterioresAlIngreso(asignaciones){
 // recompartida inflaba el presupuesto usado de esa persona y el total del
 // equipo. Entre las asignaciones del mismo acceso se toma el monto más alto,
 // que es el que tiene el dato cuando las otras quedaron en blanco.
+//
+// Las certificaciones quedan afuera: se cubren contra el "Tope anual
+// capacitación", no contra el de beneficios. Se siguen viendo en la lista de
+// beneficios de la persona —están asignadas— pero el monto se cuenta una sola
+// vez, en Certifications Sponsorship, que es el tope que efectivamente
+// consumen.
+function consumeTopeBeneficios(nombreBeneficio){
+  return !esBeneficioCertifications(nombreBeneficio);
+}
 function sumarMontosAsignados(asignaciones,catalogo){
   let total=0;
   const credenciales=new Map();
   (asignaciones||[]).forEach(a=>{
     const monto=montoDeAsignacion(a,catalogo);
     const bNombre=beneficioDeAsignacion(a,catalogo).nombre;
+    if(!consumeTopeBeneficios(bNombre)) return;
     if(!esBeneficioCredenciales(bNombre)){ total+=monto; return; }
     const clave=`${normalizarNombre(valorVinculado(a.fields.Persona))}|${normalizarBeneficioKey(bNombre)}`;
     credenciales.set(clave,Math.max(credenciales.get(clave)||0,monto));

@@ -131,9 +131,16 @@ function managerDePersona(nombre){
 // Si la persona ya no está en la empresa (Fecha de egreso pasada), los
 // listados "por persona"/historial no deben mostrarla — mismo criterio que
 // ya usan Personas/Cumpleaños/Aniversarios/Beneficios "Por persona".
+// El registro de Personas que corresponde a un nombre (o a un linked record
+// sin resolver), o undefined. El match es por nombre normalizado: acentos,
+// mayúsculas y espacios de más no tienen que decidir si se encuentra o no.
+function personaPorNombre(nombre){
+  const buscado=normalizarNombre(nombreDePersonaRef(nombre));
+  if(!buscado) return undefined;
+  return (cachePersonasRaw||[]).find(x=>normalizarNombre(x.fields.Nombre)===buscado);
+}
 function personaActiva(nombre){
-  const buscado=normalizarNombre(nombre);
-  const p=cachePersonasRaw.find(x=>normalizarNombre(x.fields.Nombre)===buscado);
+  const p=personaPorNombre(nombre);
   return!!p&&!yaEgreso(p);
 }
 // ¿Este nombre corresponde a alguien de la tabla Personas? Sirve para separar

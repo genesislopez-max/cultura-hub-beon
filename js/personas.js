@@ -372,6 +372,30 @@ function yaEgreso(r){
   return new Date(fe+'T00:00:00')<=hoy;
 }
 
+// Cuando alguien deja BEON, sus beneficios dejan de correr: el beneficio
+// terminó cuando terminó la relación, aunque nadie haya cargado la baja en
+// Airtable (casi nunca se carga — no hay un trámite aparte).
+//
+// Para quien se fue y NO volvió esto ya se resolvía a nivel de toda la card.
+// El caso que faltaba es el de quien se fue y volvió: su registro vuelve a
+// contar como activo, así que lo que se le había dado en la etapa anterior
+// —y que no se le sigue cubriendo— reaparecía como vigente hoy. Lo que decide
+// es la fecha: lo activado hasta el egreso es de la etapa que terminó, y lo
+// activado después es de la etapa actual.
+//
+// Devuelve la fecha en la que esa etapa terminó, o '' si el beneficio sigue
+// corriendo. Un egreso futuro (un offboarding ya cargado pero que todavía no
+// llegó) no cierra nada: la persona sigue acá.
+function finEtapaDeBeneficio(persona,fechaActivacion){
+  const egreso=persona?.fields?.['Fecha de egreso'];
+  if(!egreso) return '';
+  if(yaEgreso(persona)) return egreso;
+  if(!reingresoVigente(persona)) return '';
+  // Volvió. Sin fecha de activación no se puede saber de qué etapa viene, y
+  // cerrar un registro que no se puede fechar afirmaría algo que no consta.
+  return fechaActivacion&&fechaActivacion<=egreso?egreso:'';
+}
+
 // Alguien con Fecha de ingreso futura todavía no es parte del equipo: ya está
 // cargado y aparece en el Kanban de Ingresos (en Pre-ingreso, que es donde
 // tiene que estar), pero contarlo en Engineers & Tech infla el tamaño del

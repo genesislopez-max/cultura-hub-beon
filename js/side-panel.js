@@ -38,7 +38,10 @@ function agruparBenefAsignados(filas){
   }
   for(const g of grupos.values()){
     g.items.sort((a,b)=>(b.r.fields['Fecha activación']||'').localeCompare(a.r.fields['Fecha activación']||''));
-    g.activos=g.items.filter(f=>(f.r.fields.Estado||'Activo')==='Activo').length;
+    // "Activas" son las que siguen corriendo hoy. Una asignación de una etapa
+    // anterior en BEON (f.fin) no cuenta, aunque su Estado diga Activo.
+    g.activos=g.items.filter(f=>!f.fin&&(f.r.fields.Estado||'Activo')==='Activo').length;
+    g.cerradas=g.items.filter(f=>f.fin).length;
   }
   return [...grupos.values()];
 }
@@ -48,8 +51,16 @@ function agruparBenefAsignados(filas){
 // en el caché — y con eso toda la card queda igual que antes para quien está
 // activo, que es la mayoría de las veces que se abre.
 function finEnBeonDe(nombre){
-  const p=(cachePersonasRaw||[]).find(x=>normalizarNombre(x.fields.Nombre)===normalizarNombre(nombre));
+  const p=personaPorNombre(nombre);
   return p&&yaEgreso(p)?(p.fields['Fecha de egreso']||''):'';
+}
+
+// Fecha en la que terminó la etapa ANTERIOR de alguien que se fue y volvió.
+// Vacío para quien nunca se fue y para quien se fue y no volvió (ese caso lo
+// cubre finEnBeonDe, que cierra la card entera).
+function finEtapaPreviaDe(nombre){
+  const p=personaPorNombre(nombre);
+  return p&&reingresoVigente(p)?(p.fields['Fecha de egreso']||''):'';
 }
 
 // Chip "Ex BEONer · hasta <fecha>" del encabezado de la card.
@@ -57,6 +68,16 @@ function pillExBeonerHtml(nombre){
   const hasta=finEnBeonDe(nombre);
   if(!hasta) return '';
   return `<span class="bp-detalle-pill" title="Ya no trabaja en BEON"><i class="ti ti-user-off"></i>Ex BEONer · hasta ${fmt(hasta)}</span>`;
+}
+
+// Chip para quien se fue y volvió. Sin esto, su card se lee igual que la de
+// alguien que nunca se movió, y los beneficios cerrados que aparecen más abajo
+// no tienen contra qué explicarse.
+function pillReingresoHtml(nombre){
+  const p=personaPorNombre(nombre);
+  if(!p||!reingresoVigente(p)) return '';
+  const fin=p.fields['Fecha de egreso'],vuelta=p.fields['Fecha de reingreso'];
+  return `<span class="bp-detalle-pill" title="Trabajó antes en BEON hasta el ${fmt(fin)}"><i class="ti ti-rotate-clockwise"></i>Reingresó el ${fmt(vuelta)}</span>`;
 }
 
 async function verBenefPersona(nombre, grupo, nivel){
@@ -70,7 +91,7 @@ async function verBenefPersona(nombre, grupo, nivel){
   document.getElementById('bpd-pills').innerHTML=`
     <span class="bp-detalle-pill"><i class="ti ti-users"></i>${grupo}</span>
     <span class="bp-detalle-pill"><i class="ti ${iconoNivel(nivel)}"></i>${normalizarNivel(nivel)}</span>
-    ${pillExBeonerHtml(nombre)}`;
+    ${pillExBeonerHtml(nombre)}${pillReingresoHtml(nombre)}`;
   document.getElementById('bpd-stats').innerHTML='';
   document.getElementById('bpd-body').innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text3);font-size:13px;">Cargando...</div>';
   overlay.classList.add('open');
@@ -119,8 +140,7 @@ async function verBenefPersona(nombre, grupo, nivel){
   // del linked record, así que no se lo reconoce como mensual ni como
   // credenciales: AI Tools no se anualizaba y las recompartidas se contaban dos
   // veces, justo en el caso en que esta card es la única vista disponible.
-  const usadoBenef=sumarMontosAsignados(
-    benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo'),catalogoBenef);
+  const usadoBenef=sumarMontosAsignados(benefAsig.filter(asignacionVigente),catalogoBenef);
   // Proyecto es un linked record — resolver el ID a nombre acá también,
   // igual que hacen loadOffsites()/loadGetTogether() con su propio caché,
   // para no mostrar el código crudo (recXXXXXXXX) en el resumen.
@@ -150,7 +170,11 @@ async function verBenefPersona(nombre, grupo, nivel){
   // En el histórico de quien ya no está, "activos" no significa nada: se
   // cuentan todos los registros y la etiqueta lo dice.
   const finEnBeon=finEnBeonDe(nombre);
-  const activosCount=benefAsig.filter(r=>(r.fields.Estado||'Activo')==='Activo').length;
+  // Para quien se fue y volvió, el cierre no es de toda la card: se decide
+  // asignación por asignación según de qué etapa venga.
+  const finEtapaPrevia=finEtapaPreviaDe(nombre);
+  const finDeFila=f=>finEnBeon||(finEtapaPrevia&&(f['Fecha activación']||'')&&(f['Fecha activación']||'')<=finEtapaPrevia?finEtapaPrevia:'');
+  const activosCount=benefAsig.filter(asignacionVigente).length;
   const benefCount=finEnBeon?benefAsig.length:activosCount;
   const benefLabel=finEnBeon?'En su histórico':'Beneficios';
   const nombreEscJs=nombre.replace(/'/g,"\\'");
@@ -177,11 +201,11 @@ async function verBenefPersona(nombre, grupo, nivel){
     const filasBenef=ordenarBenefAsignados(benefAsig.map(r=>{
       const bId=Array.isArray(r.fields.Beneficio)?r.fields.Beneficio[0]:r.fields.Beneficio;
       const benef=catalogoBenef.find(b=>b.id===bId||b.fields.Beneficio===bId);
-      return {r,benef,nombre:benef?.fields.Beneficio||bId||'—'};
+      return {r,benef,nombre:benef?.fields.Beneficio||bId||'—',fin:finDeFila(r.fields)};
     }));
     // Una fila por asignación. Se usa suelta cuando el beneficio aparece una
     // sola vez, y dentro del desplegable cuando hay varias del mismo.
-    const filaBenefHtml=({r,benef,nombre:bNombre},dentroDeGrupo)=>{
+    const filaBenefHtml=({r,benef,nombre:bNombre,fin},dentroDeGrupo)=>{
       const cat=estiloCategoria(benef?.fields.Categoria);
       // Dentro de un grupo, repetir el nombre del beneficio en cada fila es
       // ruido: ya lo dice el encabezado. Si la asignación tiene Curso cargado
@@ -201,7 +225,7 @@ async function verBenefPersona(nombre, grupo, nivel){
       const estado=r.fields.Estado||'Activo';
       const nombreEsc=nombre.replace(/'/g,"\\'"),bNombreEsc=bNombre.replace(/'/g,"\\'");
       const motivoBaja=r.fields['Motivo de baja'];
-      const fechaLabel=periodoBenefAsignado(r.fields,bNombre,finEnBeon);
+      const fechaLabel=periodoBenefAsignado(r.fields,bNombre,fin);
       // El link se muestra en los beneficios que lo usan (Blogpost, Udemy):
       // el punto de tenerlo cargado es poder ir a la publicación desde acá.
       const link=esBeneficioConLink(bNombre)?linkBenefAsignado(r.fields,bNombre):'';
@@ -219,7 +243,7 @@ async function verBenefPersona(nombre, grupo, nivel){
           ${comentario?`<div class="bp-detalle-row-coment"><i class="ti ti-message-2"></i><span>${comentario}</span></div>`:''}
           ${link}
         </div>
-        ${badgeEstadoBenefHistorico(estado,finEnBeon)}
+        ${badgeEstadoBenefHistorico(estado,fin)}
         <div class="bp-detalle-actions">
           <button class="bp-detalle-action-btn" onclick="editarBenefAsignado('${r.id}','${nombreEsc}','${grupo}','${nivel}')" title="Editar"><i class="ti ti-pencil"></i></button>
           <button class="bp-detalle-action-btn danger" onclick="eliminarBenefAsignado('${r.id}','${bNombreEsc}','${nombreEsc}','${grupo}','${nivel}')" title="Eliminar"><i class="ti ti-trash"></i></button>
@@ -500,7 +524,14 @@ function periodoBenefAsignado(fields,nombreBeneficio,finEnBeon){
 // cursos de Udemy) el total suma; para credenciales es un pago único, así que
 // se muestra el monto del acceso, no la suma de las veces que se recompartió.
 function montoGrupoBenef(g){
-  const items=g.items||[];
+  const todas=g.items||[];
+  // Si parte del grupo quedó cerrada en una etapa anterior en BEON, el monto
+  // del encabezado es el que corre HOY. Sumar la etapa vieja decía que a quien
+  // se fue y volvió se le cubren $120/mes cuando se le cubren $100. Si NO
+  // quedó nada vigente (el histórico de quien ya no está), se suma todo: ahí
+  // el encabezado describe lo que llegó a tener, no lo que tiene.
+  const vigentes=todas.filter(f=>!f.fin);
+  const items=vigentes.length?vigentes:todas;
   const montoDe=f=>Number(f.r.fields.Monto||g.benef?.fields?.Valor||0);
   if(esBeneficioCredenciales(g.nombre)){
     const monto=items.reduce((max,f)=>Math.max(max,montoDe(f)),0);
@@ -531,6 +562,12 @@ function resumenGrupoBenef(g,finEnBeon){
   // del badge verde: ninguna sigue corriendo.
   if(finEnBeon&&!esBeneficioCredenciales(g.nombre)){
     return `${items.length} registros en su histórico`;
+  }
+  // Grupo mixto: alguien que volvió y tiene asignaciones de las dos etapas.
+  // Decir "3 asignaciones · 3 activas" ahí es justamente lo que se reportó.
+  if(g.cerradas&&!esBeneficioCredenciales(g.nombre)){
+    const vig=items.length-g.cerradas;
+    return `${vig} vigente${vig!==1?'s':''} · ${g.cerradas} de su etapa anterior`;
   }
   if(esBeneficioCredenciales(g.nombre)){
     const fechas=items.map(f=>f.r.fields['Fecha activación']).filter(Boolean).sort();

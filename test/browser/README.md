@@ -73,6 +73,7 @@ Variables opcionales:
 | `probar-benef-etapa-anterior.js` | los beneficios de quien se fue y volvió figuran cerrados, y no suman al presupuesto de hoy |
 | `probar-benef-antes-del-ingreso.js` | un beneficio con fecha anterior al ingreso no corre, se ve por qué y se puede encontrar |
 | `probar-certifications-sponsorship.js` | una Certifications cargada como beneficio aparece en Certifications Sponsorship |
+| `probar-contar-beneficios.js` | los beneficios se cuentan por beneficio y no por asignación, y el número coincide con la lista |
 
 ## Cómo escribir uno nuevo
 

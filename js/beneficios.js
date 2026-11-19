@@ -1059,6 +1059,23 @@ function asignacionesAnterioresAlIngreso(asignaciones){
 function consumeTopeBeneficios(nombreBeneficio){
   return !esBeneficioCertifications(nombreBeneficio);
 }
+// Cuántos beneficios DISTINTOS tiene la persona, no cuántas asignaciones.
+// Alguien con 12 cursos de Udemy y las credenciales de O'Reilly recompartidas
+// dos veces tiene 3 beneficios, no 15: son tres cosas que se le cubren, con
+// varios usos cada una.
+//
+// Contar asignaciones hacía que "15 asignados / 6 disponibles" comparara dos
+// unidades distintas —asignaciones contra beneficios— y la barra se iba al
+// 250%. Es también lo que muestra la lista de la card, que agrupa por
+// beneficio: ahí el número decía 15 arriba de tres filas.
+function beneficiosDistintosAsignados(asignaciones,catalogo){
+  const claves=new Set();
+  (asignaciones||[]).forEach(a=>{
+    const k=normalizarBeneficioKey(beneficioDeAsignacion(a,catalogo).nombre);
+    if(k) claves.add(k);
+  });
+  return claves.size;
+}
 function sumarMontosAsignados(asignaciones,catalogo){
   let total=0;
   const credenciales=new Map();
@@ -1484,14 +1501,20 @@ function renderBenefPersonas(){
 
     const grupoBadge=grupo==='Engineers'?'badge-blue':'badge-purple';
     const bg=idx%2===0?'background:var(--bg2)':'';
-    const activeW=beneficiosAccesibles.length?Math.round(asignados.length/beneficiosAccesibles.length*100):0;
+    // Beneficios distintos, que es la misma unidad que "disponibles". El total
+    // de asignaciones no se pierde: va en el title del número.
+    const asignadosDistintos=beneficiosDistintosAsignados(asignados,cacheBeneficiosRaw);
+    const activeW=beneficiosAccesibles.length
+      ?Math.min(100,Math.round(asignadosDistintos/beneficiosAccesibles.length*100)):0;
+    const detalleUsos=asignados.length!==asignadosDistintos
+      ?` title="${asignados.length} asignaciones en total: hay beneficios con más de un uso"`:'';
 
     return`<tr class="tr-clickable benef-per-tr" style="${bg}" onclick="verBenefPersona('${nombre.replace(/'/g,"\\'")}','${grupo}','${nivel}')">
       <td>${avH(nombre)}${nombre}${badgeExBeonerHtml(p)}</td>
       <td><span class="badge ${grupoBadge}">${grupo}</span></td>
       <td>${badgeNivelHtml(nivel,'badge benef-per-nivel-badge')}</td>
       <td style="font-size:13px">
-        <span style="font-weight:600">${asignados.length}</span>
+        <span style="font-weight:600"${detalleUsos}>${asignadosDistintos}</span>
         <span style="color:var(--text3);font-size:11px"> asignados / ${beneficiosAccesibles.length} disponibles</span>
         <div class="benef-per-bar-track"><div class="benef-per-bar-fill" style="width:${activeW}%"></div></div>
       </td>

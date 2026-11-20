@@ -74,6 +74,7 @@ Variables opcionales:
 | `probar-benef-antes-del-ingreso.js` | un beneficio con fecha anterior al ingreso no corre, se ve por qué y se puede encontrar |
 | `probar-certifications-sponsorship.js` | una Certifications cargada como beneficio aparece en Certifications Sponsorship |
 | `probar-contar-beneficios.js` | los beneficios se cuentan por beneficio y no por asignación, y el número coincide con la lista |
+| `probar-asignar-nombre-certificacion.js` | al asignar una certificación hay dónde cargar su nombre, y se guarda |
 
 ## Cómo escribir uno nuevo
 

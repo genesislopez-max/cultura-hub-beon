@@ -1122,12 +1122,38 @@ function esBeneficioIngles(nombreBeneficio){
 function esBeneficioConLink(nombreBeneficio){
   return esBeneficioUdemy(nombreBeneficio)||esBeneficioBlogpost(nombreBeneficio);
 }
+// Beneficios donde cada asignación tiene un nombre propio, que se guarda en el
+// campo Curso: qué curso de Udemy es, qué certificación es. Certifications no
+// lo tenía al asignar, así que el nombre terminaba anotado en Comentarios —que
+// es el texto libre del pedido— y la fila de Certifications Sponsorship quedaba
+// sin nombre que mostrar.
+function esBeneficioConNombrePropio(nombreBeneficio){
+  return esBeneficioUdemy(nombreBeneficio)||esBeneficioCertifications(nombreBeneficio);
+}
+// Un curso y una certificación no se llaman igual, y la etiqueta del campo es
+// lo único que dice qué se espera ahí.
+function etiquetaNombrePropio(nombreBeneficio){
+  return esBeneficioCertifications(nombreBeneficio)?'Certificación':'Curso';
+}
+function placeholderNombrePropio(nombreBeneficio){
+  return esBeneficioCertifications(nombreBeneficio)
+    ?'Ej: AWS Solutions Architect Associate'
+    :'Ej: CompTIA Pentest+ PT0-002 (Ethical Hacking)';
+}
 function toggleCamposLink(){
   const nombre=document.getElementById('f-ba-beneficio')?.value||'';
   const fgLink=document.getElementById('fg-ba-link');
   if(fgLink) fgLink.style.display=esBeneficioConLink(nombre)?'block':'none';
   const fgCurso=document.getElementById('fg-ba-curso');
-  if(fgCurso) fgCurso.style.display=esBeneficioUdemy(nombre)?'block':'none';
+  if(fgCurso) fgCurso.style.display=esBeneficioConNombrePropio(nombre)?'block':'none';
+  const lbl=document.getElementById('f-ba-curso-label');
+  if(lbl) lbl.textContent=etiquetaNombrePropio(nombre);
+  const inp=document.getElementById('f-ba-curso-nombre');
+  if(inp) inp.placeholder=placeholderNombrePropio(nombre);
+  // El Quarter se calcula solo en Udemy y credenciales, no en Certifications:
+  // la aclaración solo aplica donde es cierta.
+  const hint=document.getElementById('f-ba-curso-hint');
+  if(hint) hint.style.display=esBeneficioConQuarterAuto(nombre)?'block':'none';
 }
 // Certifications necesita un espacio libre al asignarlo: qué certificación es,
 // si la rinde en una fecha puntual, si el monto es estimado… No entra en un

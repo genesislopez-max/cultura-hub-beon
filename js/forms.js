@@ -403,12 +403,12 @@ const FORMS={
 </div>
 <div id="fg-ba-comentarios" style="display:none">
   <div class="field-group"><label class="field-label">Comentarios</label>
-    <textarea class="field-input" id="f-ba-comentarios" placeholder="Ej: qué certificación es, cuándo la rinde, si el monto es estimado…"></textarea>
+    <textarea class="field-input" id="f-ba-comentarios" placeholder="Ej: cuándo la rinde, si el monto es estimado, quién la aprobó…"></textarea>
   </div>
 </div>
 <div id="fg-ba-curso" style="display:none">
-  <div class="field-group"><label class="field-label">Curso</label><input class="field-input" id="f-ba-curso-nombre" placeholder="Ej: CompTIA Pentest+ PT0-002 (Ethical Hacking)"></div>
-  <div class="field-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">El Quarter se calcula solo a partir de la Fecha activación — no hace falta escribirlo.</div>
+  <div class="field-group"><label class="field-label" id="f-ba-curso-label">Curso</label><input class="field-input" id="f-ba-curso-nombre" placeholder="Ej: CompTIA Pentest+ PT0-002 (Ethical Hacking)"></div>
+  <div class="field-hint" id="f-ba-curso-hint" style="font-size:11px;color:var(--text3);padding:0 0 8px">El Quarter se calcula solo a partir de la Fecha activación — no hace falta escribirlo.</div>
 </div>
 <div id="fg-ba-link" style="display:none">
   <div class="field-group"><label class="field-label">Link</label><input class="field-input" id="f-ba-link" type="url" placeholder="https://…"></div>
@@ -433,7 +433,10 @@ const FORMS={
         if(v('f-ba-frecuencia')) fields.Frecuencia=v('f-ba-frecuencia');
         if(v('f-ba-profesional')) fields['Profesional Asignado']=v('f-ba-profesional');
       }
-      if(esBeneficioUdemy(nombreBeneficio)&&v('f-ba-curso-nombre')) fields.Curso=v('f-ba-curso-nombre');
+      // Mismo criterio que lo que MUESTRA el form (toggleCamposLink): con la
+      // condición más angosta, el nombre de una certificación se escribía, se
+      // veía en el form y se perdía al guardar.
+      if(esBeneficioConNombrePropio(nombreBeneficio)&&v('f-ba-curso-nombre')) fields.Curso=v('f-ba-curso-nombre');
       // El Link lo comparten Udemy (curso) y Blogpost (publicación).
       if(esBeneficioConLink(nombreBeneficio)&&v('f-ba-link')) fields.Link=v('f-ba-link');
       // esBeneficioConComentario y no esBeneficioCertifications: el campo se

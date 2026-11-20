@@ -226,3 +226,32 @@ test('la Descripción de Capacitaciones sigue siendo el título, sin comentario'
   assert.equal(certs[0].titulo,'CKA');
   assert.equal(certs[0].comentario,'');
 });
+
+// ── Cargar el nombre al ASIGNAR ──
+// La fila dice "Certificación sin nombre cargado" cuando falta, así que tiene
+// que poder cargarse desde el principio y no solo editando después.
+
+test('Certifications tiene nombre propio, igual que Udemy',()=>{
+  const ctx=ctxCert();
+  assert.equal(ctx.esBeneficioConNombrePropio('Certifications'),true);
+  assert.equal(ctx.esBeneficioConNombrePropio('Udemy Courses'),true);
+  // Los que no lo tienen: cada asignación no es "una cosa con nombre"
+  assert.equal(ctx.esBeneficioConNombrePropio('AI Tools'),false);
+  assert.equal(ctx.esBeneficioConNombrePropio('Hardware Bonus'),false);
+});
+
+test('la etiqueta del campo dice qué va ahí',()=>{
+  const ctx=ctxCert();
+  assert.equal(ctx.etiquetaNombrePropio('Certifications'),'Certificación');
+  assert.equal(ctx.etiquetaNombrePropio('Udemy Courses'),'Curso');
+  assert.match(ctx.placeholderNombrePropio('Certifications'),/AWS/);
+  assert.match(ctx.placeholderNombrePropio('Udemy Courses'),/CompTIA/);
+});
+
+test('el Quarter automático no se promete donde no aplica',()=>{
+  const ctx=ctxCert();
+  // La aclaración del Quarter va con esBeneficioConQuarterAuto, que no incluye
+  // Certifications: mostrarla ahí afirmaría algo que no pasa.
+  assert.equal(ctx.esBeneficioConQuarterAuto('Udemy Courses'),true);
+  assert.equal(ctx.esBeneficioConQuarterAuto('Certifications'),false);
+});

@@ -76,7 +76,7 @@ async function buscarPersonaPorEmail(email,fetchImpl){
 
 // Devuelve {rol, grupoBeneficios}. grupoBeneficios es el único grupo de
 // Beneficios que puede ver ese rol ('Engineers'|'Core Team'), o null si ve
-// ambos grupos sin restricción (full/tem/manager).
+// ambos grupos sin restricción (solo full y manager).
 async function resolverAccesoPorEmail(email,fetchImpl){
   if(EMAILS_ACCESO_FULL.has(String(email||'').toLowerCase())) return {rol:'full',grupoBeneficios:null};
 
@@ -85,8 +85,15 @@ async function resolverAccesoPorEmail(email,fetchImpl){
   const rol=NIVELES_ACCESO.get(accesoNormalizado)||'equipo';
 
   const rolEmpresa=persona?.fields?.['Rol en empresa']||'';
+  // El TEM acompaña a los devs, así que ve los beneficios de Engineers y no
+  // los de Core Team — que incluye a Manager, Lead, Supervisor, COO y Founder,
+  // porque todos esos roles caen en ese grupo (ver grupoDeRolEmpresa). Es el
+  // mismo mecanismo que acota a HR al lado opuesto, y corre en el servidor:
+  // con el filtro solo en el cliente, los registros llegarían igual al
+  // navegador y se verían desde la consola.
   const grupoBeneficios=
     rol==='hr'?'Core Team':
+    rol==='tem'?'Engineers':
     rol==='equipo'?grupoDeRolEmpresa(rolEmpresa):
     null;
 

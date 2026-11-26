@@ -75,6 +75,7 @@ Variables opcionales:
 | `probar-certifications-sponsorship.js` | una Certifications cargada como beneficio aparece en Certifications Sponsorship |
 | `probar-contar-beneficios.js` | los beneficios se cuentan por beneficio y no por asignación, y el número coincide con la lista |
 | `probar-asignar-nombre-certificacion.js` | al asignar una certificación hay dónde cargar su nombre, y se guarda |
+| `probar-acceso-tem.js` | el TEM ve solo sus cinco secciones, y Beneficios le queda fijo en Engineers |
 
 ## Cómo escribir uno nuevo
 

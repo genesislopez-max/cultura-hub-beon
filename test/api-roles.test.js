@@ -26,7 +26,8 @@ test('resolverAccesoPorEmail: toma el nivel directo del campo Acceso', async()=>
   const casos=[
     {acceso:'Full',rolEsperado:'full',grupoEsperado:null},
     {acceso:'HR',rolEsperado:'hr',grupoEsperado:'Core Team'},
-    {acceso:'TEM',rolEsperado:'tem',grupoEsperado:null},
+    // El TEM acompaña a los devs: solo los beneficios de Engineers.
+    {acceso:'TEM',rolEsperado:'tem',grupoEsperado:'Engineers'},
     {acceso:'Manager',rolEsperado:'manager',grupoEsperado:null},
   ];
   for(const {acceso,rolEsperado,grupoEsperado} of casos){

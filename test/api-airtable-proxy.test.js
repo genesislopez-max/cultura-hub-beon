@@ -93,11 +93,15 @@ test('api/airtable: un token de sesión vencido devuelve 401', async()=>{
 
 // ─── Control de acceso por rol ───────────────────────────────────────────────
 // Niveles: full (People/COO/Founder) > hr (Recruiting, grupoBeneficios fijo
-// "Core Team") > tem/manager (sin restricción de grupo) > equipo (su propio
-// grupo). Ver api/_lib/roles.js.
+// "Core Team") > tem (fijo "Engineers": acompaña a los devs) > manager (sin
+// restricción de grupo) > equipo (su propio grupo). Ver api/_lib/roles.js.
 const TOKEN_FULL=signSession({email:'people@beon.tech',name:'People',rol:'full'});
 const TOKEN_HR=signSession({email:'hr@beon.tech',name:'HR',rol:'hr',grupoBeneficios:'Core Team'});
-const TOKEN_TEM=signSession({email:'vicky@beon.tech',name:'Vicky',rol:'tem'});
+const TOKEN_TEM=signSession({email:'vicky@beon.tech',name:'Vicky',rol:'tem',grupoBeneficios:'Engineers'});
+// Sesión de TEM firmada ANTES de que el rol quedara restringido: trae
+// grupoBeneficios en null y el proxy tiene que acotarla igual, sin esperar a
+// que venza (36 h) ni a que la persona vuelva a loguearse.
+const TOKEN_TEM_VIEJO=signSession({email:'vicky@beon.tech',name:'Vicky',rol:'tem'});
 const TOKEN_MANAGER=signSession({email:'lead@beon.tech',name:'Lead',rol:'manager'});
 const TOKEN_EQUIPO_ENG=signSession({email:'ana@beon.tech',name:'Ana',rol:'equipo',grupoBeneficios:'Engineers'});
 const TOKEN_EQUIPO_CORE=signSession({email:'beto@beon.tech',name:'Beto',rol:'equipo',grupoBeneficios:'Core Team'});
@@ -217,7 +221,7 @@ test('api/airtable: Eventos — "full" ve todo, incluido Glassdoor', async()=>{
   }
 });
 
-test('api/airtable: Beneficios — full/tem/manager ven los 2 grupos; hr y equipo solo el suyo (+ "Ambos")', async()=>{
+test('api/airtable: Beneficios — full y manager ven los 2 grupos; hr, tem y equipo solo el suyo (+ "Ambos")', async()=>{
   const registros=[
     {id:'b1',fields:{Beneficio:'Gimnasio Core',Grupo:'Core Team'}},
     {id:'b2',fields:{Beneficio:'Curso técnico',Grupo:'Engineers'}},
@@ -225,8 +229,11 @@ test('api/airtable: Beneficios — full/tem/manager ven los 2 grupos; hr y equip
   ];
   const casos=[
     [TOKEN_FULL,['b1','b2','b3']],
-    [TOKEN_TEM,['b1','b2','b3']],
     [TOKEN_MANAGER,['b1','b2','b3']],
+    // El TEM acompaña a los devs: no ve los de Core Team, que es donde caen
+    // Manager, Lead, Supervisor, COO y Founder.
+    [TOKEN_TEM,['b2','b3']],
+    [TOKEN_TEM_VIEJO,['b2','b3']],
     [TOKEN_HR,['b1','b3']],
     [TOKEN_EQUIPO_CORE,['b1','b3']],
     [TOKEN_EQUIPO_ENG,['b2','b3']],
@@ -312,7 +319,7 @@ test('api/airtable: Beneficios Asignados — se filtra por el Grupo del Benefici
   }
 });
 
-test('api/airtable: Beneficios Asignados — full/tem/manager no filtran (ven todo, sin la llamada extra a Beneficios)', async()=>{
+test('api/airtable: Beneficios Asignados — full y manager no filtran (ven todo, sin la llamada extra a Beneficios)', async()=>{
   const asignados=[
     {id:'a1',fields:{Persona:'Beto',Beneficio:['b1']}},
     {id:'a2',fields:{Persona:'Ana',Beneficio:['b2']}},
@@ -321,7 +328,7 @@ test('api/airtable: Beneficios Asignados — full/tem/manager no filtran (ven to
   const original=global.fetch;
   global.fetch=fetchImpl;
   try{
-    const req={headers:{authorization:`Bearer ${TOKEN_TEM}`},method:'GET',query:{path:'Beneficios Asignados'}};
+    const req={headers:{authorization:`Bearer ${TOKEN_MANAGER}`},method:'GET',query:{path:'Beneficios Asignados'}};
     const res=fakeRes();
     await handler(req,res);
     const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
@@ -330,6 +337,46 @@ test('api/airtable: Beneficios Asignados — full/tem/manager no filtran (ven to
   }finally{
     global.fetch=original;
   }
+});
+
+test('api/airtable: Beneficios Asignados — el TEM solo recibe las de beneficios de Engineers', async()=>{
+  // Es la tabla que importa: acá está lo que se le cubrió a cada persona, y
+  // las de Core Team incluyen a Manager, Lead, Supervisor, COO y Founder.
+  const asignados=[
+    {id:'aCore',fields:{Persona:'Un Manager',Beneficio:['b1']}},   // b1 = Core Team
+    {id:'aEng',fields:{Persona:'Una Dev',Beneficio:['b2']}},       // b2 = Engineers
+  ];
+  const catalogo=[
+    {id:'b1',fields:{Beneficio:'Gimnasio Core',Grupo:'Core Team'}},
+    {id:'b2',fields:{Beneficio:'Curso técnico',Grupo:'Engineers'}},
+  ];
+  for(const token of [TOKEN_TEM,TOKEN_TEM_VIEJO]){
+    const original=global.fetch;
+    global.fetch=async(url)=>String(url).endsWith('/Beneficios')
+      ?{ok:true,status:200,json:async()=>({records:catalogo}),text:async()=>JSON.stringify({records:catalogo})}
+      :{ok:true,status:200,text:async()=>JSON.stringify({records:asignados})};
+    try{
+      const res=fakeRes();
+      await handler({headers:{authorization:`Bearer ${token}`},method:'GET',query:{path:'Beneficios Asignados'}},res);
+      const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+      assert.equal(body.records.map(r=>r.id).join('|'),'aEng');
+    }finally{
+      global.fetch=original;
+    }
+  }
+});
+
+test('api/airtable: grupoBeneficiosEfectivo — el rol manda sobre lo que traiga el token', ()=>{
+  const ef=handler.grupoBeneficiosEfectivo;
+  // Una sesión vieja (null) queda acotada igual por su rol…
+  assert.equal(ef('tem',null),'Engineers');
+  assert.equal(ef('hr',null),'Core Team');
+  // …y un token que dijera otra cosa no puede ampliar el acceso.
+  assert.equal(ef('tem','Core Team'),'Engineers');
+  // Los roles sin grupo fijo siguen dependiendo del token (equipo) o sin tope.
+  assert.equal(ef('equipo','Engineers'),'Engineers');
+  assert.equal(ef('full',null),null);
+  assert.equal(ef('manager',null),null);
 });
 
 test('api/airtable: Beneficios Asignados — si falla la resolución del catálogo, falla cerrado (records vacíos)', async()=>{

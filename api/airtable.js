@@ -20,12 +20,24 @@ const {verifySession}=require('./_lib/session');
 // - Ingresos/Egresos (tabla Checklist): exclusivo de full/hr.
 // - Glassdoor (registros de Tipo "Glassdoor" en Eventos): exclusivo de full.
 // - Beneficios/Presupuesto Loyalty/Beneficios Asignados: si el rol tiene
-//   grupoBeneficios seteado (hr → fijo "Core Team"; equipo → su propio
-//   grupo), solo ve los registros de ese grupo (o "Ambos"/sin grupo). Full,
-//   tem y manager no tienen grupoBeneficios — ven los dos grupos.
+//   grupoBeneficios seteado (hr → fijo "Core Team"; tem → fijo "Engineers";
+//   equipo → su propio grupo), solo ve los registros de ese grupo (o
+//   "Ambos"/sin grupo). Full y manager no tienen grupoBeneficios — ven los
+//   dos grupos.
 const TABLAS_INGRESOS_EGRESOS=new Set(['Checklist']);
 const ROLES_VEN_INGRESOS_EGRESOS=new Set(['full','hr']);
 const TABLAS_GRUPO_BENEFICIOS=new Set(['Beneficios','Presupuesto Loyalty','Beneficios Asignados']);
+
+// Grupo fijo por rol, para los roles cuya restricción NO depende de quién es
+// la persona sino de su nivel de acceso. El token ya trae grupoBeneficios
+// resuelto en el login, pero una sesión firmada ANTES de que el rol quedara
+// restringido lo trae en null, y el proxy le creería: la restricción no
+// empezaría a valer hasta que esa persona volviera a loguearse. Derivarlo
+// también del rol cierra esa ventana sin obligar a nadie a cerrar sesión.
+const GRUPO_BENEFICIOS_POR_ROL={hr:'Core Team',tem:'Engineers'};
+function grupoBeneficiosEfectivo(rol,grupoDelToken){
+  return GRUPO_BENEFICIOS_POR_ROL[rol]||grupoDelToken||null;
+}
 
 // ─── Solo lectura para los equipos ────────────────────────────────────────────
 // Hasta acá el rol definía qué se VE, pero casi no qué se puede CAMBIAR: el rol
@@ -94,7 +106,7 @@ module.exports=async(req,res)=>{
   // Sesiones firmadas antes de este cambio no tienen rol — se tratan como el
   // nivel más restrictivo hasta que esa persona vuelva a loguearse.
   const rol=verificado.rol||'equipo';
-  const grupoBeneficios=verificado.grupoBeneficios||null;
+  const grupoBeneficios=grupoBeneficiosEfectivo(rol,verificado.grupoBeneficios);
 
   // "No access" (Acceso="No access" en Personas): bloqueo total, para
   // cualquier tabla — cinturón de seguridad además del bloqueo del lado del
@@ -189,3 +201,5 @@ module.exports=async(req,res)=>{
   res.setHeader('Content-Type','application/json');
   res.send(text);
 };
+
+module.exports.grupoBeneficiosEfectivo=grupoBeneficiosEfectivo;

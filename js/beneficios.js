@@ -50,6 +50,10 @@ function poblarFiltroBeneficioNombre(){
 // HR y Manager no ven la pestaña de Métricas (cinturón de seguridad además
 // de ocultar el botón — por si algo la dispara directamente).
 const BENEF_ROLES_SIN_METRICAS=new Set(['hr','manager']);
+// Roles que solo pueden ver un grupo de Beneficios. Es el espejo en el cliente
+// de lo que ya aplica el servidor (api/_lib/roles.js): acá no protege nada,
+// solo evita ofrecer una vista que vendría vacía.
+const GRUPO_BENEFICIOS_FIJO={hr:'Core Team',tem:'Engineers'};
 
 // Se llama al arrancar (ver aplicarRestriccionesDeAcceso() en nav.js) —
 // oculta/fija controles de Beneficios según el rol. Los elementos ya están
@@ -60,9 +64,13 @@ function aplicarRestriccionesBeneficios(){
   if(BENEF_ROLES_SIN_METRICAS.has(rol)){
     document.querySelector('.benef-tab[onclick*="metricas"]')?.style.setProperty('display','none');
   }
-  if(rol==='hr'){
+  // El grupo queda fijo para quien solo puede ver uno: el servidor ya no le
+  // manda los beneficios del otro, así que dejar el selector libre solo
+  // ofrecería una vista que vuelve vacía.
+  const grupoFijo=GRUPO_BENEFICIOS_FIJO[rol];
+  if(grupoFijo){
     const sel=document.getElementById('benef-persona-grupo');
-    if(sel){ sel.value='Core Team'; sel.disabled=true; }
+    if(sel){ sel.value=grupoFijo; sel.disabled=true; }
   }
 }
 
@@ -1428,10 +1436,10 @@ function renderAvisoPreIngreso(){
 function renderBenefPersonas(){
   renderAvisoPreIngreso();
   const q=(document.getElementById('benef-persona-search')?.value||'').toLowerCase();
-  // HR solo puede ver Core Team acá — se fuerza el filtro sin importar lo
-  // que diga el selector (que además queda deshabilitado, ver
+  // HR solo ve Core Team y el TEM solo Engineers — se fuerza el filtro sin
+  // importar lo que diga el selector (que además queda deshabilitado, ver
   // aplicarRestriccionesBeneficios()).
-  const grupoFil=rolUsuarioActual()==='hr'?'Core Team':(document.getElementById('benef-persona-grupo')?.value||'');
+  const grupoFil=GRUPO_BENEFICIOS_FIJO[rolUsuarioActual()]||(document.getElementById('benef-persona-grupo')?.value||'');
   const loyaltyFil=document.getElementById('benef-persona-loyalty')?.value||'';
   const temFil=document.getElementById('benef-persona-tem')?.value||'';
   // Quién entra en la lista. Por defecto ('') solo el equipo de hoy, que es

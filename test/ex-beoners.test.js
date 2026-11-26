@@ -29,11 +29,13 @@ const PERSONAS=[
 // TEMs (que necesitan consultar el paso por BEON de quienes tuvieron a cargo).
 // El resto del equipo no. El bloqueo de los datos está en el servidor; esto
 // controla qué aparece en el menú y a dónde deja navegar showSection().
-test('Ex BEONers: lo ven full, HR y TEM; manager y el resto del equipo no', ()=>{
+test('Ex BEONers: lo ven full y HR; el TEM, manager y el resto del equipo no', ()=>{
   const ctx=ctxEx();
   const roles=vm.runInContext('SECCION_ROLES_PERMITIDOS',ctx).exbeoners;
-  ['full','hr','tem'].forEach(rol=>assert.equal(roles.has(rol),true,`${rol} debería ver la sección`));
-  ['manager','equipo','bloqueado'].forEach(rol=>assert.equal(roles.has(rol),false,`${rol} no debería ver la sección`));
+  ['full','hr'].forEach(rol=>assert.equal(roles.has(rol),true,`${rol} debería ver la sección`));
+  // El TEM la tenía para consultar el paso por BEON de quienes tuvo a cargo,
+  // pero este histórico incluye a todo el mundo, Core Team incluido.
+  ['tem','manager','equipo','bloqueado'].forEach(rol=>assert.equal(roles.has(rol),false,`${rol} no debería ver la sección`));
 });
 
 test('la lista son los que ya terminaron, no los que están saliendo', ()=>{

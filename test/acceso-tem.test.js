@@ -1,6 +1,8 @@
 'use strict';
 // Qué ve un TEM. El TEM acompaña a los devs: Inicio, Engineers & Tech,
-// Cumpleaños, Aniversarios y Beneficios —solo los de Engineers— y nada más.
+// Cumpleaños, Aniversarios, Ex BEONers y todo el grupo "Beneficios" del menú
+// —Beneficios, Ambassador Week, Off Sites, Get Together y Asistencia a
+// Actividades— pero siempre solo lo de Engineers.
 //
 // La parte de Beneficios se verifica en el servidor (ver
 // test/api-airtable-proxy.test.js): el menú del cliente esconde secciones,
@@ -21,14 +23,17 @@ function permisos(ctx){ return vm.runInContext('SECCION_ROLES_PERMITIDOS',ctx); 
 const SECCIONES=['inicio','engineers','cumpleanos','aniversarios','beneficios',
   'coreteam','proyectos','tareas','ingresos','egresos','exbeoners','reviews',
   'ambassadors','offsites','gettogether','actividades','eventoshist'];
-const TEM_VE=new Set(['inicio','engineers','cumpleanos','aniversarios','beneficios']);
+const TEM_VE=new Set(['inicio','engineers','cumpleanos','aniversarios','exbeoners',
+  // el grupo "Beneficios" del menú, completo
+  'beneficios','ambassadors','offsites','gettogether','actividades']);
 
-test('el TEM ve exactamente las cinco secciones que le corresponden',()=>{
+test('el TEM ve exactamente las secciones que le corresponden',()=>{
   const ctx=ctxTem();
   const mapa=permisos(ctx);
   const ve=s=>{ const p=mapa[s]; return p?p.has('tem'):true; };   // sin entrada = la ven todos
-  const visibles=SECCIONES.filter(ve).join(', ');
-  assert.equal(visibles,[...TEM_VE].join(', '));
+  // Ordenado, para que el test hable de QUÉ ve y no del orden del menú.
+  const visibles=SECCIONES.filter(ve).sort().join(', ');
+  assert.equal(visibles,[...TEM_VE].sort().join(', '));
 });
 
 test('las secciones del Hub están todas contempladas en este test',()=>{
@@ -51,15 +56,27 @@ test('darle Cumpleaños y Aniversarios al TEM no se las saca a nadie',()=>{
   });
 });
 
-test('restringir actividades y eventos históricos no se las saca a los demás',()=>{
+test('darle entrada a actividades y eventos históricos no se las saca a los demás',()=>{
   const ctx=ctxTem();
   const mapa=permisos(ctx);
-  // Antes no tenían entrada, así que las veía todo el mundo: al agregarla hay
-  // que dejar adentro a todos los que ya las veían, menos el TEM.
+  // Antes no tenían entrada en la lista blanca, así que las veía todo el
+  // mundo: al agregarla hay que dejar adentro a todos los que ya las veían.
   ['actividades','eventoshist'].forEach(s=>{
     ['full','hr','manager','equipo'].forEach(rol=>
       assert.equal(mapa[s].has(rol),true,`${rol} seguía viendo ${s}`));
-    assert.equal(mapa[s].has('tem'),false,s);
+  });
+  // Asistencia a Actividades es del grupo Beneficios: el TEM la ve.
+  assert.equal(mapa.actividades.has('tem'),true);
+  // Eventos históricos no está en ese grupo: no la ve.
+  assert.equal(mapa.eventoshist.has('tem'),false);
+});
+
+test('el grupo "Beneficios" del menú lo ve entero',()=>{
+  const ctx=ctxTem();
+  const mapa=permisos(ctx);
+  ['beneficios','ambassadors','offsites','gettogether','actividades'].forEach(s=>{
+    const p=mapa[s];
+    assert.equal(p?p.has('tem'):true,true,`el TEM debería ver ${s}`);
   });
 });
 
@@ -80,4 +97,14 @@ test('el TEM sigue sin poder escribir',()=>{
   assert.equal(escritura.has('tem'),false);
   assert.equal(escritura.has('full'),true);
   assert.equal(escritura.has('hr'),true);
+});
+
+test('ver Ex BEONers no le abre al TEM los beneficios de Core Team',()=>{
+  const ctx=ctxTem();
+  // El histórico incluye a todo el mundo, Core Team incluido. Lo que lo acota
+  // no es la sección sino el grupo, que aplica el servidor: al abrir la card
+  // de un ex BEONer de Core Team no le llega ninguna asignación.
+  // (El filtro en sí se verifica en test/api-airtable-proxy.test.js.)
+  assert.equal(permisos(ctx).exbeoners.has('tem'),true);
+  assert.equal(vm.runInContext('GRUPO_BENEFICIOS_FIJO',ctx).tem,'Engineers');
 });

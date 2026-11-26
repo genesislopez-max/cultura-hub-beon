@@ -1,6 +1,7 @@
 // Qué ve un TEM al entrar al Hub. Acompaña a los devs: Inicio, Engineers &
-// Tech, Cumpleaños, Aniversarios y Beneficios —solo los de Engineers— y nada
-// más.
+// Tech, Cumpleaños, Aniversarios, Ex BEONers y todo el grupo "Beneficios" del
+// menú —Beneficios, Ambassador Week, Off Sites, Get Together y Asistencia a
+// Actividades— pero siempre solo lo de Engineers.
 //
 // El menú es lo que la persona VE; lo que protege los datos es que el proxy no
 // los mande (test/api-airtable-proxy.test.js). Acá se verifica además que ni
@@ -16,7 +17,8 @@ const TABLAS={Personas:PERSONAS,Beneficios:[],'Beneficios Asignados':[],'Presupu
   'Get Together':[],'Asistencia a Actividades':[],'Meet our Teams':[],Tareas:[],
   'Eventos Feedback':[],'Historial Loyalty':[]};
 
-const ESPERADAS=['inicio','engineers','cumpleanos','aniversarios','beneficios'];
+const ESPERADAS=['inicio','engineers','cumpleanos','aniversarios','exbeoners',
+  'beneficios','ambassadors','offsites','gettogether','actividades'];
 
 (async()=>{
   const browser=await lanzar();
@@ -49,25 +51,32 @@ const ESPERADAS=['inicio','engineers','cumpleanos','aniversarios','beneficios'];
     // Navegar a mano a una restringida tiene que rebotar a Inicio
     showSection('coreteam',null);
     const trasCoreteam=document.querySelector('.section-page.active')?.id||'';
-    showSection('ambassadors',null);
-    const trasAmbassadors=document.querySelector('.section-page.active')?.id||'';
+    showSection('eventoshist',null);
+    const trasEventos=document.querySelector('.section-page.active')?.id||'';
+    // Ex BEONers SÍ la tiene: navegar ahí tiene que entrar, no rebotar.
     showSection('exbeoners',null);
     const trasExbeoners=document.querySelector('.section-page.active')?.id||'';
+    showSection('proyectos',null);
+    const trasProyectos=document.querySelector('.section-page.active')?.id||'';
+    showSection('offsites',null);
+    const trasOffsites=document.querySelector('.section-page.active')?.id||'';
 
     // Y en Beneficios, el grupo queda fijo en Engineers
     await cargarSeccionLazy('beneficios');
     aplicarRestriccionesBeneficios();
     await new Promise(r=>setTimeout(r,250));
     const sel=document.getElementById('benef-persona-grupo');
-    return {visibles,trasCoreteam,trasAmbassadors,trasExbeoners,
+    return {visibles,trasCoreteam,trasEventos,trasProyectos,trasExbeoners,trasOffsites,
       grupo:sel?.value||'', grupoBloqueado:!!sel?.disabled};
   });
 
   console.log('Entrando como TEM:');
   console.log('   secciones en el menú :',r.visibles.join(', ')||'(ninguna)');
   console.log('   navegar a coreteam   →',r.trasCoreteam);
-  console.log('   navegar a ambassadors→',r.trasAmbassadors);
-  console.log('   navegar a exbeoners  →',r.trasExbeoners);
+  console.log('   navegar a eventoshist →',r.trasEventos);
+  console.log('   navegar a proyectos  →',r.trasProyectos);
+  console.log('   navegar a offsites   →',r.trasOffsites,'(esta sí la tiene)');
+  console.log('   navegar a exbeoners  →',r.trasExbeoners,'(esta sí la tiene)');
   console.log('   filtro de grupo      :',r.grupo,r.grupoBloqueado?'(bloqueado)':'(EDITABLE)');
   await browser.close();
 
@@ -78,12 +87,15 @@ const ESPERADAS=['inicio','engineers','cumpleanos','aniversarios','beneficios'];
   if(faltan.length) fallas.push('le faltan secciones que sí le corresponden: '+faltan.join(', '));
 
   // Esconder el ítem del menú no alcanza: entrar por otro camino tiene que rebotar
-  [['coreteam',r.trasCoreteam],['ambassadors',r.trasAmbassadors],['exbeoners',r.trasExbeoners]]
+  [['coreteam',r.trasCoreteam],['eventoshist',r.trasEventos],['proyectos',r.trasProyectos]]
     .forEach(([s,destino])=>{ if(destino!=='page-inicio') fallas.push(`navegando a ${s} queda en ${destino}, no rebota a Inicio`); });
+  // Y las que sí tiene no pueden rebotar
+  if(r.trasExbeoners!=='page-exbeoners') fallas.push('no puede entrar a Ex BEONers, que sí le corresponde: '+r.trasExbeoners);
+  if(r.trasOffsites!=='page-offsites') fallas.push('no puede entrar a Off Sites, que sí le corresponde: '+r.trasOffsites);
 
   if(r.grupo!=='Engineers') fallas.push('el filtro de grupo de Beneficios no queda en Engineers: '+r.grupo);
   if(!r.grupoBloqueado) fallas.push('el filtro de grupo se puede cambiar a Core Team, que llegaría vacío');
 
-  console.log(fallas.length?'\n❌ '+fallas.join('\n❌ '):'\n✅ El TEM ve solo sus cinco secciones y Beneficios queda fijo en Engineers');
+  console.log(fallas.length?'\n❌ '+fallas.join('\n❌ '):'\n✅ El TEM ve sus secciones (con el grupo Beneficios entero) y el filtro queda fijo en Engineers');
   process.exit(fallas.length?1:0);
 })();

@@ -51,6 +51,12 @@ const TABLAS_GRUPO_PERSONA={
 // empezaría a valer hasta que esa persona volviera a loguearse. Derivarlo
 // también del rol cierra esa ventana sin obligar a nadie a cerrar sesión.
 const GRUPO_BENEFICIOS_POR_ROL={hr:'Core Team',tem:'Engineers'};
+
+// Roles a los que SÍ se les filtran las tablas de personas (ver
+// TABLAS_GRUPO_PERSONA más abajo). Es un mapa aparte y no el de arriba a
+// propósito: una cosa es qué beneficios se le cubren a cada grupo, y otra
+// distinta es a quién se le esconde la vida en común de la empresa.
+const GRUPO_PERSONA_POR_ROL={tem:'Engineers'};
 function grupoBeneficiosEfectivo(rol,grupoDelToken){
   return GRUPO_BENEFICIOS_POR_ROL[rol]||grupoDelToken||null;
 }
@@ -252,13 +258,19 @@ module.exports=async(req,res)=>{
         res.status(airtableRes.status).json(filtrado);
         return;
       }
-      // Ojo con el alcance: esto NO se aplica al rol "equipo", aunque tenga
-      // grupoBeneficios. Ahí el grupo sale de la ficha de la persona y sirve
-      // para acotar BENEFICIOS, no para partir la vida en común: Off Sites y
-      // Get Together son de toda la empresa, y a alguien de Engineers no se le
-      // esconden los viajes de Core Team. Solo se filtra para los roles cuya
-      // restricción es de acceso (GRUPO_BENEFICIOS_POR_ROL: hr y tem).
-      const grupoFijoDelRol=GRUPO_BENEFICIOS_POR_ROL[rol];
+      // Ojo con el alcance: esto NO va por grupoBeneficios, que lo tienen
+      // también "equipo" y "hr".
+      //
+      // - "equipo": ahí el grupo sale de la ficha de la persona y sirve para
+      //   acotar BENEFICIOS, no para partir la vida en común. Off Sites y Get
+      //   Together son de toda la empresa: a alguien de Engineers no se le
+      //   esconden los viajes de Core Team.
+      // - "hr": sigue viendo todo en Asistencia a Actividades, que es la única
+      //   de estas cuatro secciones que tiene en el menú.
+      //
+      // Queda solo el TEM, cuya restricción sí es de acceso: acompaña a los
+      // devs y no ve lo de Core Team.
+      const grupoFijoDelRol=GRUPO_PERSONA_POR_ROL[rol];
       if(grupoFijoDelRol&&TABLAS_GRUPO_PERSONA[tabla]){
         const filtrado=await filtrarPorGrupoDePersona(
           tabla,TABLAS_GRUPO_PERSONA[tabla],grupoFijoDelRol,data,token,base);

@@ -465,13 +465,36 @@ test('api/airtable: un nombre que no matchea con nadie no pasa el filtro', async
   assert.equal(await idsPara(TOKEN_FULL,'Ambassador Week',registros),'dev|sinFicha');
 });
 
-test('api/airtable: al rol "equipo" no se le parte la vida en común', async()=>{
-  // Tiene grupoBeneficios, pero eso acota BENEFICIOS. Off Sites y Get Together
-  // son de toda la empresa: a alguien de Engineers no se le esconden los
-  // viajes de Core Team.
+test('api/airtable: solo al TEM se le filtran estas tablas, a nadie más', async()=>{
+  // Tener grupoBeneficios no alcanza: lo tienen también "equipo" y "hr".
+  // - "equipo": su grupo acota BENEFICIOS, no la vida en común. Off Sites y
+  //   Get Together son de toda la empresa.
+  // - "hr": sigue viendo todo en Asistencia a Actividades, que es la única de
+  //   estas cuatro que tiene en el menú.
   const registros=[{id:'dev',fields:{Persona:'Una Dev'}},{id:'mgr',fields:{Persona:'Un Manager'}}];
   assert.equal(await idsPara(TOKEN_EQUIPO_ENG,'Off Sites',registros),'dev|mgr');
   assert.equal(await idsPara(TOKEN_EQUIPO_CORE,'Ambassador Week',registros),'dev|mgr');
+  assert.equal(await idsPara(TOKEN_HR,'Asistencia a Actividades',registros),'dev|mgr');
+  assert.equal(await idsPara(TOKEN_HR,'Ambassador Week',registros),'dev|mgr');
+  // Y el TEM sí
+  assert.equal(await idsPara(TOKEN_TEM,'Off Sites',registros),'dev');
+});
+
+test('api/airtable: acotar las tablas de personas no toca los Beneficios de HR', async()=>{
+  // Son dos restricciones distintas y conviven: HR sigue viendo solo los
+  // beneficios de Core Team aunque vea todo en Asistencia a Actividades.
+  const registros=[
+    {id:'b1',fields:{Beneficio:'Gimnasio Core',Grupo:'Core Team'}},
+    {id:'b2',fields:{Beneficio:'Curso técnico',Grupo:'Engineers'}},
+  ];
+  const original=global.fetch;
+  global.fetch=async()=>({ok:true,status:200,text:async()=>JSON.stringify({records:registros})});
+  try{
+    const res=fakeRes();
+    await handler({headers:{authorization:`Bearer ${TOKEN_HR}`},method:'GET',query:{path:'Beneficios'}},res);
+    const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+    assert.equal(body.records.map(r=>r.id).join('|'),'b1');
+  }finally{ global.fetch=original; }
 });
 
 test('api/airtable: si no se puede resolver quién es quién, falla cerrado', async()=>{

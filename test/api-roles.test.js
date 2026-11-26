@@ -62,21 +62,57 @@ test('resolverAccesoPorEmail: el match de Acceso no distingue mayúsculas ni esp
   }
 });
 
-test('resolverAccesoPorEmail: sin Acceso cargado, cae a "equipo" (fail closed)', async()=>{
+// El Hub es interno: lo usan unas pocas personas, no todo BEON. Sin un nivel
+// explícito y reconocido no se entra — el acceso se concede, no se asume.
+//
+// Estos tres casos antes caían en "equipo", que no es el nivel más
+// restrictivo sino uno que ve 13 de las 17 secciones (más que un TEM). Un
+// campo vacío, un typo o una persona que todavía no está cargada alcanzaban
+// para entrar.
+test('resolverAccesoPorEmail: sin Acceso cargado, no entra', async()=>{
   const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({rolEmpresa:'Engineer'}));
-  assert.equal(r.rol,'equipo');
-  assert.equal(r.grupoBeneficios,'Engineers');
+  assert.equal(r.rol,'bloqueado');
+  assert.equal(r.grupoBeneficios,null);
 });
 
-test('resolverAccesoPorEmail: un valor de Acceso no reconocido cae a "equipo"', async()=>{
-  const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({acceso:'Lo que sea',rolEmpresa:'Engineer'}));
-  assert.equal(r.rol,'equipo');
+test('resolverAccesoPorEmail: un valor de Acceso no reconocido no entra', async()=>{
+  // El caso del typo: "Sin acceso" en vez de "No access".
+  // Ojo: "equipo" SÍ es un valor válido del campo. Lo que cambia es que ahora
+  // hay que ponerlo a propósito — ya no se recibe por no configurar nada.
+  for(const acceso of ['Lo que sea','Sin acceso','sin-acceso','Engineer','Dev']){
+    const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({acceso,rolEmpresa:'Engineer'}));
+    assert.equal(r.rol,'bloqueado',`Acceso="${acceso}" no debería dar acceso`);
+  }
 });
 
-test('resolverAccesoPorEmail: sin Persona encontrada, cae a "equipo"/"Engineers"', async()=>{
+test('resolverAccesoPorEmail: sin Persona encontrada, no entra', async()=>{
   const r=await resolverAccesoPorEmail('nadie@beon.tech',fetchPersonas([]));
+  assert.equal(r.rol,'bloqueado');
+  assert.equal(r.grupoBeneficios,null);
+});
+
+test('resolverAccesoPorEmail: si Airtable no responde, tampoco entra', async()=>{
+  // Antes, un error pasajero de Airtable en el momento del login le daba
+  // acceso a cualquier cuenta @beon.tech.
+  const r=await resolverAccesoPorEmail('x@beon.tech',async()=>({ok:false,status:500}));
+  assert.equal(r.rol,'bloqueado');
+});
+
+test('resolverAccesoPorEmail: "equipo" sigue siendo un nivel que se concede a propósito', async()=>{
+  const r=await resolverAccesoPorEmail('x@beon.tech',personaCon({acceso:'equipo',rolEmpresa:'Engineer'}));
   assert.equal(r.rol,'equipo');
   assert.equal(r.grupoBeneficios,'Engineers');
+});
+
+test('resolverAccesoPorEmail: People Ops entra aunque Airtable esté caído', async()=>{
+  // La contracara de cerrar el default: la red de seguridad por mail se
+  // resuelve ANTES de consultar Airtable, así que no puede dejar afuera a
+  // quien tiene que poder arreglar el dato.
+  const caido=async()=>({ok:false,status:500});
+  for(const mail of ['valentina.vellon@beon.tech','VICTORIA.FRANCO@beon.tech']){
+    const r=await resolverAccesoPorEmail(mail,caido);
+    assert.equal(r.rol,'full',mail);
+  }
 });
 
 test('grupoDeRolEmpresa: mismo criterio que getRolGroup() del cliente', ()=>{

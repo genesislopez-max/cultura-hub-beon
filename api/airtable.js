@@ -161,9 +161,10 @@ module.exports=async(req,res)=>{
     res.status(401).json({error:{message:verificado.error}});
     return;
   }
-  // Sesiones firmadas antes de este cambio no tienen rol — se tratan como el
-  // nivel más restrictivo hasta que esa persona vuelva a loguearse.
-  const rol=verificado.rol||'equipo';
+  // Un token sin rol se trata como el nivel más restrictivo hasta que esa
+  // persona vuelva a loguearse. Decía eso mismo pero caía en "equipo", que no
+  // es el más restrictivo sino uno que ve 13 de las 17 secciones.
+  const rol=verificado.rol||'bloqueado';
   const grupoBeneficios=grupoBeneficiosEfectivo(rol,verificado.grupoBeneficios);
 
   // "No access" (Acceso="No access" en Personas): bloqueo total, para

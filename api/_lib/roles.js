@@ -82,7 +82,20 @@ async function resolverAccesoPorEmail(email,fetchImpl){
 
   const persona=await buscarPersonaPorEmail(email,fetchImpl);
   const accesoNormalizado=normalizarValor(persona?.fields?.['Acceso']);
-  const rol=NIVELES_ACCESO.get(accesoNormalizado)||'equipo';
+  // Sin un nivel explícito y reconocido, no entra. El Hub es interno: lo usan
+  // unas pocas personas, no todo BEON, así que el acceso se concede, no se
+  // asume.
+  //
+  // El default anterior era "equipo", y eso dejaba entrar por omisión: a quien
+  // tuviera el campo Acceso vacío, a quien lo tuviera con un typo ("Sin
+  // acceso" en vez de "No access"), a quien todavía no estuviera cargado en
+  // Personas, y a cualquiera si Airtable fallaba justo en el login. Peor aún,
+  // "equipo" veía MÁS secciones que un TEM, así que el rol que se recibía por
+  // no estar configurado era más amplio que uno configurado a propósito.
+  //
+  // Esto no puede dejar afuera a People Ops: EMAILS_ACCESO_FULL se resuelve
+  // más arriba, antes de tocar Airtable.
+  const rol=NIVELES_ACCESO.get(accesoNormalizado)||'bloqueado';
 
   const rolEmpresa=persona?.fields?.['Rol en empresa']||'';
   // El TEM acompaña a los devs, así que ve los beneficios de Engineers y no

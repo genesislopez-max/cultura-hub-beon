@@ -32,11 +32,15 @@ function usuarioActual(){
 // 'full' | 'hr' | 'tem' | 'manager' | 'equipo'. Se usa para ocultar
 // secciones/datos restringidos del lado del cliente (el bloqueo real ya
 // pasó en el servidor).
+// Sin rol guardado (o con el dato ilegible) se asume el nivel más restrictivo:
+// el acceso se concede, no se asume. El bloqueo real está en el servidor
+// (api/_lib/roles.js), esto solo evita que la pantalla muestre de más mientras
+// tanto.
 function rolUsuarioActual(){
   try{
-    return JSON.parse(localStorage.getItem('hub_user')||'{}').rol||'equipo';
+    return JSON.parse(localStorage.getItem('hub_user')||'{}').rol||'bloqueado';
   }catch(e){
-    return 'equipo';
+    return 'bloqueado';
   }
 }
 

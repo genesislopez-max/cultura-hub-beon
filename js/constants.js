@@ -155,24 +155,31 @@ const SECCION_GRUPO={inicio:'principal',engineers:'principal',coreteam:'principa
 // roles que no deben verlas.
 //
 // El TEM acompaña a los devs: ve Inicio, Engineers & Tech, Cumpleaños,
-// Aniversarios y Beneficios (solo los de Engineers, acotado en el servidor —
-// ver api/_lib/roles.js). Nada más.
+// Aniversarios, Ex BEONers y todo el grupo Beneficios del menú (Beneficios,
+// Ambassador Week, Off Sites, Get Together y Asistencia a Actividades), pero
+// siempre solo lo de Engineers — eso lo acota el servidor por grupo, no este
+// mapa (ver api/_lib/roles.js y api/airtable.js). Nada más.
 const SECCION_ROLES_PERMITIDOS={
   ingresos:new Set(['full','hr']),
   egresos:new Set(['full','hr']),
-  // Histórico de gente que ya no está. Solo People Ops y HR: el TEM lo tenía
-  // para consultar el paso por BEON de quienes tuvo a cargo, pero ese
-  // histórico incluye a todo el mundo, Core Team incluido.
-  exbeoners:new Set(['full','hr']),
+  // Histórico de gente que ya no está. People Ops, HR y los TEMs, que
+  // necesitan consultar el paso por BEON de quienes tuvieron a cargo. El resto
+  // del equipo no lo ve.
+  //
+  // La lista incluye a todo el mundo, Core Team incluido, pero eso no le abre
+  // los beneficios al TEM: esos los acota el servidor por grupo
+  // (api/_lib/roles.js), así que al abrir la card de un ex BEONer de Core Team
+  // no le llega ninguna asignación.
+  exbeoners:new Set(['full','hr','tem']),
   reviews:new Set(['full']), // Glassdoor
   cumpleanos:new Set(['full','tem','equipo']),
   aniversarios:new Set(['full','tem','equipo']),
   proyectos:new Set(['full','equipo']),
   tareas:new Set(['full','equipo']),
-  ambassadors:new Set(['full','manager','equipo']), // HR no ve Ambassador Week
-  offsites:new Set(['full','manager','equipo']), // HR no ve Off Sites
-  gettogether:new Set(['full','manager','equipo']), // HR no ve Get Together
-  actividades:new Set(['full','hr','manager','equipo']),
+  ambassadors:new Set(['full','tem','manager','equipo']), // HR no ve Ambassador Week
+  offsites:new Set(['full','tem','manager','equipo']), // HR no ve Off Sites
+  gettogether:new Set(['full','tem','manager','equipo']), // HR no ve Get Together
+  actividades:new Set(['full','tem','hr','manager','equipo']),
   eventoshist:new Set(['full','hr','manager','equipo']),
   coreteam:new Set(['full','hr','manager','equipo']), // TEM no ve la pestaña Core Team
 };

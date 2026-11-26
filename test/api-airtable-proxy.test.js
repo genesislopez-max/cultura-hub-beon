@@ -397,3 +397,116 @@ test('api/airtable: Beneficios Asignados — si falla la resolución del catálo
     global.fetch=original;
   }
 });
+
+// ─── Secciones del grupo "Beneficios" que hablan de UNA persona ──────────────
+// Ambassador Week, Off Sites, Get Together y Asistencia a Actividades. El TEM
+// las ve, pero solo con gente de Engineers. Se filtra por grupo en vez de
+// bloquear la tabla porque la card de beneficios de cada persona lee estas
+// mismas tablas: bloquearlas rompería la pantalla que el TEM sí tiene.
+const PERSONAS_GRUPOS=[
+  {id:'p1',fields:{Nombre:'Una Dev','Rol en empresa':'Engineer'}},
+  {id:'p2',fields:{Nombre:'Un Manager','Rol en empresa':'Manager'}},
+  {id:'p3',fields:{Nombre:'Jesús Figueroa','Rol en empresa':'Engineer'}},
+  {id:'p4',fields:{Nombre:'La Founder','Rol en empresa':'Founder'}},
+];
+function conPersonas(registros){
+  return async(url)=>String(url).endsWith('/Personas')
+    ?{ok:true,status:200,json:async()=>({records:PERSONAS_GRUPOS}),text:async()=>JSON.stringify({records:PERSONAS_GRUPOS})}
+    :{ok:true,status:200,text:async()=>JSON.stringify({records:registros})};
+}
+async function idsPara(token,tabla,registros){
+  const original=global.fetch;
+  global.fetch=conPersonas(registros);
+  try{
+    const res=fakeRes();
+    await handler({headers:{authorization:`Bearer ${token}`},method:'GET',query:{path:tabla}},res);
+    const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+    return (body.records||[]).map(r=>r.id).join('|');
+  }finally{ global.fetch=original; }
+}
+
+test('api/airtable: Ambassador Week / Off Sites / Asistencia — el TEM solo ve gente de Engineers', async()=>{
+  const casos=[
+    ['Ambassador Week',[{id:'dev',fields:{Persona:'Una Dev'}},{id:'mgr',fields:{Persona:'Un Manager'}}]],
+    ['Off Sites',[{id:'dev',fields:{Persona:'Una Dev'}},{id:'founder',fields:{Persona:'La Founder'}}]],
+    ['Asistencia a Actividades',[{id:'dev',fields:{Persona:'Una Dev'}},{id:'mgr',fields:{Persona:'Un Manager'}}]],
+  ];
+  for(const [tabla,registros] of casos){
+    assert.equal(await idsPara(TOKEN_TEM,tabla,registros),'dev',tabla);
+    assert.equal(await idsPara(TOKEN_TEM_VIEJO,tabla,registros),'dev',`${tabla} (sesión vieja)`);
+  }
+});
+
+test('api/airtable: Get Together usa el campo BEONer, no Persona', async()=>{
+  // Cada tabla identifica a la persona con un campo distinto. Con el nombre
+  // equivocado no matchearía nadie y, al fallar cerrado, la sección entera
+  // llegaría vacía en vez de filtrada.
+  const registros=[{id:'dev',fields:{BEONer:'Una Dev'}},{id:'mgr',fields:{BEONer:'Un Manager'}}];
+  assert.equal(await idsPara(TOKEN_TEM,'Get Together',registros),'dev');
+  assert.equal(await idsPara(TOKEN_FULL,'Get Together',registros),'dev|mgr');
+});
+
+test('api/airtable: el nombre matchea sin importar acentos, mayúsculas ni espacios', async()=>{
+  // Estos registros guardan el nombre escrito a mano: "Jesús" y "jesus  " son
+  // la misma persona, y si no matchean el registro desaparece de su sección.
+  const registros=[
+    {id:'acento',fields:{Persona:'jesus  figueroa'}},
+    {id:'exacto',fields:{Persona:'Jesús Figueroa'}},
+  ];
+  assert.equal(await idsPara(TOKEN_TEM,'Ambassador Week',registros),'acento|exacto');
+});
+
+test('api/airtable: un nombre que no matchea con nadie no pasa el filtro', async()=>{
+  // No se puede afirmar de qué grupo es, y en una restricción de acceso la
+  // duda se resuelve del lado seguro. Para full no cambia nada: lo sigue
+  // viendo, que es lo que hace falta para corregirlo.
+  const registros=[{id:'dev',fields:{Persona:'Una Dev'}},{id:'sinFicha',fields:{Persona:'Alguien Que No Existe'}}];
+  assert.equal(await idsPara(TOKEN_TEM,'Ambassador Week',registros),'dev');
+  assert.equal(await idsPara(TOKEN_FULL,'Ambassador Week',registros),'dev|sinFicha');
+});
+
+test('api/airtable: solo al TEM se le filtran estas tablas, a nadie más', async()=>{
+  // Tener grupoBeneficios no alcanza: lo tienen también "equipo" y "hr".
+  // - "equipo": su grupo acota BENEFICIOS, no la vida en común. Off Sites y
+  //   Get Together son de toda la empresa.
+  // - "hr": sigue viendo todo en Asistencia a Actividades, que es la única de
+  //   estas cuatro que tiene en el menú.
+  const registros=[{id:'dev',fields:{Persona:'Una Dev'}},{id:'mgr',fields:{Persona:'Un Manager'}}];
+  assert.equal(await idsPara(TOKEN_EQUIPO_ENG,'Off Sites',registros),'dev|mgr');
+  assert.equal(await idsPara(TOKEN_EQUIPO_CORE,'Ambassador Week',registros),'dev|mgr');
+  assert.equal(await idsPara(TOKEN_HR,'Asistencia a Actividades',registros),'dev|mgr');
+  assert.equal(await idsPara(TOKEN_HR,'Ambassador Week',registros),'dev|mgr');
+  // Y el TEM sí
+  assert.equal(await idsPara(TOKEN_TEM,'Off Sites',registros),'dev');
+});
+
+test('api/airtable: acotar las tablas de personas no toca los Beneficios de HR', async()=>{
+  // Son dos restricciones distintas y conviven: HR sigue viendo solo los
+  // beneficios de Core Team aunque vea todo en Asistencia a Actividades.
+  const registros=[
+    {id:'b1',fields:{Beneficio:'Gimnasio Core',Grupo:'Core Team'}},
+    {id:'b2',fields:{Beneficio:'Curso técnico',Grupo:'Engineers'}},
+  ];
+  const original=global.fetch;
+  global.fetch=async()=>({ok:true,status:200,text:async()=>JSON.stringify({records:registros})});
+  try{
+    const res=fakeRes();
+    await handler({headers:{authorization:`Bearer ${TOKEN_HR}`},method:'GET',query:{path:'Beneficios'}},res);
+    const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+    assert.equal(body.records.map(r=>r.id).join('|'),'b1');
+  }finally{ global.fetch=original; }
+});
+
+test('api/airtable: si no se puede resolver quién es quién, falla cerrado', async()=>{
+  const registros=[{id:'dev',fields:{Persona:'Una Dev'}}];
+  const original=global.fetch;
+  global.fetch=async(url)=>String(url).endsWith('/Personas')
+    ?{ok:false,status:500,json:async()=>({}),text:async()=>'boom'}
+    :{ok:true,status:200,text:async()=>JSON.stringify({records:registros})};
+  try{
+    const res=fakeRes();
+    await handler({headers:{authorization:`Bearer ${TOKEN_TEM}`},method:'GET',query:{path:'Off Sites'}},res);
+    const body=typeof res.body==='string'?JSON.parse(res.body):res.body;
+    assert.equal(body.records.length,0,'sin poder resolver el grupo, no se manda nada');
+  }finally{ global.fetch=original; }
+});

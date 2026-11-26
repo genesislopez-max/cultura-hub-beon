@@ -12,6 +12,7 @@
 // función) para cualquier pedido con más de un segmento de path. Con un
 // endpoint fijo + query param no depende de esa resolución de rutas.
 const {verifySession}=require('./_lib/session');
+const {grupoDeRolEmpresa}=require('./_lib/roles');
 
 // Control de acceso por rol — ver api/_lib/roles.js para cómo se resuelven
 // "rol"/"grupoBeneficios" (una sola vez, en el login, embebidos en el token
@@ -28,6 +29,21 @@ const TABLAS_INGRESOS_EGRESOS=new Set(['Checklist']);
 const ROLES_VEN_INGRESOS_EGRESOS=new Set(['full','hr']);
 const TABLAS_GRUPO_BENEFICIOS=new Set(['Beneficios','Presupuesto Loyalty','Beneficios Asignados']);
 
+// Tablas cuyo registro habla de UNA persona, con el nombre del campo que la
+// identifica. Para un rol acotado a un grupo, el registro de alguien del otro
+// grupo no tiene por qué llegarle: son las secciones del menú "Beneficios"
+// (Ambassador Week, Off Sites, Get Together, Asistencia a Actividades).
+//
+// Se filtra por GRUPO y no bloqueando la tabla entera, porque la card de
+// beneficios de cada persona lee estas mismas tablas para mostrar sus viajes
+// y sus Get Togethers: bloquearlas rompería la pantalla que el rol sí tiene.
+const TABLAS_GRUPO_PERSONA={
+  'Ambassador Week':'Persona',
+  'Off Sites':'Persona',
+  'Get Together':'BEONer',
+  'Asistencia a Actividades':'Persona',
+};
+
 // Grupo fijo por rol, para los roles cuya restricción NO depende de quién es
 // la persona sino de su nivel de acceso. El token ya trae grupoBeneficios
 // resuelto en el login, pero una sesión firmada ANTES de que el rol quedara
@@ -35,6 +51,12 @@ const TABLAS_GRUPO_BENEFICIOS=new Set(['Beneficios','Presupuesto Loyalty','Benef
 // empezaría a valer hasta que esa persona volviera a loguearse. Derivarlo
 // también del rol cierra esa ventana sin obligar a nadie a cerrar sesión.
 const GRUPO_BENEFICIOS_POR_ROL={hr:'Core Team',tem:'Engineers'};
+
+// Roles a los que SÍ se les filtran las tablas de personas (ver
+// TABLAS_GRUPO_PERSONA más abajo). Es un mapa aparte y no el de arriba a
+// propósito: una cosa es qué beneficios se le cubren a cada grupo, y otra
+// distinta es a quién se le esconde la vida en común de la empresa.
+const GRUPO_PERSONA_POR_ROL={tem:'Engineers'};
 function grupoBeneficiosEfectivo(rol,grupoDelToken){
   return GRUPO_BENEFICIOS_POR_ROL[rol]||grupoDelToken||null;
 }
@@ -72,6 +94,48 @@ async function fetchGrupoPorBeneficioId(token,base){
   }
 }
 
+// Nombre normalizado → grupo, a partir de Personas. Mismo criterio de
+// normalización que el cliente (acentos, mayúsculas y espacios de más), porque
+// estos registros guardan el nombre escrito a mano y "Jesús" y "Jesus" son la
+// misma persona.
+async function fetchGrupoPorPersona(token,base){
+  try{
+    const r=await fetch(`https://api.airtable.com/v0/${base}/Personas`,{headers:{'Authorization':`Bearer ${token}`}});
+    if(!r.ok) return null;
+    const data=await r.json();
+    const mapa={};
+    (data.records||[]).forEach(rec=>{
+      const nombre=normalizarNombrePersona(rec.fields?.Nombre);
+      if(nombre) mapa[nombre]=grupoDeRolEmpresa(rec.fields?.['Rol en empresa']||'');
+    });
+    return mapa;
+  }catch(e){
+    return null;
+  }
+}
+
+function normalizarNombrePersona(valor){
+  const v=Array.isArray(valor)?valor[0]:valor;
+  return String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\s+/g,' ').trim().toLowerCase();
+}
+
+// Deja solo los registros de gente del grupo permitido. Un nombre que no
+// matchea con nadie de Personas NO pasa: no se puede afirmar de qué grupo es,
+// y en una restricción de acceso la duda se resuelve del lado seguro.
+async function filtrarPorGrupoDePersona(tabla,campo,grupoPermitido,data,token,base){
+  const mapa=await fetchGrupoPorPersona(token,base);
+  if(!mapa){
+    data.records=[]; // fail closed — no se pudo resolver el grupo de nadie
+    return data;
+  }
+  data.records=(data.records||[]).filter(r=>{
+    const nombre=normalizarNombrePersona(r.fields?.[campo]);
+    return !!nombre&&mapa[nombre]===grupoPermitido;
+  });
+  return data;
+}
+
 async function filtrarPorGrupoBeneficios(tabla,grupoPermitido,data,token,base){
   if(tabla==='Beneficios'||tabla==='Presupuesto Loyalty'){
     data.records=(data.records||[]).filter(r=>pasaFiltroGrupo(r.fields?.Grupo,grupoPermitido));
@@ -103,9 +167,10 @@ module.exports=async(req,res)=>{
     res.status(401).json({error:{message:verificado.error}});
     return;
   }
-  // Sesiones firmadas antes de este cambio no tienen rol — se tratan como el
-  // nivel más restrictivo hasta que esa persona vuelva a loguearse.
-  const rol=verificado.rol||'equipo';
+  // Un token sin rol se trata como el nivel más restrictivo hasta que esa
+  // persona vuelva a loguearse. Decía eso mismo pero caía en "equipo", que no
+  // es el más restrictivo sino uno que ve 13 de las 17 secciones.
+  const rol=verificado.rol||'bloqueado';
   const grupoBeneficios=grupoBeneficiosEfectivo(rol,verificado.grupoBeneficios);
 
   // "No access" (Acceso="No access" en Personas): bloqueo total, para
@@ -194,6 +259,25 @@ module.exports=async(req,res)=>{
         res.status(airtableRes.status).json(filtrado);
         return;
       }
+      // Ojo con el alcance: esto NO va por grupoBeneficios, que lo tienen
+      // también "equipo" y "hr".
+      //
+      // - "equipo": ahí el grupo sale de la ficha de la persona y sirve para
+      //   acotar BENEFICIOS, no para partir la vida en común. Off Sites y Get
+      //   Together son de toda la empresa: a alguien de Engineers no se le
+      //   esconden los viajes de Core Team.
+      // - "hr": sigue viendo todo en Asistencia a Actividades, que es la única
+      //   de estas cuatro secciones que tiene en el menú.
+      //
+      // Queda solo el TEM, cuya restricción sí es de acceso: acompaña a los
+      // devs y no ve lo de Core Team.
+      const grupoFijoDelRol=GRUPO_PERSONA_POR_ROL[rol];
+      if(grupoFijoDelRol&&TABLAS_GRUPO_PERSONA[tabla]){
+        const filtrado=await filtrarPorGrupoDePersona(
+          tabla,TABLAS_GRUPO_PERSONA[tabla],grupoFijoDelRol,data,token,base);
+        res.status(airtableRes.status).json(filtrado);
+        return;
+      }
     }
   }
 
@@ -203,3 +287,4 @@ module.exports=async(req,res)=>{
 };
 
 module.exports.grupoBeneficiosEfectivo=grupoBeneficiosEfectivo;
+module.exports.normalizarNombrePersona=normalizarNombrePersona;
